@@ -1,12 +1,12 @@
-import { 
-  collection, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy,
   limit,
   onSnapshot,
-  Timestamp 
+  Timestamp
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useState, useEffect, useCallback } from 'react';
@@ -29,7 +29,7 @@ export const getProducts = async (): Promise<Product[]> => {
       where('isActive', '==', true),
       orderBy('createdAt', 'desc')
     );
-    
+
     const snapshot = await getDocs(productsQuery);
     return snapshot.docs.map(doc => ({
       id: doc.id,
@@ -67,7 +67,7 @@ export const getSales = async (limitCount: number = 50): Promise<Sale[]> => {
       orderBy('date', 'desc'),
       limit(limitCount)
     );
-    
+
     const snapshot = await getDocs(salesQuery);
     return snapshot.docs.map(doc => {
       const data = doc.data();
@@ -110,7 +110,7 @@ export const getExpenses = async (limitCount: number = 50): Promise<Expense[]> =
       orderBy('date', 'desc'),
       limit(limitCount)
     );
-    
+
     const snapshot = await getDocs(expensesQuery);
     return snapshot.docs.map(doc => {
       const data = doc.data();
@@ -151,7 +151,7 @@ export const getNotes = async (limitCount: number = 50): Promise<Note[]> => {
       orderBy('date', 'desc'),
       limit(limitCount)
     );
-    
+
     const snapshot = await getDocs(notesQuery);
     return snapshot.docs.map(doc => {
       const data = doc.data();
@@ -223,7 +223,7 @@ export const subscribeToProducts = (callback: (products: Product[]) => void) => 
     where('isActive', '==', true),
     orderBy('createdAt', 'desc')
   );
-  
+
   return onSnapshot(productsQuery, (snapshot) => {
     const products = snapshot.docs.map(doc => ({
       id: doc.id,
@@ -240,7 +240,7 @@ export const subscribeToSales = (callback: (sales: Sale[]) => void, limitCount: 
     orderBy('date', 'desc'),
     limit(limitCount)
   );
-  
+
   return onSnapshot(salesQuery, (snapshot) => {
     const sales = snapshot.docs.map(doc => {
       const data = doc.data();
@@ -452,24 +452,24 @@ export const downloadAsJSON = (data: any, filename: string) => {
   const dataStr = JSON.stringify(data, null, 2);
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(dataBlob);
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   URL.revokeObjectURL(url);
 };
 
 export const downloadAsCSV = (data: any[], filename: string) => {
   if (data.length === 0) return;
-  
+
   const headers = Object.keys(data[0]);
   const csvContent = [
     headers.join(','),
-    ...data.map(row => 
+    ...data.map(row =>
       headers.map(header => {
         const value = row[header];
         // Escape commas and quotes in CSV
@@ -480,17 +480,17 @@ export const downloadAsCSV = (data: any[], filename: string) => {
       }).join(',')
     )
   ].join('\n');
-  
+
   const dataBlob = new Blob([csvContent], { type: 'text/csv' });
   const url = URL.createObjectURL(dataBlob);
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   URL.revokeObjectURL(url);
 };
 
@@ -523,23 +523,23 @@ export const usePerformanceMonitor = () => {
 // Data validation utilities
 export const validateProductData = (product: Partial<Product>): string[] => {
   const errors: string[] = [];
-  
+
   if (!product.name || product.name.trim().length === 0) {
     errors.push('Product name is required');
   }
-  
+
   if (!product.price || product.price <= 0) {
     errors.push('Product price must be greater than 0');
   }
-  
+
   if (product.stock === undefined || product.stock < 0) {
     errors.push('Product stock must be 0 or greater');
   }
-  
+
   if (!product.category || product.category.trim().length === 0) {
     errors.push('Product category is required');
   }
-  
+
   return errors;
 };
 
@@ -548,11 +548,11 @@ export const validateSaleData = (saleData: {
   payment: number;
 }): string[] => {
   const errors: string[] = [];
-  
+
   if (!saleData.items || saleData.items.length === 0) {
     errors.push('At least one item is required');
   }
-  
+
   saleData.items?.forEach((item, index) => {
     if (!item.productId) {
       errors.push(`Item ${index + 1}: Product ID is required`);
@@ -561,11 +561,11 @@ export const validateSaleData = (saleData: {
       errors.push(`Item ${index + 1}: Quantity must be greater than 0`);
     }
   });
-  
+
   if (!saleData.payment || saleData.payment < 0) {
     errors.push('Payment amount must be 0 or greater');
   }
-  
+
   return errors;
 };
 
@@ -574,14 +574,14 @@ export const validateExpenseData = (expenseData: {
   description: string;
 }): string[] => {
   const errors: string[] = [];
-  
+
   if (!expenseData.amount || expenseData.amount <= 0) {
     errors.push('Expense amount must be greater than 0');
   }
-  
+
   if (!expenseData.description || expenseData.description.trim().length === 0) {
     errors.push('Expense description is required');
   }
-  
+
   return errors;
 };
