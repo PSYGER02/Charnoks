@@ -9,6 +9,7 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
+import { useState, useEffect, useCallback } from 'react';
 import { db, functions } from '../src/firebaseConfig';
 import type { Product, Sale, Expense, Note } from '../types';
 
@@ -256,8 +257,9 @@ export const subscribeToSales = (callback: (sales: Sale[]) => void, limitCount: 
     }) as Sale[];
     callback(sales);
   });
-};//
- Advanced Analytics Services
+};
+
+// Advanced Analytics Services
 export const getSalesAnalytics = async (options: {
   startDate?: string;
   endDate?: string;
@@ -392,8 +394,9 @@ export const handleFirebaseError = (error: any): string => {
     }
   }
   return error.message || 'An unexpected error occurred.';
-};// 
-System Monitoring Services
+};
+
+// System Monitoring Services
 export const getSystemHealth = async () => {
   try {
     const healthCheckFn = httpsCallable(functions, 'healthCheck');
