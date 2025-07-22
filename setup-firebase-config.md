@@ -1,76 +1,62 @@
-# Firebase Environment Configuration Setup
+# Get Your Firebase Configuration
 
-## For Production Deployment
+## Step 1: Get Firebase Config Values
 
-### 1. Set Environment Variables using Firebase CLI
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Select your project: **charnoks-209bf**
+3. Click the gear icon ⚙️ → **Project settings**
+4. Scroll down to **Your apps** section
+5. Click on your web app (or create one if you don't have it)
+6. Copy the config values and update your `.env` file
 
+## Step 2: Update .env File
+
+Replace the placeholder values in your `.env` file with the actual values from Firebase:
+
+```env
+VITE_FIREBASE_API_KEY=AIzaSyC... (your actual API key)
+VITE_FIREBASE_AUTH_DOMAIN=charnoks-209bf.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=charnoks-209bf
+VITE_FIREBASE_STORAGE_BUCKET=charnoks-209bf.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789 (your actual sender ID)
+VITE_FIREBASE_APP_ID=1:123456789:web:abc123 (your actual app ID)
+```
+
+## Step 3: Update Vercel Environment Variables
+
+In your Vercel dashboard, add these same environment variables:
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+
+## Step 4: Restart Development Server
+
+After updating the `.env` file:
 ```bash
-# Set your Gemini API key
-firebase functions:config:set gemini.api_key="your_actual_gemini_api_key"
-
-# Set other environment variables if needed
-firebase functions:config:set app.environment="production"
-
-# View current config
-firebase functions:config:get
+# Stop your dev server (Ctrl+C)
+# Then restart it
+npm run dev
 ```
 
-### 2. Update your Cloud Functions to use config
+## Firebase Config Example
 
-In your `functions/index.ts`, you can access these like:
-```typescript
-import { defineString } from 'firebase-functions/params';
-
-// Define the parameter
-const geminiApiKey = defineString('GEMINI_API_KEY');
-
-// Use in your function
-const genAI = new GoogleGenerativeAI(geminiApiKey.value());
+Your Firebase config object should look like this:
+```javascript
+const firebaseConfig = {
+  apiKey: "AIzaSyC...",
+  authDomain: "charnoks-209bf.firebaseapp.com",
+  projectId: "charnoks-209bf",
+  storageBucket: "charnoks-209bf.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123"
+};
 ```
 
-### 3. Deploy with environment variables
-```bash
-firebase deploy --only functions
-```
+## Security Note
 
-## For Local Development
-
-### 1. Create functions/.env file (already done)
-```
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-
-### 2. The Firebase emulator will automatically load this file
-
-## Security Best Practices
-
-1. **Never commit .env files to git** (already in .gitignore)
-2. **Use different keys for development and production**
-3. **Rotate keys regularly**
-4. **Use Firebase's built-in config for production**
-5. **Keep frontend API keys separate from backend secrets**
-
-## Getting Your Keys
-
-### Firebase Configuration
-1. Go to Firebase Console → Project Settings → General
-2. Scroll down to "Your apps" section
-3. Click on your web app
-4. Copy the config object values
-
-### Gemini API Key
-1. Go to Google AI Studio (https://aistudio.google.com/)
-2. Click "Get API Key"
-3. Create a new API key
-4. Copy the key (keep it secure!)
-
-## Environment File Structure
-
-```
-your-project/
-├── .env                    # Frontend environment variables
-├── functions/
-│   ├── .env               # Backend environment variables (local)
-│   └── index.ts           # Your cloud functions
-└── .gitignore             # Make sure .env files are ignored
-```
+- The Firebase API key for web apps is safe to expose publicly
+- It's different from server-side API keys
+- Firebase security is handled by Firestore rules, not the API key

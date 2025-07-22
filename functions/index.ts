@@ -11,7 +11,25 @@ const auth = getAuth();
 const db = getFirestore();
 
 // Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// For local development, use .env file
+// For production, use Firebase config or environment variables
+const getGeminiApiKey = () => {
+  // Try environment variable first (works in both local and production)
+  if (process.env.GEMINI_API_KEY) {
+    return process.env.GEMINI_API_KEY;
+  }
+  
+  // Fallback for Firebase config (legacy)
+  try {
+    const functions = require('firebase-functions');
+    return functions.config().gemini?.api_key;
+  } catch (error) {
+    console.warn('Firebase config not available, using empty key');
+    return '';
+  }
+};
+
+const genAI = new GoogleGenerativeAI(getGeminiApiKey());
 
 // Helper function to verify user role
 const verifyRole = (context: any, requiredRole: 'owner' | 'worker' | 'any') => {
