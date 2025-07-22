@@ -1,186 +1,107 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { 
-    signInWithEmailAndPassword, 
-    createUserWithEmailAndPassword, 
-    signOut as firebaseSignOut, 
-    onAuthStateChanged
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut as firebaseSignOut,
+    onAuthStateChanged,
+    User
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { auth, db, functions } from '../src/firebaseConfig';t, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged,
-  User as FirebaseUser
-} from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from '../src/firebaseConfig';
+import { httpsCallable } from 'firebase/functions';
 
-interface User {
+export interface UserData {
     uid: string;
-    email: string;
-    name: string;
+    email: string | null;
     role: 'owner' | 'worker';
+    displayName: string;
 }
 
-interface AuthContextType {
-    user: User | null;
-    loading: boolean;
-    error: string | null;
-    login: (email: string, password: string) => Promise<void>;
-    signup: (name: string, email: string, password: string) => Promise<void>;
-    logout: () => Promise<void>;
-    createWorker: (name: string, email: string, password: string) => Promise<void>;
-}
+// Auth state management
+let currentUser: UserData | null = null;
+const authStateListeners = new Set<(user: UserData | null) => void>();
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          // Get the user's custom claims (including role)
-          const idTokenResult = await firebaseUser.getIdTokenResult();
-          const customClaims = idTokenResult.claims;
-          
-          const userData = convertFirebaseUser(firebaseUser, customClaims);
-          setUser(userData);
-        } catch (error) {
-          console.error('Error getting user claims:', error);
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const login = useCallback(async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // User state will be updated by onAuthStateChanged
-    } catch (error: any) {
-      setLoading(false);
-      throw new Error(error.message || 'Login failed');
+// Listen to auth state changes
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        const userData = await getUserData(user);
+        currentUser = userData;
+        notifyAuthStateChange(userData);
+    } else {
+        currentUser = null;
+        notifyAuthStateChange(null);
     }
-  }, []);
+});
 
-  const signup = useCallback(async (name: string, email: string, password: string) => {
-    setLoading(true);
-    try {
-      // Create Firebase user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Create user document in Firestore with owner role
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        name,
+// Helper to get user data including role
+async function getUserData(user: User): Promise<UserData> {
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    const userData = userDoc.data();
+    
+    if (!userData?.role) {
+        throw new Error('User role not found');
+    }
+    
+    return {
+        uid: user.uid,
+        email: user.email,
+        role: userData.role, // Don't use default role
+        displayName: userData?.displayName || user.email?.split('@')[0] || 'User'
+    };
+}
+
+// Sign up new owner account
+export async function signUp(name: string, email: string, password: string): Promise<UserData> {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Create the user document with owner role
+    await setDoc(doc(db, 'users', userCredential.user.uid), {
         email,
+        displayName: name,
         role: 'owner',
         createdAt: serverTimestamp()
-      });
+    });
 
-      // Force token refresh to get new claims
-      await userCredential.user.getIdToken(true);
-
-      // Return the user data
-      return {
+    return {
         uid: userCredential.user.uid,
         email: userCredential.user.email,
-        name,
-        role: 'owner' as const
-      };
-      
-    } catch (error: any) {
-      setLoading(false);
-      throw new Error(error.message || 'Failed to create owner account');
-    }
-  }, []);
+        role: 'owner',
+        displayName: name
+    };
+}
 
-  const logout = useCallback(async () => {
-    try {
-      await signOut(auth);
-      // User state will be updated by onAuthStateChanged
-    } catch (error: any) {
-      throw new Error(error.message || 'Logout failed');
-    }
-  }, []);
+// Sign in
+export async function signIn(email: string, password: string): Promise<UserData> {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    return await getUserData(userCredential.user);
+}
 
-  const createWorkerAccount = useCallback(async (name: string, email: string, password: string) => {
-    try {
-      // Create Firebase user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Create user document in Firestore (will default to worker role)
-      const createUserDoc = httpsCallable(functions, 'createUserDocument');
-      await createUserDoc({ name, email });
-      
-      // Sign out the newly created user so the owner stays logged in
-      await signOut(auth);
-      
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to create worker account');
-    }
-  }, []);
+// Sign out
+export async function signOut(): Promise<void> {
+    await firebaseSignOut(auth);
+}
 
-  const value = useMemo(() => ({ user, loading, login, signup, logout, createWorkerAccount }), [user, loading, login, signup, logout, createWorkerAccount]);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-// pages/SignUpPage.tsx
-const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        return;
+// Create worker account (owner only)
+export async function createWorkerAccount(name: string, email: string, password: string): Promise<UserData> {
+    // First check if current user is an owner
+    if (!currentUser || currentUser.role !== 'owner') {
+        throw new Error('Only owners can create worker accounts');
     }
 
-    setIsSigningUp(true);
-    try {
-        // Create the authentication account
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Call the Cloud Function to set up the owner account
-        const createOwner = httpsCallable(functions, 'createOwnerAccount');
-        await createOwner({
-            uid: userCredential.user.uid,
-            email,
-            name
-        });
-        
-        // Force a token refresh to get the new claims
-        await userCredential.user.getIdToken(true);
-        
-        // Navigate to owner dashboard
-        navigate('/owner/dashboard', { replace: true });
-    } catch (err: any) {
-        setError(err.message || "Failed to create an account. Please try again.");
-    } finally {
-        setIsSigningUp(false);
-    }
-};
+    const createWorker = httpsCallable(functions, 'createWorkerAccount');
+    const result = await createWorker({ name, email, password });
+    return result.data as UserData;
+}
+
+// Subscribe to auth state changes
+export function subscribeToAuthState(callback: (user: UserData | null) => void): () => void {
+    authStateListeners.add(callback);
+    callback(currentUser); // Initial state
+    
+    // Return unsubscribe function
+    return () => authStateListeners.delete(callback);
+}
+
+// Helper to notify all listeners of auth state changes
+function notifyAuthStateChange(user: UserData | null) {
+    authStateListeners.forEach(listener => listener(user));
+}

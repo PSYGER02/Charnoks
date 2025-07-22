@@ -3,6 +3,7 @@ import KPICard from '../ui/KPI_Card';
 import ChartContainer from '../charts/ChartContainer';
 import { getOwnerDashboard } from '../../services/firebaseService';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
+import CreateWorkerForm from '../CreateWorkerForm';
 import Spinner from '../ui/Spinner';
 
 interface CustomizedLabelProps {
@@ -18,6 +19,7 @@ const Ownersdashboard: React.FC = () => {
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showWorkerForm, setShowWorkerForm] = useState(false);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -82,10 +84,36 @@ const Ownersdashboard: React.FC = () => {
 
     return (
         <div className="space-y-8">
-            <header className="animate-bounce-in">
-                <h1 className="text-4xl font-bold text-text-primary">Dashboard</h1>
-                <p className="text-text-secondary mt-1">Welcome back, Owner!</p>
+            <header className="animate-bounce-in flex justify-between items-center">
+                <div>
+                    <h1 className="text-4xl font-bold text-text-primary">Dashboard</h1>
+                    <p className="text-text-secondary mt-1">Welcome back, Owner!</p>
+                </div>
+                <button
+                    onClick={() => setShowWorkerForm(true)}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                >
+                    + Create Worker Account
+                </button>
             </header>
+
+            {/* Worker Creation Modal */}
+            {showWorkerForm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-background p-6 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-2xl font-bold">Create Worker Account</h2>
+                            <button
+                                onClick={() => setShowWorkerForm(false)}
+                                className="text-text-secondary hover:text-text-primary"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <CreateWorkerForm />
+                    </div>
+                </div>
+            )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <KPICard 
