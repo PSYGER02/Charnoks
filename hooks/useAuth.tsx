@@ -1,3 +1,4 @@
+import React from 'react';
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
@@ -104,4 +105,22 @@ export function subscribeToAuthState(callback: (user: UserData | null) => void):
 // Helper to notify all listeners of auth state changes
 function notifyAuthStateChange(user: UserData | null) {
     authStateListeners.forEach(listener => listener(user));
+}
+
+// React hook for auth
+export function useAuth() {
+    const [user, setUser] = React.useState<UserData | null>(currentUser);
+
+    React.useEffect(() => {
+        return subscribeToAuthState(setUser);
+    }, []);
+
+    return {
+        user,
+        signUp,
+        signIn,
+        logout: signOut,
+        createWorkerAccount,
+        isAuthenticated: !!user
+    };
 }
