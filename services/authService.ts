@@ -5,7 +5,7 @@ import {
     onAuthStateChanged,
     User
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, functions } from '../src/firebaseConfig';
 import { httpsCallable } from 'firebase/functions';
 
@@ -37,18 +37,38 @@ async function getUserData(user: User): Promise<UserData> {
     const userDoc = await getDoc(doc(db, 'users', user.uid));
     const userData = userDoc.data();
     
+    if (!userData) {
+        throw new Error('User data not found in Firestore');
+    }
+    
     return {
         uid: user.uid,
         email: user.email,
-        role: userData?.role || 'worker',
-        displayName: userData?.displayName || user.email?.split('@')[0] || 'User'
+        role: userData.role,  // No default - must be set when creating user
+        displayName: userData.displayName || user.email?.split('@')[0] || 'User'
     };
 }
 
 // Sign up
-export async function signUp(email: string, password: string): Promise<UserData> {
+export async function signUp(name: string, email: string, password: string, role: 'owner' | 'worker' = 'owner'): Promise<UserData> {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Create user document in Firestore
+    await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email,
+        role,
+        displayName: name,
+        createdAt: serverTimestamp()
+    });
+
     return await getUserData(userCredential.user);
+}
+
+// Create worker account (owner only)
+export async function createWorkerAccount(name: string, email: string, password: string): Promise<UserData> {
+    const createWorker = httpsCallable(functions, 'createWorkerAccount');
+    const result = await createWorker({ name, email, password });
+    return result.data as UserData;
 }
 
 // Sign in

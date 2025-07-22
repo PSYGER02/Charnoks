@@ -66,8 +66,15 @@ const SignUpPage: React.FC = () => {
 
         setIsSigningUp(true);
         try {
-            await auth.signup(name, email, password);
-            navigate('/owner/dashboard', { replace: true });
+            // Always create as owner account through signup page
+            const user = await auth.signup(name, email, password, 'owner');
+            // Navigate based on role
+            if (user.role === 'owner') {
+                navigate('/owner/dashboard', { replace: true });
+            } else {
+                // This should never happen for new signups
+                navigate('/worker/dashboard', { replace: true });
+            }
         } catch (err: any) {
             setError(err.message || "Failed to create an account. Please try again.");
         } finally {

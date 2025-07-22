@@ -1,4 +1,13 @@
-import React, { createContext, useState, useContext, useMemo, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    signOut as firebaseSignOut, 
+    onAuthStateChanged
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { auth, db, functions } from '../src/firebaseConfig';t, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -6,36 +15,28 @@ import {
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { auth, functions } from '../src/firebaseConfig';
+import { auth, db, functions } from '../src/firebaseConfig';
 
 interface User {
-  uid: string;
-  email: string;
-  name: string;
-  role: 'owner' | 'worker';
+    uid: string;
+    email: string;
+    name: string;
+    role: 'owner' | 'worker';
 }
 
 interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  createWorker: (name: string, email: string, password: string) => Promise<void>;
+    user: User | null;
+    loading: boolean;
+    error: string | null;
+    login: (email: string, password: string) => Promise<void>;
+    signup: (name: string, email: string, password: string) => Promise<void>;
+    logout: () => Promise<void>;
+    createWorker: (name: string, email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Helper function to convert Firebase user to our User interface
-const convertFirebaseUser = (firebaseUser: FirebaseUser, customClaims: any): User => {
-  return {
-    uid: firebaseUser.uid,
-    email: firebaseUser.email || '',
-    name: customClaims?.name || firebaseUser.displayName || 'Unknown',
-    role: customClaims?.role || 'worker'
-  };
-};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -81,20 +82,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Create Firebase user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Create user document in Firestore
-      const createUserDoc = httpsCallable(functions, 'createUserDocument');
-      await createUserDoc({ name, email });
-      
-      // Set the user as owner (first user to signup becomes owner)
-      const setRole = httpsCallable(functions, 'setUserRole');
-      await setRole({ targetUid: userCredential.user.uid, newRole: 'owner' });
-      
+      // Create user document in Firestore with owner role
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        name,
+        email,
+        role: 'owner',
+        createdAt: serverTimestamp()
+      });
+
       // Force token refresh to get new claims
       await userCredential.user.getIdToken(true);
+
+      // Return the user data
+      return {
+        uid: userCredential.user.uid,
+        email: userCredential.user.email,
+        name,
+        role: 'owner' as const
+      };
       
     } catch (error: any) {
       setLoading(false);
-      throw new Error(error.message || 'Signup failed');
+      throw new Error(error.message || 'Failed to create owner account');
     }
   }, []);
 
@@ -107,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const createWorker = useCallback(async (name: string, email: string, password: string) => {
+  const createWorkerAccount = useCallback(async (name: string, email: string, password: string) => {
     try {
       // Create Firebase user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -124,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, signup, logout, createWorker }), [user, loading, login, signup, logout, createWorker]);
+  const value = useMemo(() => ({ user, loading, login, signup, logout, createWorkerAccount }), [user, loading, login, signup, logout, createWorkerAccount]);
 
   return (
     <AuthContext.Provider value={value}>
@@ -139,4 +148,39 @@ export const useAuth = (): AuthContextType => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+// pages/SignUpPage.tsx
+const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+    }
+
+    setIsSigningUp(true);
+    try {
+        // Create the authentication account
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Call the Cloud Function to set up the owner account
+        const createOwner = httpsCallable(functions, 'createOwnerAccount');
+        await createOwner({
+            uid: userCredential.user.uid,
+            email,
+            name
+        });
+        
+        // Force a token refresh to get the new claims
+        await userCredential.user.getIdToken(true);
+        
+        // Navigate to owner dashboard
+        navigate('/owner/dashboard', { replace: true });
+    } catch (err: any) {
+        setError(err.message || "Failed to create an account. Please try again.");
+    } finally {
+        setIsSigningUp(false);
+    }
 };
