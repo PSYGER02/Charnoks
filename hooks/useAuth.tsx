@@ -126,8 +126,8 @@ function useAuthState() {
 
     return {
         user,
-        signUp,
-        signIn,
+        signup: signUp, // Alias signUp as signup to match what SignUpPage expects
+        login: signIn, // Alias signIn as login to match what LoginPage expects
         logout: signOut,
         createWorkerAccount,
         isAuthenticated: !!user
