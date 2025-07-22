@@ -107,8 +107,17 @@ function notifyAuthStateChange(user: UserData | null) {
     authStateListeners.forEach(listener => listener(user));
 }
 
-// React hook for auth
-export function useAuth() {
+// Create auth context
+const AuthContext = React.createContext<ReturnType<typeof useAuthState> | null>(null);
+
+// Auth provider component
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+    const auth = useAuthState();
+    return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
+}
+
+// Internal hook for auth state
+function useAuthState() {
     const [user, setUser] = React.useState<UserData | null>(currentUser);
 
     React.useEffect(() => {
@@ -123,4 +132,13 @@ export function useAuth() {
         createWorkerAccount,
         isAuthenticated: !!user
     };
+}
+
+// React hook for auth
+export function useAuth() {
+    const context = React.useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
 }
