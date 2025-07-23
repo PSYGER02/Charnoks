@@ -40,9 +40,13 @@ service cloud.firestore {
     match /inventoryLogs/{logId} { allow read, write: if false; }
     
     // Users collection - workers can read their own document, owners can read/write all
-    match /users/{userId} { 
+    match /users/{userId} {
+      // Allow users to read their own document
       allow read: if isWorker() && request.auth.uid == userId;
-      allow write: if false; // Only backend functions can write user documents
+      // Allow users to create their own document if it doesn't exist
+      allow create: if request.auth != null && request.auth.uid == userId && !exists(/databases/$(database)/documents/users/$(userId));
+      // Only backend functions can update/delete user documents
+      allow update, delete: if false;
     }
   }
 }
