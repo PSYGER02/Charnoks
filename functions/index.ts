@@ -5,6 +5,13 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+// Import our enhanced utilities
+import { ErrorHandler, AppError } from '../utils/errorHandler';
+import { saleValidator, expenseValidator, productValidator, userValidator } from '../utils/validation';
+import { performanceMonitor, monitorFunction } from '../utils/monitoring';
+import { only } from 'node:test';
+import { only } from 'node:test';
+
 // Initialize Firebase Admin
 initializeApp();
 const auth = getAuth();
@@ -31,18 +38,30 @@ const getGeminiApiKey = () => {
 
 const genAI = new GoogleGenerativeAI(getGeminiApiKey());
 
-// Helper function to verify user role
+// Enhanced helper function to verify user role with better error handling
 const verifyRole = (context: any, requiredRole: 'owner' | 'worker' | 'any') => {
   if (!context.auth) {
-    throw new HttpsError('unauthenticated', 'User must be authenticated');
+    throw ErrorHandler.handleBusinessLogicError(
+      'unauthenticated',
+      'User must be authenticated to perform this action',
+      { requiredRole, operation: 'role_verification' }
+    );
   }
 
   const userRole = context.auth.token?.role;
   if (requiredRole !== 'any' && userRole !== requiredRole) {
-    throw new HttpsError('permission-denied', `Access denied. Required role: ${requiredRole}`);
+    throw ErrorHandler.handleBusinessLogicError(
+      'permission-denied',
+      `Access denied. Required role: ${requiredRole}`,
+      { requiredRole, currentRole: userRole, userId: context.auth.uid }
+    );
   }
 
-  return { uid: context.auth.uid, role: userRole, name: context.auth.token?.name || 'Unknown' };
+  return { 
+    uid: context.auth.uid, 
+    role: userRole, 
+    name: context.auth.token?.name || context.auth.token?.displayName || 'Unknown' 
+  };
 };
 
 // 1. Auto-assign default role when user is created
@@ -91,23 +110,30 @@ export const setUserRole = onCall(async (request) => {
     throw new HttpsError('internal', 'Failed to update user role');
   }
 });
-// 3.
- Record a sale(transactional)
-export const recordSale = onCall(async (request) => {
-  const { items, payment } = request.data;
-  const user = verifyRole(request, 'any'); // Both owner and worker can record sales
-
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    throw new HttpsError('invalid-argument', 'Items array is required and cannot be empty');
-  }
-
-  if (!payment || typeof payment !== 'number' || payment < 0) {
-    throw new HttpsError('invalid-argument', 'Valid payment amount is required');
-  }
-
+// 3. Record a sale (transactional) - Enhanced with validation and monitoring
+export const recordSale = onCall(monitorFunction('recordSale', async (request) => {
+  const timerId = performanceMonitor.startTimer('recordSale_validation');
+  
   try {
+    const { items, payment } = request.data;
+    const user = verifyRole(request, 'any'); // Both owner and worker can record sales
+
+    // Validate sale data using our validation system
+    const validationResult = saleValidator.validate({ items, payment });
+    if (!validationResult.isValid) {
+      performanceMonitor.endTimer(timerId, false, 'validation_failed');
+      throw ErrorHandler.handleValidationError(validationResult.errors, {
+        operation: 'recordSale',
+        userId: user.uid
+      });
+    }
+
+    performanceMonitor.endTimer(timerId, true);
+
+    const transactionTimerId = performanceMonitor.startTimer('recordSale_transaction');
+
     const result = await db.runTransaction(async (transaction) => {
-      const productRefs = items.map(item => db.collection('products').doc(item.productId));
+      const productRefs = items.map((item: any) => db.collection('products').doc(item.productId));
       const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
 
       // Verify stock and calculate total
@@ -119,13 +145,27 @@ export const recordSale = onCall(async (request) => {
         const productDoc = productDocs[i];
 
         if (!productDoc.exists) {
-          throw new HttpsError('not-found', `Product ${item.productId} not found`);
+          throw ErrorHandler.handleBusinessLogicError(
+            'product-not-found',
+            `Product ${item.productId} not found`,
+            { productId: item.productId, userId: user.uid }
+          );
         }
 
         const product = productDoc.data()!;
 
         if (product.stock < item.quantity) {
-          throw new HttpsError('failed-precondition', `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`);
+          throw ErrorHandler.handleBusinessLogicError(
+            'insufficient-stock',
+            `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
+            { 
+              productId: item.productId,
+              productName: product.name,
+              availableStock: product.stock,
+              requestedQuantity: item.quantity,
+              userId: user.uid
+            }
+          );
         }
 
         // Update stock
@@ -146,6 +186,15 @@ export const recordSale = onCall(async (request) => {
 
       const change = payment - total;
 
+      // Validate that payment is sufficient
+      if (change < 0) {
+        throw ErrorHandler.handleBusinessLogicError(
+          'insufficient-payment',
+          `Payment insufficient. Total: ${total.toFixed(2)}, Payment: ${payment.toFixed(2)}`,
+          { total, payment, shortfall: Math.abs(change), userId: user.uid }
+        );
+      }
+
       // Create sale record
       const saleRef = db.collection('sales').doc();
       transaction.set(saleRef, {
@@ -161,30 +210,41 @@ export const recordSale = onCall(async (request) => {
       return { saleId: saleRef.id, total, change };
     });
 
-    return { success: true, saleId: result.saleId };
-  } catch (error) {
-    console.error('Error recording sale:', error);
-    if (error instanceof HttpsError) {
+    performanceMonitor.endTimer(transactionTimerId, true);
+    performanceMonitor.logMetric('sale_recorded', 1, {
+      userId: user.uid,
+      itemCount: items.length.toString(),
+      total: result.total.toString()
+    });
+
+    return ErrorHandler.createSuccessResponse({ saleId: result.saleId });
+    
+  } catch (error: any) {
+    if (error instanceof AppError) {
       throw error;
     }
-    throw new HttpsError('internal', 'Failed to record sale');
+    throw ErrorHandler.handleSystemError(error, {
+      operation: 'recordSale',
+      userId: request.auth?.uid
+    });
   }
-});
+}));
 
-// 4. Record an expense
-export const recordExpense = onCall(async (request) => {
-  const { amount, description } = request.data;
-  const user = verifyRole(request, 'any'); // Both owner and worker can record expenses
-
-  if (!amount || typeof amount !== 'number' || amount <= 0) {
-    throw new HttpsError('invalid-argument', 'Valid amount is required');
-  }
-
-  if (!description || typeof description !== 'string' || description.trim().length === 0) {
-    throw new HttpsError('invalid-argument', 'Description is required');
-  }
-
+// 4. Record an expense - Enhanced with validation and monitoring
+export const recordExpense = onCall(monitorFunction('recordExpense', async (request) => {
   try {
+    const { amount, description } = request.data;
+    const user = verifyRole(request, 'any'); // Both owner and worker can record expenses
+
+    // Validate expense data using our validation system
+    const validationResult = expenseValidator.validate({ amount, description });
+    if (!validationResult.isValid) {
+      throw ErrorHandler.handleValidationError(validationResult.errors, {
+        operation: 'recordExpense',
+        userId: user.uid
+      });
+    }
+
     const expenseRef = await db.collection('expenses').add({
       workerId: user.uid,
       workerName: user.name,
@@ -193,31 +253,42 @@ export const recordExpense = onCall(async (request) => {
       description: description.trim()
     });
 
-    return { success: true, expenseId: expenseRef.id };
-  } catch (error) {
-    console.error('Error recording expense:', error);
-    throw new HttpsError('internal', 'Failed to record expense');
+    performanceMonitor.logMetric('expense_recorded', 1, {
+      userId: user.uid,
+      amount: amount.toString()
+    });
+
+    return ErrorHandler.createSuccessResponse({ expenseId: expenseRef.id });
+    
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw ErrorHandler.handleSystemError(error, {
+      operation: 'recordExpense',
+      userId: request.auth?.uid
+    });
   }
-});
+}));
 
-// 5. Add a product (owner only)
-export const addProduct = onCall(async (request) => {
-  const { name, price, stock, category, imageUrl } = request.data;
-  verifyRole(request, 'owner');
-
-  if (!name || !price || stock === undefined || !category) {
-    throw new HttpsError('invalid-argument', 'Name, price, stock, and category are required');
-  }
-
-  if (typeof price !== 'number' || price <= 0) {
-    throw new HttpsError('invalid-argument', 'Price must be a positive number');
-  }
-
-  if (typeof stock !== 'number' || stock < 0) {
-    throw new HttpsError('invalid-argument', 'Stock must be a non-negative number');
-  }
-
+// 5. Add a product (owner only) - Enhanced with validation and monitoring
+export const addProduct = onCall(monitorFunction('addProduct', async (request) => {
   try {
+    const { name, price, stock, category, imageUrl } = request.data;
+    const user = verifyRole(request, 'owner');
+
+    // Validate product data using our validation system
+    const validationResult = productValidator.validate({
+      name, price, stock, category, imageUrl
+    });
+    
+    if (!validationResult.isValid) {
+      throw ErrorHandler.handleValidationError(validationResult.errors, {
+        operation: 'addProduct',
+        userId: user.uid
+      });
+    }
+
     const productRef = await db.collection('products').add({
       name: name.trim(),
       price: parseFloat(price.toFixed(2)),
@@ -228,12 +299,24 @@ export const addProduct = onCall(async (request) => {
       createdAt: Timestamp.now()
     });
 
-    return { success: true, productId: productRef.id };
-  } catch (error) {
-    console.error('Error adding product:', error);
-    throw new HttpsError('internal', 'Failed to add product');
+    performanceMonitor.logMetric('product_added', 1, {
+      userId: user.uid,
+      category: category.trim(),
+      price: price.toString()
+    });
+
+    return ErrorHandler.createSuccessResponse({ productId: productRef.id });
+    
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw ErrorHandler.handleSystemError(error, {
+      operation: 'addProduct',
+      userId: request.auth?.uid
+    });
   }
-});/
+}));/
   / 6. Get owner dashboard data
 export const getOwnerDashboard = onCall(async (request) => {
   verifyRole(request, 'owner');
@@ -1214,5 +1297,179 @@ export const generateBusinessReport = onCall(async (request) => {
   } catch (error) {
     console.error('Error generating business report:', error);
     throw new HttpsError('internal', 'Failed to generate business report');
+  }
+});
+
+// System Health Monitoring Functions
+
+// Health check endpoint
+export const healthCheck = onCall(monitorFunction('healthCheck', async (request) => {
+  try {
+    const startTime = Date.now();
+    
+    // Test database connectivity
+    const testDoc = await db.collection('_health').doc('test').get();
+    const dbLatency = Date.now() - startTime;
+    
+    // Test authentication service
+    const authStartTime = Date.now();
+    try {
+      await auth.listUsers(1);
+    } catch (error) {
+      // Auth service might have restrictions, but we can still check if it's responding
+    }
+    const authLatency = Date.now() - authStartTime;
+    
+    // Get system metrics
+    const systemHealth = performanceMonitor.getSystemHealth();
+    
+    const healthData = {
+      status: 'healthy',
+      timestamp: Date.now(),
+      services: {
+        database: {
+          status: 'healthy',
+          latency: dbLatency
+        },
+        auth: {
+          status: 'healthy',
+          latency: authLatency
+        },
+        functions: {
+          status: 'healthy',
+          uptime: systemHealth.uptime
+        }
+      },
+      metrics: {
+        uptime: systemHealth.uptime,
+        memoryUsage: systemHealth.memoryUsage,
+        errorRate: systemHealth.errorRate,
+        averageResponseTime: systemHealth.averageResponseTime
+      }
+    };
+    
+    return ErrorHandler.createSuccessResponse(healthData);
+    
+  } catch (error: any) {
+    const healthData = {
+      status: 'unhealthy',
+      timestamp: Date.now(),
+      error: error.message,
+      services: {
+        database: { status: 'unknown' },
+        auth: { status: 'unknown' },
+        functions: { status: 'degraded' }
+      }
+    };
+    
+    return ErrorHandler.createSuccessResponse(healthData);
+  }
+}));
+
+// Performance metrics endpoint
+export const getPerformanceMetrics = onCall(async (request) => {
+  const user = verifyRole(request, 'owner'); // Only owners can access metrics
+  
+  try {
+    const systemHealth = performanceMonitor.getSystemHealth();
+    const performanceSummary = performanceMonitor.getPerformanceSummary();
+    const recentMetrics = performanceMonitor.getRecentMetrics(10);
+    
+    const metricsData = {
+      systemHealth,
+      performanceSummary,
+      recentMetrics,
+      timestamp: Date.now()
+    };
+    
+    return ErrorHandler.createSuccessResponse(metricsData);
+    
+  } catch (error: any) {
+    throw ErrorHandler.handleSystemError(error, {
+      operation: 'getPerformanceMetrics',
+      userId: user.uid
+    });
+  }
+});
+
+// System status dashboard data
+export const getSystemStatus = onCall(async (request) => {
+  const user = verifyRole(request, 'owner');
+  
+  try {
+    const now = Date.now();
+    const oneHourAgo = now - (60 * 60 * 1000);
+    
+    // Get recent sales count
+    const recentSalesQuery = await db.collection('sales')
+      .where('date', '>=', Timestamp.fromMillis(oneHourAgo))
+      .get();
+    
+    // Get recent expenses count  
+    const recentExpensesQuery = await db.collection('expenses')
+      .where('date', '>=', Timestamp.fromMillis(oneHourAgo))
+      .get();
+    
+    // Get active products count
+    const activeProductsQuery = await db.collection('products')
+      .where('isActive', '==', true)
+      .get();
+    
+    // Get low stock products
+    const lowStockQuery = await db.collection('products')
+      .where('isActive', '==', true)
+      .where('stock', '<=', 10)
+      .get();
+    
+    // Get system health
+    const systemHealth = performanceMonitor.getSystemHealth();
+    
+    const statusData = {
+      timestamp: now,
+      activity: {
+        recentSales: recentSalesQuery.size,
+        recentExpenses: recentExpensesQuery.size,
+        activeProducts: activeProductsQuery.size,
+        lowStockProducts: lowStockQuery.size
+      },
+      system: {
+        uptime: systemHealth.uptime,
+        memoryUsage: systemHealth.memoryUsage,
+        errorRate: systemHealth.errorRate,
+        averageResponseTime: systemHealth.averageResponseTime,
+        activeConnections: systemHealth.activeConnections
+      },
+      alerts: []
+    };
+    
+    // Generate alerts
+    if (systemHealth.errorRate > 5) {
+      statusData.alerts.push({
+        type: 'warning',
+        message: `High error rate: ${systemHealth.errorRate.toFixed(2)}%`
+      });
+    }
+    
+    if (systemHealth.averageResponseTime > 1000) {
+      statusData.alerts.push({
+        type: 'warning', 
+        message: `Slow response time: ${systemHealth.averageResponseTime.toFixed(0)}ms`
+      });
+    }
+    
+    if (lowStockQuery.size > 0) {
+      statusData.alerts.push({
+        type: 'info',
+        message: `${lowStockQuery.size} products are low in stock`
+      });
+    }
+    
+    return ErrorHandler.createSuccessResponse(statusData);
+    
+  } catch (error: any) {
+    throw ErrorHandler.handleSystemError(error, {
+      operation: 'getSystemStatus',
+      userId: user.uid
+    });
   }
 });
