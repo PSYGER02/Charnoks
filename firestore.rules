@@ -39,10 +39,10 @@ service cloud.firestore {
     match /notes/{noteId} { allow read, write: if false; }
     match /inventoryLogs/{logId} { allow read, write: if false; }
     
-    // Users collection - workers can read their own document, owners can read/write all
+    // Users collection - allow any authenticated user to read their own document
     match /users/{userId} {
-      // Allow users to read their own document
-      allow read: if isWorker() && request.auth.uid == userId;
+      // Allow any authenticated user to read their own document (needed for role lookup)
+      allow read: if request.auth != null && request.auth.uid == userId;
       // Allow users to create their own document if it doesn't exist
       allow create: if request.auth != null && request.auth.uid == userId && !exists(/databases/$(database)/documents/users/$(userId));
       // Only backend functions can update/delete user documents
