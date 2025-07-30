@@ -31,23 +31,55 @@ onAuthStateChanged(auth, async (user) => {
         currentUser = null;
         notifyAuthStateChange(null);
     }
-});
+}); 
+
 
 // Helper to get user data including role
 async function getUserData(user: User): Promise<UserData> {
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
-    const userData = userDoc.data();
-    
-    if (!userData?.role) {
-        throw new Error('User role not found');
+    try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        
+        if (!userData?.role) {
+            // If no role in Firestore, check custom claims
+            const idTokenResult = await user.getIdTokenResult();
+            const role = idTokenResult.claims.role as 'owner' | 'worker';
+            
+            if (!role) {
+                // Default to owner for first-time users
+                console.log('No role found, defaulting to owner');
+                return {
+                    uid: user.uid,
+                    email: user.email,
+                    role: 'owner',
+                    displayName: user.displayName || user.email?.split('@')[0] || 'User'
+                };
+            }
+            
+            return {
+                uid: user.uid,
+                email: user.email,
+                role: role,
+                displayName: user.displayName || user.email?.split('@')[0] || 'User'
+            };
+        }
+        
+        return {
+            uid: user.uid,
+            email: user.email,
+            role: userData.role,
+            displayName: userData?.displayName || user.email?.split('@')[0] || 'User'
+        };
+    } catch (error) {
+        console.error('Error getting user data:', error);
+        // Fallback: assume owner role if we can't read from Firestore
+        return {
+            uid: user.uid,
+            email: user.email,
+            role: 'owner', // Default fallback
+            displayName: user.displayName || user.email?.split('@')[0] || 'User'
+        };
     }
-    
-    return {
-        uid: user.uid,
-        email: user.email,
-        role: userData.role, // Don't use default role
-        displayName: userData?.displayName || user.email?.split('@')[0] || 'User'
-    };
 }
 
 // Sign up new owner account
