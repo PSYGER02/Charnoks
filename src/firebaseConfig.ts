@@ -16,8 +16,18 @@ const firebaseConfig = {
 
 // Validate configuration
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "undefined") {
+    console.error("Firebase configuration is missing. Environment variables:", {
+        apiKey: firebaseConfig.apiKey ? "SET" : "MISSING",
+        authDomain: firebaseConfig.authDomain ? "SET" : "MISSING",
+        projectId: firebaseConfig.projectId ? "SET" : "MISSING"
+    });
     throw new Error("Firebase configuration is missing. Ensure environment variables are set in Vercel.");
 }
+
+console.log("Firebase config loaded successfully:", {
+    projectId: firebaseConfig.projectId,
+    authDomain: firebaseConfig.authDomain
+});
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
