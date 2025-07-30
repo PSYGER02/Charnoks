@@ -4,6 +4,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import * as cors from 'cors';
 
 // Import our enhanced utilities
 import { ErrorHandler, AppError } from '../utils/errorHandler';
@@ -16,6 +17,14 @@ import { only } from 'node:test';
 initializeApp();
 const auth = getAuth();
 const db = getFirestore();
+
+// Configure CORS
+const corsHandler = cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+});
 
 // Initialize Gemini AI
 // For local development, use .env file
@@ -316,9 +325,12 @@ export const addProduct = onCall(monitorFunction('addProduct', async (request) =
       userId: request.auth?.uid
     });
   }
-}));/
-  / 6. Get owner dashboard data
-export const getOwnerDashboard = onCall(async (request) => {
+}));
+
+// 6. Get owner dashboard data
+export const getOwnerDashboard = onCall({
+  cors: corsHandler
+}, async (request) => {
   verifyRole(request, 'owner');
 
   try {
@@ -795,7 +807,9 @@ export const getWorkerPerformance = onCall(async (request) => {
 });
 
 // 12. Get all workers list (owner only)
-export const getWorkersList = onCall(async (request) => {
+export const getWorkersList = onCall({
+  cors: corsHandler
+}, async (request) => {
   verifyRole(request, 'owner');
   
   try {
@@ -992,7 +1006,9 @@ export const getSalesAnalytics = onCall(async (request) => {
 });
 
 // 16. Backup data (owner only)
-export const backupData = onCall(async (request) => {
+export const backupData = onCall({
+  cors: corsHandler
+}, async (request) => {
   verifyRole(request, 'owner');
   
   try {
