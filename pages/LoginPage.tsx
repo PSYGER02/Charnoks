@@ -30,10 +30,13 @@ const EyeOffIcon = () => (
 );
 
 const LogoIcon = () => (
-    <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" className="text-white">
-        <path d="M12 2L2 8.5v7L12 22l10-6.5v-7L12 2zM3.5 9.75l8.5-5.5 8.5 5.5v4.5l-8.5 5.5-8.5-5.5v-4.5z" opacity={0.5}/>
-        <path d="M12 5.5l-6.5 4.25v1.5L12 15.5l6.5-4.25v-1.5L12 5.5zM4 10v4l8 5 8-5v-4l-8-5-8 5zm2 1.5l6 3.5 6-3.5-6 3.5-6-3.5z"/>
-    </svg>
+    <div className="w-24 h-24 bg-gradient-to-br from-orange-500 to-yellow-500 rounded-2xl flex items-center justify-center shadow-2xl p-2">
+        <img 
+            src="/Charnoks logo-192x192.png" 
+            alt="Charnoks Logo" 
+            className="w-20 h-20 object-contain drop-shadow-lg" 
+        />
+    </div>
 );
 
 const LoginPage: React.FC = () => {
@@ -81,13 +84,35 @@ const LoginPage: React.FC = () => {
     return (
         <div className="min-h-screen w-full flex items-center justify-center p-4">
             <div className="w-full max-w-sm space-y-6">
-                <div className="flex justify-center animate-bounce-in" style={{animationDelay: '100ms'}}>
-                    <LogoIcon />
+                <div className="text-center space-y-4 animate-bounce-in" style={{animationDelay: '100ms'}}>
+                    <div className="flex justify-center">
+                        <LogoIcon />
+                    </div>
+                    
+                    <div>
+                        <div className="flex items-center justify-center gap-3 animate-bounce-in" style={{animationDelay: '150ms'}}>
+                            <img 
+                                src="/Charnoks logo-192x192.png" 
+                                alt="Charnoks" 
+                                className="w-12 h-12 object-contain drop-shadow-lg" 
+                            />
+                            <h1 className="text-5xl font-bold brand-title">
+                                CHARNOKS
+                            </h1>
+                        </div>
+                        <p className="text-lg brand-subtitle mt-2 animate-bounce-in" style={{animationDelay: '200ms'}}>
+                            Point of Sale System
+                        </p>
+                        <p className="text-sm text-white/70 mt-1 animate-bounce-in" style={{animationDelay: '250ms'}}>
+                            🍗 Special Fried Chicken & More
+                        </p>
+                    </div>
                 </div>
 
-                <h2 className="text-3xl font-bold text-center text-white animate-bounce-in" style={{animationDelay: '200ms'}}>Account Login</h2>
+                <h2 className="text-2xl font-semibold text-center text-white animate-bounce-in" style={{animationDelay: '300ms'}}>✨ Welcome Back</h2>
+                <p className="text-center text-white/80 animate-bounce-in" style={{animationDelay: '350ms'}}>Sign in to manage your Charnoks restaurant</p>
 
-                <form className="space-y-5 animate-bounce-in" style={{animationDelay: '300ms'}} onSubmit={handleLogin}>
+                <form className="space-y-5 animate-bounce-in" style={{animationDelay: '400ms'}} onSubmit={handleLogin}>
                     <div>
                         <label htmlFor="email-address" className="sr-only">Username or Email address</label>
                          <div className="flex items-center bg-accent/20 rounded-lg p-1 border border-transparent focus-within:border-white/50">
@@ -150,7 +175,7 @@ const LoginPage: React.FC = () => {
                     </div>
                 </form>
 
-                <div className="animate-bounce-in" style={{animationDelay: '400ms'}}>
+                <div className="animate-bounce-in" style={{animationDelay: '500ms'}}>
                     <div className="relative my-4">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-border/50"></div>
@@ -180,7 +205,7 @@ const LoginPage: React.FC = () => {
                     </div>
                 </div>
 
-                <p className="text-center text-sm text-white/60 animate-bounce-in" style={{animationDelay: '500ms'}}>
+                <p className="text-center text-sm text-white/60 animate-bounce-in" style={{animationDelay: '600ms'}}>
                     Don't have an account? <ReactRouterDOM.Link to="/signup" className="font-medium text-white/80 hover:text-white">Sign Up</ReactRouterDOM.Link>
                 </p>
             </div>

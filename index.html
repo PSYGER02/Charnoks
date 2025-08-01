@@ -3,17 +3,53 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>" />
+  <link rel="icon" type="image/png" href="/Charnoks logo-192x192.png" />
+  <link rel="manifest" href="/manifest.json" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Sari POS - AI Enhanced</title>
+  <meta name="theme-color" content="#db4e2a" />
+  <title>CHARNOKS - Point of Sale System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap"
     rel="stylesheet">
   <style>
     :root {
       --font-sans: 'Poppins', sans-serif;
+      --font-brand: 'Orbitron', monospace;
+      --font-display: 'Rajdhani', sans-serif;
+    }
+
+    /* CHARNOKS Brand Styling */
+    .brand-title {
+      font-family: var(--font-brand);
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #ff6b35, #f7931e, #ffcc02);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(255, 107, 53, 0.5);
+      position: relative;
+    }
+
+    .brand-title::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, #ff6b35, #f7931e, #ffcc02);
+      border-radius: 1px;
+    }
+
+    .brand-subtitle {
+      font-family: var(--font-display);
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      color: rgba(255, 255, 255, 0.9);
     }
 
     body {

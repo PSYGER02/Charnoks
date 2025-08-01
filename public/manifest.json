@@ -1,0 +1,26 @@
+{
+  "name": "CHARNOKS - Point of Sale System",
+  "short_name": "CHARNOKS POS",
+  "description": "Special Fried Chicken & More - Restaurant Management System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#db4e2a",
+  "theme_color": "#db4e2a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/Charnoks logo-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Charnoks logo-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "food"],
+  "lang": "en"
+}

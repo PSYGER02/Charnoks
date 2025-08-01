@@ -31,7 +31,14 @@ export const WorkerLayout: React.FC<{ children: React.ReactNode }> = ({ children
       `}
     >
       <div className="flex items-center justify-between mb-6 h-16">
-       <h1 className="text-2xl font-bold text-text-primary tracking-wider">Sari POS</h1>
+       <div className="flex items-center gap-2">
+         <img 
+           src="/Charnoks logo-192x192.png" 
+           alt="Charnoks" 
+           className="w-8 h-8 object-contain" 
+         />
+         <h1 className="text-2xl font-bold text-text-primary tracking-wider brand-title">CHARNOKS</h1>
+       </div>
         <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-text-secondary p-2 -mr-2">
            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
