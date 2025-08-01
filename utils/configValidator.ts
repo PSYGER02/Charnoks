@@ -38,21 +38,20 @@ export class ConfigValidator {
    * Validate Firebase configuration
    */
   static validateFirebase(): ConfigValidationResult {
-    const requiredKeys = [
-      'VITE_FIREBASE_API_KEY',
-      'VITE_FIREBASE_AUTH_DOMAIN',
-      'VITE_FIREBASE_PROJECT_ID',
-      'VITE_FIREBASE_STORAGE_BUCKET',
-      'VITE_FIREBASE_MESSAGING_SENDER_ID',
-      'VITE_FIREBASE_APP_ID'
-    ];
+    const envVars = {
+      'VITE_FIREBASE_API_KEY': import.meta.env.VITE_FIREBASE_API_KEY,
+      'VITE_FIREBASE_AUTH_DOMAIN': import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      'VITE_FIREBASE_PROJECT_ID': import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      'VITE_FIREBASE_STORAGE_BUCKET': import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      'VITE_FIREBASE_MESSAGING_SENDER_ID': import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      'VITE_FIREBASE_APP_ID': import.meta.env.VITE_FIREBASE_APP_ID
+    };
 
     const missingKeys: string[] = [];
     const invalidKeys: string[] = [];
     const details: Record<string, any> = {};
 
-    requiredKeys.forEach(key => {
-      const value = import.meta.env[key];
+    Object.entries(envVars).forEach(([key, value]) => {
       const present = !!value;
       const valid = present && value !== 'undefined' && !value.includes('your_') && value.length > 10;
 
@@ -85,7 +84,7 @@ export class ConfigValidator {
    */
   static validateGemini(): ConfigValidationResult {
     const key = 'GEMINI_API_KEY';
-    const value = import.meta.env[key];
+    const value = import.meta.env.GEMINI_API_KEY;
     const present = !!value;
     const valid = present && value !== 'undefined' && !value.includes('your_') && value.startsWith('AI');
 
@@ -199,7 +198,20 @@ export class ConfigValidator {
       suggestions.push('For Vercel deployment, add environment variables in Vercel dashboard');
     }
 
-    if (invalidKeys.some(key => import.meta.env[key]?.includes('your_'))) {
+    // Check for placeholder values without dynamic key access
+    const hasPlaceholders = invalidKeys.some(key => {
+      const envVars = {
+        'VITE_FIREBASE_API_KEY': import.meta.env.VITE_FIREBASE_API_KEY,
+        'VITE_FIREBASE_AUTH_DOMAIN': import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+        'VITE_FIREBASE_PROJECT_ID': import.meta.env.VITE_FIREBASE_PROJECT_ID,
+        'VITE_FIREBASE_STORAGE_BUCKET': import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+        'VITE_FIREBASE_MESSAGING_SENDER_ID': import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+        'VITE_FIREBASE_APP_ID': import.meta.env.VITE_FIREBASE_APP_ID
+      };
+      return envVars[key as keyof typeof envVars]?.includes('your_');
+    });
+
+    if (hasPlaceholders) {
       suggestions.push('Replace placeholder values (your_api_key_here) with actual values');
     }
 
@@ -213,6 +225,11 @@ export class ConfigValidator {
       suggestions.push('Get a Gemini API key from Google AI Studio');
       suggestions.push('Add GEMINI_API_KEY to your .env.local file');
       suggestions.push('For Vercel deployment, add GEMINI_API_KEY in environment variables');
+    }
+
+    // Check for placeholder values in Gemini key
+    if (invalidKeys.includes('GEMINI_API_KEY') && import.meta.env.GEMINI_API_KEY?.includes('your_')) {
+      suggestions.push('Replace placeholder Gemini API key with actual key from Google AI Studio');
     }
 
     return suggestions;
