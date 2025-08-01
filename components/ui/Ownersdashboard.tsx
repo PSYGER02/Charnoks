@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import KPICard from '../ui/KPI_Card';
 import ChartContainer from '../charts/ChartContainer';
 import { getOwnerDashboard } from '../../services/firebaseService';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
 import CreateWorkerForm from '../CreateWorkerForm';
 import Spinner from '../ui/Spinner';
+import ConfigurationStatus from '../ui/ConfigurationStatus';
+import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
 
 interface CustomizedLabelProps {
     cx: number;
@@ -15,48 +17,54 @@ interface CustomizedLabelProps {
     percent: number;
 }
 
+// Default empty data structure for new users
+const getEmptyDashboardData = () => ({
+    totalRevenue: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    transactions: 0,
+    salesTrend: [
+        { name: 'Mon', sales: 0 },
+        { name: 'Tue', sales: 0 },
+        { name: 'Wed', sales: 0 },
+        { name: 'Thu', sales: 0 },
+        { name: 'Fri', sales: 0 },
+        { name: 'Sat', sales: 0 },
+        { name: 'Sun', sales: 0 }
+    ],
+    topProducts: [
+        { name: 'No products yet', value: 1 }
+    ]
+});
+
 const Ownersdashboard: React.FC = () => {
-    const [dashboardData, setDashboardData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [showWorkerForm, setShowWorkerForm] = useState(false);
+    const [showConfigStatus, setShowConfigStatus] = useState(false);
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                const data = await getOwnerDashboard();
-                setDashboardData(data);
-            } catch (err: any) {
-                setError(err.message || 'Failed to load dashboard data');
-                console.error('Dashboard error:', err);
-            } finally {
-                setLoading(false);
+    const { loadingState, reload, refresh } = useEnhancedDataLoading(
+        () => getOwnerDashboard(),
+        {
+            cacheKey: 'owner-dashboard',
+            cacheDuration: 2 * 60 * 1000, // 2 minutes
+            autoRefresh: false, // Don't auto-refresh for new users
+            maxRetries: 2, // Reduce retries to fail faster
+            onError: (error) => {
+                console.error('Dashboard loading error:', error);
+                // For new users, we'll show empty data instead of errors
             }
-        };
+        }
+    );
 
-        fetchDashboardData();
-    }, []);
+    // Get dashboard data or use empty data for new users
+    const dashboardData = loadingState.data || getEmptyDashboardData();
+    const isLoading = loadingState.loading && !loadingState.data;
+    const hasError = loadingState.error && !loadingState.data;
 
-    if (loading) {
+    // Show loading spinner only on initial load
+    if (isLoading) {
         return (
             <div className="flex justify-center items-center h-64">
                 <Spinner size="lg" />
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="bg-red-900/20 text-red-300 text-center p-4 rounded-lg">
-                {error}
-            </div>
-        );
-    }
-
-    if (!dashboardData) {
-        return (
-            <div className="text-center text-text-secondary p-4">
-                No dashboard data available
             </div>
         );
     }
@@ -84,17 +92,71 @@ const Ownersdashboard: React.FC = () => {
 
     return (
         <div className="space-y-8">
+            {/* Error banner for configuration issues (non-blocking) */}
+            {hasError && (
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <span className="text-yellow-400 mr-3">⚠️</span>
+                            <div>
+                                <h3 className="text-yellow-300 font-medium">Unable to load live data</h3>
+                                <p className="text-yellow-400/80 text-sm">
+                                    Showing empty dashboard. Configure your system to see real data.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowConfigStatus(true)}
+                                className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-3 py-1 rounded text-sm transition-colors"
+                            >
+                                Setup
+                            </button>
+                            <button
+                                onClick={reload}
+                                className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-3 py-1 rounded text-sm transition-colors"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Configuration Status */}
+            {showConfigStatus && (
+                <ConfigurationStatus 
+                    showDetails={true}
+                    onConfigurationChange={(isValid) => {
+                        if (isValid) {
+                            setShowConfigStatus(false);
+                            refresh(); // Refresh data when configuration is fixed
+                        }
+                    }}
+                />
+            )}
+
             <header className="animate-bounce-in flex justify-between items-center">
                 <div>
                     <h1 className="text-4xl font-bold text-text-primary">Dashboard</h1>
-                    <p className="text-text-secondary mt-1">Welcome back, Owner!</p>
+                    <p className="text-text-secondary mt-1">
+                        {totalRevenue === 0 ? 'Welcome! Start by adding products and making sales.' : 'Welcome back, Owner!'}
+                    </p>
                 </div>
-                <button
-                    onClick={() => setShowWorkerForm(true)}
-                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-                >
-                    + Create Worker Account
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => setShowConfigStatus(!showConfigStatus)}
+                        className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                    >
+                        ⚙️ System Status
+                    </button>
+                    <button
+                        onClick={() => setShowWorkerForm(true)}
+                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                    >
+                        + Create Worker Account
+                    </button>
+                </div>
             </header>
 
             {/* Worker Creation Modal */}
@@ -120,26 +182,26 @@ const Ownersdashboard: React.FC = () => {
                     title="Total Revenue" 
                     value={`$${totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} 
                     icon="💰" 
-                    trend="+5.2% this month" 
-                    trendDirection="up" 
+                    trend={totalRevenue > 0 ? "+5.2% this month" : "Start making sales to see trends"} 
+                    trendDirection={totalRevenue > 0 ? "up" : undefined} 
                 />
                 <KPICard 
                     title="Net Profit" 
                     value={`$${netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} 
                     icon="📈" 
-                    trend="+3.1% this month" 
-                    trendDirection="up" 
+                    trend={netProfit > 0 ? "+3.1% this month" : "Add expenses to track profit"} 
+                    trendDirection={netProfit > 0 ? "up" : undefined} 
                 />
                 <KPICard 
                     title="Transactions" 
                     value={transactions.toLocaleString()} 
                     icon="🛒" 
-                    trend="-1.4% this month" 
-                    trendDirection="down" 
+                    trend={transactions > 0 ? "Active sales" : "No transactions yet"} 
+                    trendDirection={transactions > 0 ? "up" : undefined} 
                 />
                 <KPICard 
                     title="Top Product" 
-                    value={topProducts[0]?.name || 'No sales yet'} 
+                    value={totalRevenue > 0 ? (topProducts[0]?.name || 'No sales yet') : 'Add products first'} 
                     icon="🔥" 
                 />
             </div>
@@ -157,8 +219,15 @@ const Ownersdashboard: React.FC = () => {
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                                 <XAxis dataKey="name" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-                                <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `$${value}`} />
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
+                                <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value: any) => `$${value}`} />
+                                <Tooltip 
+                                    contentStyle={{ 
+                                        backgroundColor: 'rgba(30,41,59,0.8)', 
+                                        border: '1px solid rgba(255,255,255,0.2)', 
+                                        borderRadius: '0.5rem' 
+                                    }} 
+                                    formatter={(value: any) => [`$${value}`, 'Sales']}
+                                />
                                 <Area type="monotone" dataKey="sales" stroke="rgb(var(--primary))" fillOpacity={1} fill="url(#colorSales)" />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -173,7 +242,7 @@ const Ownersdashboard: React.FC = () => {
                                     cx="50%"
                                     cy="50%"
                                     labelLine={false}
-                                    label={renderCustomizedLabel}
+                                    label={totalRevenue > 0 ? renderCustomizedLabel : undefined}
                                     outerRadius={100}
                                     fill="#8884d8"
                                     dataKey="value"
@@ -182,13 +251,47 @@ const Ownersdashboard: React.FC = () => {
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
-                                <Legend iconSize={10} wrapperStyle={{fontSize: '12px', color: 'rgb(var(--text-secondary))', paddingBottom: '20px' }} />
+                                <Tooltip 
+                                    contentStyle={{ 
+                                        backgroundColor: 'rgba(30,41,59,0.8)', 
+                                        border: '1px solid rgba(255,255,255,0.2)', 
+                                        borderRadius: '0.5rem' 
+                                    }} 
+                                />
+                                <Legend 
+                                    iconSize={10} 
+                                    wrapperStyle={{
+                                        fontSize: '12px', 
+                                        color: 'rgb(var(--text-secondary))', 
+                                        paddingBottom: '20px' 
+                                    }} 
+                                />
                             </PieChart>
                         </ResponsiveContainer>
                     </ChartContainer>
                 </div>
             </div>
+
+            {/* Getting Started Guide for New Users */}
+            {totalRevenue === 0 && (
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-6">
+                    <h3 className="text-blue-300 font-semibold mb-3">🚀 Getting Started</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div className="bg-blue-800/20 rounded-lg p-4">
+                            <div className="text-blue-200 font-medium mb-2">1. Add Products</div>
+                            <p className="text-blue-300/80">Go to Products page and add your inventory items with prices and images.</p>
+                        </div>
+                        <div className="bg-blue-800/20 rounded-lg p-4">
+                            <div className="text-blue-200 font-medium mb-2">2. Record Sales</div>
+                            <p className="text-blue-300/80">Use the Sales page to record transactions and track your revenue.</p>
+                        </div>
+                        <div className="bg-blue-800/20 rounded-lg p-4">
+                            <div className="text-blue-200 font-medium mb-2">3. Monitor Growth</div>
+                            <p className="text-blue-300/80">Watch your dashboard come alive with real data and insights!</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

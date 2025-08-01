@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { getProducts, addProduct } from '../services/firebaseService';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Product } from '../types';
+import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 import Spinner from '../components/ui/Spinner';
 
 const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ onProductAdd }) => {
@@ -191,35 +192,27 @@ const ProductList: React.FC<{ products: Product[] }> = ({ products }) => (
 
 
 const ProductsPage: React.FC = () => {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                const fetchedProducts = await getProducts();
-                setProducts(fetchedProducts);
-            } catch (err) {
-                setError('Failed to load products. Please try again later.');
-                console.error(err);
-            } finally {
-                setIsLoading(false);
+    const { loadingState, reload, refresh } = useEnhancedDataLoading(
+        () => getProducts(),
+        {
+            cacheKey: 'products-list',
+            cacheDuration: 3 * 60 * 1000, // 3 minutes
+            autoRefresh: false, // Manual refresh for products
+            maxRetries: 2, // Reduce retries to fail faster
+            onError: (error) => {
+                console.error('Products loading error:', error);
             }
-        };
-        fetchProducts();
-    }, []);
+        }
+    );
 
     const handleProductAdd = (newProduct: Product) => {
-        setProducts(prevProducts => [newProduct, ...prevProducts]);
+        refresh(); // Refresh to get the latest data from server
     };
 
-    if (isLoading) {
-        return <div className="flex justify-center items-center h-64"><Spinner size="lg" /></div>;
-    }
-    if (error) {
-        return <div className="bg-red-900/20 text-red-300 text-center p-4 rounded-lg">{error}</div>;
-    }
+    // Get products data or use empty array for new users
+    const products = loadingState.data || [];
+    const isLoading = loadingState.loading && !loadingState.data;
+    const hasError = loadingState.error && !loadingState.data;
 
     return (
         <div className="space-y-8">
@@ -227,8 +220,91 @@ const ProductsPage: React.FC = () => {
                 <h1 className="text-4xl font-bold text-text-primary">Product Management</h1>
                 <p className="text-text-secondary mt-1">Add new items to your inventory and view existing stock.</p>
             </header>
+            
+            {/* Error banner for configuration issues (non-blocking) */}
+            {hasError && (
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <span className="text-yellow-400 mr-3">⚠️</span>
+                            <div>
+                                <h3 className="text-yellow-300 font-medium">Unable to load products</h3>
+                                <p className="text-yellow-400/80 text-sm">
+                                    You can still add products. Configure your system to sync data.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={reload}
+                            className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-3 py-1 rounded text-sm transition-colors"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            )}
+            
             <ProductForm onProductAdd={handleProductAdd} />
-            <ProductList products={products} />
+            
+            {/* Products List */}
+            <div className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold">Current Products ({products.length})</h2>
+                    {!isLoading && (
+                        <button
+                            onClick={refresh}
+                            className="text-text-secondary hover:text-text-primary transition-colors text-sm"
+                        >
+                            🔄 Refresh
+                        </button>
+                    )}
+                </div>
+                
+                {isLoading ? (
+                    <div className="flex justify-center items-center h-32">
+                        <Spinner size="lg" />
+                    </div>
+                ) : products.length === 0 ? (
+                    <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="text-primary text-2xl">📦</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-text-primary mb-2">No Products Yet</h3>
+                        <p className="text-text-secondary mb-4">
+                            Start building your inventory by adding your first product above.
+                        </p>
+                        <button
+                            onClick={() => {
+                                const form = document.querySelector('form');
+                                if (form) {
+                                    form.scrollIntoView({ behavior: 'smooth' });
+                                    const nameInput = form.querySelector('input[id="product-name"]') as HTMLInputElement;
+                                    if (nameInput) nameInput.focus();
+                                }
+                            }}
+                            className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-colors"
+                        >
+                            Add First Product
+                        </button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto p-1">
+                        {products.map(product => (
+                            <div key={product.id} className="bg-card-bg-solid/50 rounded-xl p-4 border border-border/30 flex flex-col justify-between transition-all hover:shadow-lg hover:border-primary/50 hover:scale-105">
+                                <img src={product.imageUrl} alt={product.name} className="w-full h-32 object-cover rounded-lg mb-3" />
+                                <div>
+                                    <p className="font-bold text-text-primary truncate">{product.name}</p>
+                                    <p className="text-sm text-text-secondary capitalize">{product.category || 'Uncategorized'}</p>
+                                </div>
+                                <div className="flex justify-between items-end mt-3">
+                                    <p className="font-bold text-xl text-primary">${product.price.toFixed(2)}</p>
+                                    <p className="text-sm text-text-secondary font-medium">Stock: {product.stock}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
