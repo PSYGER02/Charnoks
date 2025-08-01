@@ -5,7 +5,6 @@ import { getOwnerDashboard } from '../../services/firebaseService';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
 import CreateWorkerForm from '../CreateWorkerForm';
 import Spinner from '../ui/Spinner';
-import ConfigurationStatus from '../ui/ConfigurationStatus';
 import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
 
 interface CustomizedLabelProps {
@@ -39,7 +38,6 @@ const getEmptyDashboardData = () => ({
 
 const Ownersdashboard: React.FC = () => {
     const [showWorkerForm, setShowWorkerForm] = useState(false);
-    const [showConfigStatus, setShowConfigStatus] = useState(false);
 
     const { loadingState, reload, refresh } = useEnhancedDataLoading(
         () => getOwnerDashboard(),
@@ -92,49 +90,6 @@ const Ownersdashboard: React.FC = () => {
 
     return (
         <div className="space-y-8">
-            {/* Error banner for configuration issues (non-blocking) */}
-            {hasError && (
-                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                            <span className="text-yellow-400 mr-3">⚠️</span>
-                            <div>
-                                <h3 className="text-yellow-300 font-medium">Unable to load live data</h3>
-                                <p className="text-yellow-400/80 text-sm">
-                                    Showing empty dashboard. Configure your system to see real data.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setShowConfigStatus(true)}
-                                className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-3 py-1 rounded text-sm transition-colors"
-                            >
-                                Setup
-                            </button>
-                            <button
-                                onClick={reload}
-                                className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-3 py-1 rounded text-sm transition-colors"
-                            >
-                                Retry
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Configuration Status */}
-            {showConfigStatus && (
-                <ConfigurationStatus 
-                    showDetails={true}
-                    onConfigurationChange={(isValid) => {
-                        if (isValid) {
-                            setShowConfigStatus(false);
-                            refresh(); // Refresh data when configuration is fixed
-                        }
-                    }}
-                />
-            )}
 
             <header className="animate-bounce-in flex justify-between items-center">
                 <div>
@@ -143,20 +98,12 @@ const Ownersdashboard: React.FC = () => {
                         {totalRevenue === 0 ? 'Welcome! Start by adding products and making sales.' : 'Welcome back, Owner!'}
                     </p>
                 </div>
-                <div className="flex gap-3">
-                    <button
-                        onClick={() => setShowConfigStatus(!showConfigStatus)}
-                        className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
-                    >
-                        ⚙️ System Status
-                    </button>
-                    <button
-                        onClick={() => setShowWorkerForm(true)}
-                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-                    >
-                        + Create Worker Account
-                    </button>
-                </div>
+                <button
+                    onClick={() => setShowWorkerForm(true)}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                >
+                    + Create Worker Account
+                </button>
             </header>
 
             {/* Worker Creation Modal */}

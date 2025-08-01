@@ -31,62 +31,64 @@ const CreateWorkerForm: React.FC = () => {
     };
 
     return (
-        <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-4">Create Worker Account</h2>
-            
+        <div className="space-y-4">
             {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-900/20 border border-red-500/30 text-red-300 px-4 py-3 rounded-lg">
                     {error}
                 </div>
             )}
             
             {success && (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                    Worker account created successfully!
+                <div className="bg-green-900/20 border border-green-500/30 text-green-300 px-4 py-3 rounded-lg">
+                    Worker account created successfully! They can now log in with their credentials.
                 </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium mb-1">Name</label>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">Full Name</label>
                     <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
-                        className="w-full p-2 border rounded"
+                        placeholder="Enter worker's full name"
+                        className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium mb-1">Email</label>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">Email Address</label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        className="w-full p-2 border rounded"
+                        placeholder="worker@example.com"
+                        className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary"
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium mb-1">Password</label>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">Password</label>
                     <input
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         minLength={6}
-                        className="w-full p-2 border rounded"
+                        placeholder="Minimum 6 characters"
+                        className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary"
                     />
+                    <p className="text-xs text-text-secondary mt-1">The worker will use this email and password to log in.</p>
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-primary text-white p-2 rounded hover:bg-primary-dark disabled:opacity-50"
+                    className="w-full bg-primary text-white p-3 rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors font-medium"
                 >
-                    {loading ? 'Creating...' : 'Create Worker Account'}
+                    {loading ? 'Creating Account...' : 'Create Worker Account'}
                 </button>
             </form>
         </div>

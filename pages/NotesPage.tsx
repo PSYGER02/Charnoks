@@ -1,14 +1,27 @@
-
 import React, { useState, useMemo } from 'react';
-import { mockNotes } from '../data/mockData';
 import type { Note } from '../types';
 import Spinner from '../components/ui/Spinner';
+import { getNotes } from '../services/firebaseService';
+import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 
 type NoteCategory = Note['category'] | 'All';
 
 const NotesPage: React.FC = () => {
-    const [notes, setNotes] = useState<Note[]>(mockNotes.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Load notes data
+    const { loadingState: notesState, refresh: refreshNotes } = useEnhancedDataLoading(
+        () => getNotes(100),
+        {
+            cacheKey: 'internal-notes',
+            cacheDuration: 5 * 60 * 1000,
+            maxRetries: 2
+        }
+    );
+
+    const notes = notesState.data || [];
+    const isLoading = notesState.loading && !notesState.data;
+    const hasError = notesState.error && !notesState.data;
     
     // Form state
     const [category, setCategory] = useState<Note['category']>('Other');
@@ -21,28 +34,28 @@ const NotesPage: React.FC = () => {
 
     const showAmountField = useMemo(() => category === 'Supply Cost' || category === 'Internal Expense', [category]);
 
-    const handleAddNote = (e: React.FormEvent) => {
+    const handleAddNote = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        const newNote: Note = {
-            id: `note-${Date.now()}`,
-            date: new Date().toISOString(),
-            category,
-            title,
-            description,
-            amount: showAmountField ? parseFloat(amount) : undefined,
-        };
 
-        // Simulate API call
-        setTimeout(() => {
-            setNotes(prev => [newNote, ...prev]);
+        try {
+            // For now, this will show a message that the feature needs backend implementation
+            alert('Note saving feature requires backend implementation. The form works but data won\'t persist yet.');
+            
             // Reset form
             setTitle('');
             setDescription('');
             setAmount('');
             setCategory('Other');
+            
+            // Refresh notes (will still be empty until backend is implemented)
+            refreshNotes();
+        } catch (error) {
+            console.error('Error saving note:', error);
+            alert('Error saving note. Please try again.');
+        } finally {
             setIsSubmitting(false);
-        }, 1000);
+        }
     };
     
     const filteredNotes = useMemo(() => {
@@ -56,9 +69,37 @@ const NotesPage: React.FC = () => {
 
     return (
         <div className="space-y-8">
+            {/* Error banner for data loading issues (non-blocking) */}
+            {hasError && (
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <span className="text-yellow-400 mr-3">⚠️</span>
+                            <div>
+                                <h3 className="text-yellow-300 font-medium">Unable to load notes</h3>
+                                <p className="text-yellow-400/80 text-sm">
+                                    You can still add notes, but they may not persist without proper backend setup.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={refreshNotes}
+                            className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-3 py-1 rounded text-sm transition-colors"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <header className="animate-bounce-in">
                 <h1 className="text-4xl font-bold text-text-primary">Internal Log</h1>
-                <p className="text-text-secondary mt-1">Record internal notes, memos, and expenses.</p>
+                <p className="text-text-secondary mt-1">
+                    {notes.length === 0 ? 
+                        'Record internal notes, memos, and expenses for your business.' :
+                        'Manage your internal notes, memos, and expenses.'
+                    }
+                </p>
             </header>
 
             <div className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg">
@@ -106,35 +147,68 @@ const NotesPage: React.FC = () => {
                         </select>
                     </div>
                 </div>
-                 <div className="overflow-auto max-h-[60vh]">
-                    <table className="w-full text-left table-auto">
-                        <thead className="sticky top-0 bg-card-bg-solid/80 backdrop-blur-sm">
-                            <tr>
-                                <th className="p-3 font-semibold text-text-secondary">Date</th>
-                                <th className="p-3 font-semibold text-text-secondary">Category</th>
-                                <th className="p-3 font-semibold text-text-secondary">Title</th>
-                                <th className="p-3 font-semibold text-text-secondary text-right">Amount</th>
-                                <th className="p-3 font-semibold text-text-secondary text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredNotes.map(note => (
-                                <tr key={note.id} className="border-b border-border/50 hover:bg-white/5 transition-colors">
-                                    <td className="p-3 whitespace-nowrap">{new Date(note.date).toLocaleDateString()}</td>
-                                    <td className="p-3 whitespace-nowrap">
-                                        <span className="px-2 py-1 text-xs font-semibold bg-primary/20 text-primary rounded-full">{note.category}</span>
-                                    </td>
-                                    <td className="p-3 font-medium text-text-primary">{note.title}</td>
-                                    <td className="p-3 text-right font-semibold text-accent whitespace-nowrap">
-                                        {note.amount ? `$${note.amount.toFixed(2)}` : 'N/A'}
-                                    </td>
-                                    <td className="p-3 text-center">
-                                        <button className="text-sm text-text-secondary hover:text-text-primary">View</button>
-                                    </td>
+                
+                <div className="overflow-auto max-h-[60vh]">
+                    {isLoading ? (
+                        <div className="flex justify-center items-center h-32">
+                            <Spinner size="lg" />
+                        </div>
+                    ) : filteredNotes.length === 0 ? (
+                        <div className="text-center py-12">
+                            <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-primary text-2xl">📝</span>
+                            </div>
+                            <h3 className="text-lg font-semibold text-text-primary mb-2">
+                                {notes.length === 0 ? 'No Notes Yet' : 'No notes found for selected category'}
+                            </h3>
+                            <p className="text-text-secondary mb-4">
+                                {notes.length === 0 ? 
+                                    'Start recording internal notes, memos, and expenses using the form above.' :
+                                    'Try selecting a different category to see more notes.'
+                                }
+                            </p>
+                            {notes.length === 0 && (
+                                <button
+                                    onClick={() => {
+                                        const titleInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+                                        if (titleInput) titleInput.focus();
+                                    }}
+                                    className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-colors"
+                                >
+                                    Add First Note
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <table className="w-full text-left table-auto">
+                            <thead className="sticky top-0 bg-card-bg-solid/80 backdrop-blur-sm">
+                                <tr>
+                                    <th className="p-3 font-semibold text-text-secondary">Date</th>
+                                    <th className="p-3 font-semibold text-text-secondary">Category</th>
+                                    <th className="p-3 font-semibold text-text-secondary">Title</th>
+                                    <th className="p-3 font-semibold text-text-secondary text-right">Amount</th>
+                                    <th className="p-3 font-semibold text-text-secondary text-center">Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {filteredNotes.map(note => (
+                                    <tr key={note.id} className="border-b border-border/50 hover:bg-white/5 transition-colors">
+                                        <td className="p-3 whitespace-nowrap">{new Date(note.date).toLocaleDateString()}</td>
+                                        <td className="p-3 whitespace-nowrap">
+                                            <span className="px-2 py-1 text-xs font-semibold bg-primary/20 text-primary rounded-full">{note.category}</span>
+                                        </td>
+                                        <td className="p-3 font-medium text-text-primary">{note.title}</td>
+                                        <td className="p-3 text-right font-semibold text-accent whitespace-nowrap">
+                                            {note.amount ? `$${note.amount.toFixed(2)}` : 'N/A'}
+                                        </td>
+                                        <td className="p-3 text-center">
+                                            <button className="text-sm text-text-secondary hover:text-text-primary">View</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
         </div>

@@ -1,7 +1,9 @@
 
 import React, { useState, PropsWithChildren } from 'react';
 import KPICard from '../components/ui/KPI_Card';
-import { mockWorkers } from '../data/mockData';
+import { getWorkersList } from '../services/firebaseService';
+import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
+import Spinner from '../components/ui/Spinner';
 
 // Reusable CollapsibleSection component for this page
 const CollapsibleSection: React.FC<PropsWithChildren<{ title: string; defaultOpen?: boolean }>> = ({ title, children, defaultOpen = false }) => {
@@ -34,16 +36,58 @@ const CollapsibleSection: React.FC<PropsWithChildren<{ title: string; defaultOpe
 const productTypes = ['Drumstick', 'Thigh', 'Breast', 'Wing', 'Neck', 'Other'];
 
 const StockManagementPage: React.FC = () => {
-    const [stockReceivedToday, setStockReceivedToday] = useState(50);
-    const [stockSentToday, setStockSentToday] = useState(35);
-    const [remainingStock, setRemainingStock] = useState(15);
-    const [selectedBranch, setSelectedBranch] = useState(mockWorkers[0].id);
+    // For new users, show zero values
+    const [stockReceivedToday] = useState(0);
+    const [stockSentToday] = useState(0);
+    const [remainingStock] = useState(0);
+    const [selectedBranch, setSelectedBranch] = useState('');
+
+    // Load workers data
+    const { loadingState: workersState } = useEnhancedDataLoading(
+        () => getWorkersList(),
+        {
+            cacheKey: 'stock-workers',
+            cacheDuration: 10 * 60 * 1000,
+            maxRetries: 2
+        }
+    );
+
+    const workers = workersState.data || [];
+    const isLoading = workersState.loading && !workersState.data;
+    const hasError = workersState.error && !workersState.data;
+
+    // Set default selected branch when workers load
+    React.useEffect(() => {
+        if (workers.length > 0 && !selectedBranch) {
+            setSelectedBranch(workers[0].id);
+        }
+    }, [workers, selectedBranch]);
 
     return (
         <div className="space-y-8">
+            {/* Error banner for data loading issues (non-blocking) */}
+            {hasError && (
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-center">
+                        <span className="text-yellow-400 mr-3">⚠️</span>
+                        <div>
+                            <h3 className="text-yellow-300 font-medium">Unable to load worker data</h3>
+                            <p className="text-yellow-400/80 text-sm">
+                                Stock management forms will work, but worker selection may be limited.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <header className="animate-bounce-in">
                 <h1 className="text-4xl font-bold text-text-primary">Stock Management</h1>
-                <p className="text-text-secondary mt-1">Manage stock from supplier to branch.</p>
+                <p className="text-text-secondary mt-1">
+                    {stockReceivedToday === 0 && stockSentToday === 0 ? 
+                        'Start recording stock movements to track inventory flow.' :
+                        'Manage stock from supplier to branch.'
+                    }
+                </p>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -106,7 +150,11 @@ const StockManagementPage: React.FC = () => {
                         <div>
                             <label className="block text-sm font-medium text-text-secondary mb-1">Select Worker/Branch</label>
                             <select className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary">
-                                {mockWorkers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                {workers.length === 0 ? (
+                                    <option>No workers available - Create worker accounts first</option>
+                                ) : (
+                                    workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)
+                                )}
                             </select>
                         </div>
                         <div>
@@ -134,7 +182,11 @@ const StockManagementPage: React.FC = () => {
                     <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">Select Worker/Branch</label>
                         <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} className="w-full max-w-sm bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary">
-                             {mockWorkers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                             {workers.length === 0 ? (
+                                <option>No workers available</option>
+                             ) : (
+                                workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)
+                             )}
                         </select>
                     </div>
                     <div className="mt-4 overflow-x-auto">
@@ -147,13 +199,30 @@ const StockManagementPage: React.FC = () => {
                                 </tr>
                            </thead>
                            <tbody>
-                                {productTypes.slice(0, 4).map((type, index) => (
-                                     <tr key={type} className="border-b border-border/30">
-                                         <td className="p-3">{type}</td>
-                                         <td className="p-3">{~~(Math.random() * 20) + 5}</td>
-                                         <td className="p-3">{new Date(Date.now() - index * 24 * 3600 * 1000).toLocaleDateString()}</td>
-                                     </tr>
-                                ))}
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={3} className="p-8 text-center">
+                                            <Spinner size="lg" />
+                                        </td>
+                                    </tr>
+                                ) : workers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={3} className="p-8 text-center text-text-secondary">
+                                            <div className="space-y-2">
+                                                <p>No worker/branch data available</p>
+                                                <p className="text-sm">Create worker accounts to track branch stock</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    productTypes.slice(0, 4).map((type) => (
+                                         <tr key={type} className="border-b border-border/30">
+                                             <td className="p-3">{type}</td>
+                                             <td className="p-3 text-text-secondary">0 packs</td>
+                                             <td className="p-3 text-text-secondary">No data yet</td>
+                                         </tr>
+                                    ))
+                                )}
                            </tbody>
                         </table>
                     </div>

@@ -7,8 +7,7 @@ import {
     User
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db, functions } from '../src/firebaseConfig';
-import { httpsCallable } from 'firebase/functions';
+import { auth, db } from '../src/firebaseConfig';
 
 export interface UserData {
     uid: string;
@@ -113,16 +112,45 @@ export async function signOut(): Promise<void> {
     await firebaseSignOut(auth);
 }
 
-// Create worker account (owner only)
+// Create worker account (owner only) - Client-side version
 export async function createWorkerAccount(name: string, email: string, password: string): Promise<UserData> {
     // First check if current user is an owner
     if (!currentUser || currentUser.role !== 'owner') {
         throw new Error('Only owners can create worker accounts');
     }
 
-    const createWorker = httpsCallable(functions, 'createWorkerAccount');
-    const result = await createWorker({ name, email, password });
-    return result.data as UserData;
+    try {
+        // Create the user account using Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Create user document in Firestore with worker role
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+            email,
+            displayName: name,
+            role: 'worker',
+            createdAt: serverTimestamp(),
+            createdBy: currentUser.uid
+        });
+
+        return {
+            uid: userCredential.user.uid,
+            email: userCredential.user.email,
+            role: 'worker',
+            displayName: name
+        };
+    } catch (error: any) {
+        console.error('Error creating worker account:', error);
+        
+        if (error.code === 'auth/email-already-exists') {
+            throw new Error('An account with this email already exists');
+        } else if (error.code === 'auth/invalid-email') {
+            throw new Error('Invalid email address');
+        } else if (error.code === 'auth/weak-password') {
+            throw new Error('Password is too weak (minimum 6 characters)');
+        } else {
+            throw new Error('Failed to create worker account: ' + error.message);
+        }
+    }
 }
 
 // Subscribe to auth state changes

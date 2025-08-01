@@ -68,7 +68,63 @@ exports.onNewUser = onUserCreated(async (event) => {
   }
 });
 
-// 2. Set User Role (owner only)
+// 2. Create Worker Account (owner only)
+exports.createWorkerAccount = onCall(async (data, context) => {
+  try {
+    await assertOwner(context);
+
+    const {name, email, password} = data;
+
+    // Validate input
+    if (!name || !email || !password) {
+      throw new Error('Name, email, and password are required');
+    }
+
+    if (password.length < 6) {
+      throw new Error('Password must be at least 6 characters');
+    }
+
+    // Create the user account
+    const userRecord = await auth.createUser({
+      email: email,
+      password: password,
+      displayName: name,
+    });
+
+    // Set custom claims for the worker role
+    await auth.setCustomUserClaims(userRecord.uid, {role: 'worker'});
+
+    // Create user document in Firestore
+    await db.collection('users').doc(userRecord.uid).set({
+      email: email,
+      displayName: name,
+      role: 'worker',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdBy: context.auth.uid,
+    });
+
+    return {
+      uid: userRecord.uid,
+      email: email,
+      displayName: name,
+      role: 'worker',
+    };
+  } catch (error) {
+    console.error('Error creating worker account:', error);
+
+    if (error.code === 'auth/email-already-exists') {
+      throw new Error('An account with this email already exists');
+    } else if (error.code === 'auth/invalid-email') {
+      throw new Error('Invalid email address');
+    } else if (error.code === 'auth/weak-password') {
+      throw new Error('Password is too weak');
+    } else {
+      throw new Error('Failed to create worker account');
+    }
+  }
+});
+
+// 3. Set User Role (owner only)
 exports.setUserRole = onCall(async (data, context) => {
   try {
     await assertOwner(context);
@@ -88,7 +144,7 @@ exports.setUserRole = onCall(async (data, context) => {
   }
 });
 
-// 3. Record Sale (worker/owner)
+// 4. Record Sale (worker/owner)
 exports.recordSale = onCall(async (data, context) => {
   try {
     assertAuthenticated(context);
@@ -154,7 +210,7 @@ exports.recordSale = onCall(async (data, context) => {
   }
 });
 
-// 4. Parse sale from voice input
+// 5. Parse sale from voice input
 exports.parseSaleFromVoice = onCall(async (data, context) => {
   try {
     assertAuthenticated(context);
@@ -181,7 +237,7 @@ exports.parseSaleFromVoice = onCall(async (data, context) => {
   }
 });
 
-// 5. AI Assistant (owner only)
+// 6. AI Assistant (owner only)
 exports.getAIAssistantResponse = onCall(async (data, context) => {
   try {
     await assertOwner(context);

@@ -139,28 +139,7 @@ const TransactionsPage: React.FC = () => {
 
     return (
         <div className="space-y-8">
-            {/* Error banner for data loading issues (non-blocking) */}
-            {hasError && (
-                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                            <span className="text-yellow-400 mr-3">⚠️</span>
-                            <div>
-                                <h3 className="text-yellow-300 font-medium">Unable to load transaction data</h3>
-                                <p className="text-yellow-400/80 text-sm">
-                                    Showing empty transaction history. Configure your system to see real data.
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={refreshSales}
-                            className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-3 py-1 rounded text-sm transition-colors"
-                        >
-                            Retry
-                        </button>
-                    </div>
-                </div>
-            )}
+
 
             <header className="animate-bounce-in">
                 <h1 className="text-4xl font-bold text-text-primary">Transaction History</h1>
