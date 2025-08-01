@@ -8,24 +8,76 @@ import CompareWorkers from '../components/analysis/CompareWorkers';
 import WorkerInsight from '../components/analysis/WorkerInsight';
 import AIPrediction from '../components/analysis/AIPrediction';
 
-// Existing mock data
-import { mockSales, mockExpenses, mockWorkers, mockProducts } from '../data/mockData';
+// Services
+import { getSales, getExpenses, getWorkersList } from '../services/firebaseService';
+import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
+import Spinner from '../components/ui/Spinner';
 
 export type AnalysisMode = 'home' | 'all-workers' | 'compare-workers' | 'worker-insight' | 'ai-prediction';
 
 const AnalysisPage: React.FC = () => {
     const [mode, setMode] = useState<AnalysisMode>('home');
 
+    // Load data with enhanced error handling
+    const { loadingState: salesState } = useEnhancedDataLoading(
+        () => getSales(100),
+        {
+            cacheKey: 'analysis-sales',
+            cacheDuration: 5 * 60 * 1000, // 5 minutes
+            maxRetries: 2
+        }
+    );
+
+    const { loadingState: expensesState } = useEnhancedDataLoading(
+        () => getExpenses(100),
+        {
+            cacheKey: 'analysis-expenses',
+            cacheDuration: 5 * 60 * 1000,
+            maxRetries: 2
+        }
+    );
+
+    const { loadingState: workersState } = useEnhancedDataLoading(
+        () => getWorkersList(),
+        {
+            cacheKey: 'analysis-workers',
+            cacheDuration: 10 * 60 * 1000, // 10 minutes
+            maxRetries: 2
+        }
+    );
+
+    // Get data or use empty arrays
+    const sales = salesState.data || [];
+    const expenses = expensesState.data || [];
+    const workers = workersState.data || [];
+    const products = []; // Will be loaded separately if needed
+
+    const isLoading = (salesState.loading && !salesState.data) || 
+                     (expensesState.loading && !expensesState.data) || 
+                     (workersState.loading && !workersState.data);
+
+    const hasError = (salesState.error && !salesState.data) || 
+                    (expensesState.error && !expensesState.data) || 
+                    (workersState.error && !workersState.data);
+
     const renderContent = () => {
+        if (isLoading && mode !== 'home') {
+            return (
+                <div className="flex justify-center items-center h-64">
+                    <Spinner size="lg" />
+                </div>
+            );
+        }
+
         switch (mode) {
             case 'all-workers':
-                return <AllWorkersOverview sales={mockSales} expenses={mockExpenses} />;
+                return <AllWorkersOverview sales={sales} expenses={expenses} hasError={hasError} />;
             case 'compare-workers':
-                return <CompareWorkers sales={mockSales} expenses={mockExpenses} workers={mockWorkers} />;
+                return <CompareWorkers sales={sales} expenses={expenses} workers={workers} hasError={hasError} />;
             case 'worker-insight':
-                return <WorkerInsight sales={mockSales} expenses={mockExpenses} workers={mockWorkers} products={mockProducts} />;
+                return <WorkerInsight sales={sales} expenses={expenses} workers={workers} products={products} hasError={hasError} />;
             case 'ai-prediction':
-                return <AIPrediction />;
+                return <AIPrediction sales={sales} hasError={hasError} />;
             case 'home':
             default:
                 return <AnalysisHome setMode={setMode} />;
@@ -46,12 +98,29 @@ const AnalysisPage: React.FC = () => {
 
     return (
         <div className="space-y-6">
+            {/* Error banner for data loading issues (non-blocking) */}
+            {hasError && mode !== 'home' && (
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-center">
+                        <span className="text-yellow-400 mr-3">⚠️</span>
+                        <div>
+                            <h3 className="text-yellow-300 font-medium">Limited data available</h3>
+                            <p className="text-yellow-400/80 text-sm">
+                                Some data couldn't be loaded. Analysis will show available information only.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <header className="animate-bounce-in">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-4xl font-bold text-text-primary">{getPageTitle()}</h1>
                         <p className="text-text-secondary mt-1">
-                            {mode === 'home' ? 'Select an analysis mode to begin.' : 'Dive deep into your business data.'}
+                            {mode === 'home' ? 'Select an analysis mode to begin.' : 
+                             sales.length === 0 && expenses.length === 0 ? 'Start recording sales and expenses to see analysis.' :
+                             'Dive deep into your business data.'}
                         </p>
                     </div>
                     {mode !== 'home' && (

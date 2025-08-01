@@ -1,11 +1,13 @@
 
 import React, { useState, useMemo } from 'react';
-import { mockSales, mockWorkers, mockProducts } from '../data/mockData';
 import type { Sale } from '../types';
+import { getSales, getWorkersList } from '../services/firebaseService';
+import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
+import Spinner from '../components/ui/Spinner';
 
-const TransactionRow: React.FC<{ sale: Sale }> = ({ sale }) => {
+const TransactionRow: React.FC<{ sale: Sale; workers: any[] }> = ({ sale, workers }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const workerName = mockWorkers.find(w => w.id === sale.workerId)?.name || 'Unknown';
+    const workerName = workers.find(w => w.id === sale.workerId)?.name || sale.workerName || 'Unknown';
 
     return (
         <>
@@ -31,11 +33,12 @@ const TransactionRow: React.FC<{ sale: Sale }> = ({ sale }) => {
                         <div className="space-y-2 max-w-md mx-auto">
                              <h4 className="font-bold text-text-primary">Sale Items:</h4>
                              {sale.items.map((item, index) => {
-                                 const productName = mockProducts.find(p => p.id === item.productId)?.name || 'Unknown Product';
+                                 const productName = item.productName || `Product ${item.productId}`;
+                                 const itemPrice = item.price || 0;
                                  return (
                                      <div key={index} className="flex justify-between text-text-secondary text-sm ml-4">
                                          <span>{productName} &times; {item.quantity}</span>
-                                         <span>${(item.price * item.quantity).toFixed(2)}</span>
+                                         <span>${(itemPrice * item.quantity).toFixed(2)}</span>
                                      </div>
                                  );
                              })}
@@ -57,6 +60,32 @@ const TransactionsPage: React.FC = () => {
     const TRANSACTIONS_PER_PAGE = 15;
     type DateFilter = 'all' | 'today' | '7d' | '30d';
 
+    // Load data with enhanced error handling
+    const { loadingState: salesState, refresh: refreshSales } = useEnhancedDataLoading(
+        () => getSales(200), // Load more transactions
+        {
+            cacheKey: 'transactions-sales',
+            cacheDuration: 2 * 60 * 1000, // 2 minutes
+            maxRetries: 2
+        }
+    );
+
+    const { loadingState: workersState } = useEnhancedDataLoading(
+        () => getWorkersList(),
+        {
+            cacheKey: 'transactions-workers',
+            cacheDuration: 10 * 60 * 1000, // 10 minutes
+            maxRetries: 2
+        }
+    );
+
+    // Get data or use empty arrays
+    const sales = salesState.data || [];
+    const workers = workersState.data || [];
+    
+    const isLoading = (salesState.loading && !salesState.data) || (workersState.loading && !workersState.data);
+    const hasError = (salesState.error && !salesState.data) || (workersState.error && !workersState.data);
+
     const dateFilters: { id: DateFilter, label: string }[] = [
         { id: 'all', label: 'All Time' },
         { id: 'today', label: 'Today' },
@@ -65,11 +94,11 @@ const TransactionsPage: React.FC = () => {
     ];
 
     const filteredSales = useMemo(() => {
-        let sales = mockSales;
+        let filteredSales = [...sales];
 
         // Worker filter
         if (workerFilter !== 'all') {
-            sales = sales.filter(sale => sale.workerId === workerFilter);
+            filteredSales = filteredSales.filter(sale => sale.workerId === workerFilter);
         }
 
         // Date filter
@@ -83,11 +112,11 @@ const TransactionsPage: React.FC = () => {
             } else if (dateFilter === '30d') {
                 startDate.setDate(now.getDate() - 30);
             }
-            sales = sales.filter(sale => new Date(sale.date) >= startDate && new Date(sale.date) <= now);
+            filteredSales = filteredSales.filter(sale => new Date(sale.date) >= startDate && new Date(sale.date) <= now);
         }
         
-        return sales;
-    }, [workerFilter, dateFilter]);
+        return filteredSales;
+    }, [sales, workerFilter, dateFilter]);
     
     const sortedSales = useMemo(() => {
         return [...filteredSales].sort((a, b) => {
@@ -110,9 +139,34 @@ const TransactionsPage: React.FC = () => {
 
     return (
         <div className="space-y-8">
+            {/* Error banner for data loading issues (non-blocking) */}
+            {hasError && (
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <span className="text-yellow-400 mr-3">⚠️</span>
+                            <div>
+                                <h3 className="text-yellow-300 font-medium">Unable to load transaction data</h3>
+                                <p className="text-yellow-400/80 text-sm">
+                                    Showing empty transaction history. Configure your system to see real data.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={refreshSales}
+                            className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 px-3 py-1 rounded text-sm transition-colors"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <header className="animate-bounce-in">
                 <h1 className="text-4xl font-bold text-text-primary">Transaction History</h1>
-                <p className="text-text-secondary mt-1">Browse, filter, and sort all past sales.</p>
+                <p className="text-text-secondary mt-1">
+                    {sales.length === 0 ? 'Start recording sales to see transaction history.' : 'Browse, filter, and sort all past sales.'}
+                </p>
             </header>
 
             <div className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg">
@@ -122,7 +176,7 @@ const TransactionsPage: React.FC = () => {
                             <label htmlFor="worker-filter" className="block text-sm font-medium text-text-secondary mb-1">Filter by Worker</label>
                             <select id="worker-filter" value={workerFilter} onChange={e => { setWorkerFilter(e.target.value); setCurrentPage(1); }} className="w-full max-w-xs bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary">
                                 <option value="all">All Workers</option>
-                                {mockWorkers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                             </select>
                         </div>
                         <div>
@@ -142,31 +196,58 @@ const TransactionsPage: React.FC = () => {
                     </div>
                 </div>
                  <div className="overflow-auto max-h-[60vh]">
-                    <table className="w-full text-left table-auto">
-                        <thead className="sticky top-0 bg-card-bg-solid/80 backdrop-blur-sm">
-                            <tr>
-                                <th className="p-3 font-semibold text-text-secondary">
-                                    <button onClick={handleSort} className="flex items-center gap-1 hover:text-text-primary transition-colors">
-                                        Date & Time
-                                        {sortOrder === 'desc' ? '▼' : '▲'}
-                                    </button>
-                                </th>
-                                <th className="p-3 font-semibold text-text-secondary">Worker</th>
-                                <th className="p-3 font-semibold text-text-secondary text-center">Items</th>
-                                <th className="p-3 font-semibold text-text-secondary text-right">Total</th>
-                                <th className="p-3 font-semibold text-text-secondary text-center w-20">Details</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                           {paginatedSales.map(sale => (
-                               <TransactionRow key={sale.id} sale={sale} />
-                           ))}
-                        </tbody>
-                    </table>
-                     {paginatedSales.length === 0 && (
-                        <div className="text-center py-10 text-text-secondary">
-                            <p>No transactions found for the selected filters.</p>
+                    {isLoading ? (
+                        <div className="flex justify-center items-center h-32">
+                            <Spinner size="lg" />
                         </div>
+                    ) : (
+                        <>
+                            <table className="w-full text-left table-auto">
+                                <thead className="sticky top-0 bg-card-bg-solid/80 backdrop-blur-sm">
+                                    <tr>
+                                        <th className="p-3 font-semibold text-text-secondary">
+                                            <button onClick={handleSort} className="flex items-center gap-1 hover:text-text-primary transition-colors">
+                                                Date & Time
+                                                {sortOrder === 'desc' ? '▼' : '▲'}
+                                            </button>
+                                        </th>
+                                        <th className="p-3 font-semibold text-text-secondary">Worker</th>
+                                        <th className="p-3 font-semibold text-text-secondary text-center">Items</th>
+                                        <th className="p-3 font-semibold text-text-secondary text-right">Total</th>
+                                        <th className="p-3 font-semibold text-text-secondary text-center w-20">Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                   {paginatedSales.map(sale => (
+                                       <TransactionRow key={sale.id} sale={sale} workers={workers} />
+                                   ))}
+                                </tbody>
+                            </table>
+                            {paginatedSales.length === 0 && (
+                                <div className="text-center py-12">
+                                    <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span className="text-primary text-2xl">📊</span>
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-text-primary mb-2">
+                                        {sales.length === 0 ? 'No Transactions Yet' : 'No transactions found for the selected filters'}
+                                    </h3>
+                                    <p className="text-text-secondary mb-4">
+                                        {sales.length === 0 ? 
+                                            'Start recording sales to see your transaction history here.' :
+                                            'Try adjusting your filters to see more results.'
+                                        }
+                                    </p>
+                                    {sales.length === 0 && (
+                                        <button
+                                            onClick={() => window.location.href = '/sales'}
+                                            className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-colors"
+                                        >
+                                            Record First Sale
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
                 {totalPages > 1 && (
