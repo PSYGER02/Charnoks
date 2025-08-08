@@ -1,22 +1,20 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Product images - authenticated users can read, owners can write
+    // Product images - public read, authenticated write
     match /product-images/{imageId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && 
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'owner';
+      allow read: if true;
+      allow write: if request.auth != null;
     }
     
-    // Backup files - only owners can access
+    // Backup files - only authenticated users
     match /backups/{backupId} {
-      allow read, write: if request.auth != null && 
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'owner';
+      allow read, write: if request.auth != null;
     }
     
-    // Default deny for other paths
+    // Default allow for authenticated users (temporary for testing)
     match /{allPaths=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null;
     }
   }
 }

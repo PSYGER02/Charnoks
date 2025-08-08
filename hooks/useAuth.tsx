@@ -69,8 +69,14 @@ async function getUserData(user: User): Promise<UserData> {
             role: userData.role,
             displayName: userData?.displayName || user.email?.split('@')[0] || 'User'
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error getting user data:', error);
+        
+        // Handle offline errors gracefully
+        if (error.code === 'failed-precondition' || error.message?.includes('offline')) {
+            console.warn('Firestore is offline, using cached user data or defaults');
+        }
+        
         // Fallback: assume owner role if we can't read from Firestore
         return {
             uid: user.uid,

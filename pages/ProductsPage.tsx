@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { getProducts, addProduct } from '../services/firebaseService';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../src/firebaseConfig';
 import type { Product } from '../types';
 import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 import Spinner from '../components/ui/Spinner';
@@ -77,7 +78,6 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
 
         try {
             // 1. Upload image to Firebase Storage
-            const storage = getStorage();
             const imageRef = ref(storage, `product-images/${Date.now()}-${imageFile.name}`);
             await uploadBytes(imageRef, imageFile);
             const imageUrl = await getDownloadURL(imageRef);

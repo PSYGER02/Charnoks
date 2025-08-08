@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
+import { getStorage } from "firebase/storage";
 
 // .env.VITE_FIREBASE_MESSAGING_SENDER_ID,
 const firebaseConfig = {
@@ -14,7 +15,15 @@ const firebaseConfig = {
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Validate configuration
+// Clean up any malformed values that might have quotes or commas
+if (firebaseConfig.storageBucket) {
+    firebaseConfig.storageBucket = firebaseConfig.storageBucket.replace(/[",]/g, '');
+}
+if (firebaseConfig.projectId) {
+    firebaseConfig.projectId = firebaseConfig.projectId.replace(/[",]/g, '');
+}
+
+// Validate and clean configuration
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "undefined") {
     console.error("Firebase configuration is missing. Environment variables:", {
         apiKey: firebaseConfig.apiKey ? "SET" : "MISSING",
@@ -24,9 +33,11 @@ if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "undefined") {
     throw new Error("Firebase configuration is missing. Ensure environment variables are set in Vercel.");
 }
 
+// Log cleaned configuration for debugging
 console.log("Firebase config loaded successfully:", {
     projectId: firebaseConfig.projectId,
-    authDomain: firebaseConfig.authDomain
+    authDomain: firebaseConfig.authDomain,
+    storageBucket: firebaseConfig.storageBucket
 });
 
 // Initialize Firebase
@@ -36,6 +47,7 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
+export const storage = getStorage(app);
 
 // Enable local emulator only in development with explicit flag
 if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {

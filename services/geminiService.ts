@@ -5,7 +5,7 @@ import type { Sale, ForecastDataPoint, AIInsights, Expense, Product, ParsedSaleF
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
 
 if (!API_KEY) {
-  console.warn("API_KEY environment variable not set. AI features will be disabled.");
+  console.warn("Gemini API_KEY environment variable not set. AI features will be disabled.");
 }
 
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
