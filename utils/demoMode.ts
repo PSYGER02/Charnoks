@@ -1,12 +1,12 @@
 /**
  * Demo Mode Utilities
- * Provides fallback data and demo functionality when Firebase is not available
+ * Provides fallback data and demo functionality when Supabase is not available
  */
 
 export const isDemoMode = () => {
   return import.meta.env.VITE_DEMO_MODE === 'true' || 
-         import.meta.env.VITE_FIREBASE_API_KEY?.includes('demo') ||
-         import.meta.env.VITE_FIREBASE_PROJECT_ID?.includes('demo');
+         !import.meta.env.VITE_SUPABASE_URL ||
+         import.meta.env.VITE_SUPABASE_URL === 'undefined';
 };
 
 export const getDemoData = () => ({

@@ -10,7 +10,7 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     vendor: ['react', 'react-dom'],
-                    firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage', 'firebase/functions'],
+                    supabase: ['@supabase/supabase-js'],
                     charts: ['recharts']
                 }
             }
@@ -20,6 +20,6 @@ export default defineConfig({
         global: 'globalThis',
     },
     optimizeDeps: {
-        include: ['react', 'react-dom', 'firebase/app', 'firebase/auth', 'firebase/firestore']
+        include: ['react', 'react-dom', '@supabase/supabase-js']
     }
 });

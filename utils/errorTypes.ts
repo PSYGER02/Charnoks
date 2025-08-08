@@ -129,7 +129,7 @@ export interface ConfigurationErrorProps {
 export interface SystemHealthStatus {
   overall: 'healthy' | 'degraded' | 'unhealthy';
   services: {
-    firebase: 'connected' | 'disconnected' | 'error';
+    supabase: 'connected' | 'disconnected' | 'error';
     gemini: 'available' | 'unavailable' | 'error';
     auth: 'working' | 'failing' | 'error';
   };

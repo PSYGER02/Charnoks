@@ -71,10 +71,20 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const body = document.body;
+    
+    // Remove any existing theme classes
     body.className = body.className.replace(/theme-\S+/g, '');
     
-    // The login page now uses the same theme as the rest of the app for consistency.
+    // Remove any Tailwind background classes that might interfere
+    body.className = body.className.replace(/bg-\S+/g, '');
+    
+    // Apply the theme and animation classes
     body.classList.add(theme, 'animate-gradient-x');
+    
+    // Ensure we have the base classes
+    if (!body.classList.contains('text-white')) {
+      body.classList.add('text-white', 'antialiased');
+    }
 
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
