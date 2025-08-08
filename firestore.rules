@@ -1,53 +1,45 @@
 rules_version = '2';
 service cloud.firestore {
-  match / databases / { database } / documents {
+  match /databases/{database}/documents {
+    function isAuthed() { return request.auth != null; }
+    function userRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+    function isOwner() { return isAuthed() && userRole(request.auth.uid) == 'owner'; }
+    function isWorker() { return isAuthed() && userRole(request.auth.uid) == 'worker'; }
 
-    function isOwner() {
-      return request.auth.token.role == 'owner';
+    // Users: user can read/write self; owner can list
+    match /users/{userId} {
+      allow get, update, delete: if isAuthed() && request.auth.uid == userId;
+      allow create: if isAuthed() && request.auth.uid == userId; // self-provision on signup
+      allow list: if isOwner();
     }
 
-    function isWorker() {
-      return request.auth.token.role == 'worker';
+    // Products: all authed can read; only owner can write
+    match /products/{productId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isOwner();
     }
 
-    function isOwnerOfData(userIdField) {
-      return request.resource.data[userIdField] == request.auth.uid;
+    // Sales: owner full; worker create and read own
+    match /sales/{saleId} {
+      allow get: if isOwner() || (isWorker() && resource.data.workerId == request.auth.uid);
+      allow list: if isOwner();
+      allow create: if isWorker() && request.resource.data.workerId == request.auth.uid;
+      allow update, delete: if isOwner();
     }
 
-    // Owners have god-mode access
-    match / { document=**} {
+    // Expenses: owner full; worker create and read own
+    match /expenses/{expenseId} {
+      allow get: if isOwner() || (isWorker() && resource.data.workerId == request.auth.uid);
+      allow list: if isOwner();
+      allow create: if isWorker() && request.resource.data.workerId == request.auth.uid;
+      allow update, delete: if isOwner();
+    }
+
+    // Notes: owner only
+    match /notes/{noteId} {
       allow read, write: if isOwner();
-    }
-
-    // --- Worker Rules ---
-    match / products / { productId } {
-      allow read: if isWorker();
-      allow write: if false; // Workers cannot modify products
-    }
-
-    match / sales / { saleId } {
-      allow create: if isWorker() && isOwnerOfData('workerId');
-      allow read, update, delete: if false; // Workers cannot view/edit past sales
-    }
-
-    match / expenses / { expenseId } {
-      allow create: if isWorker() && isOwnerOfData('workerId');
-      allow read, update, delete: if false;
-    }
-
-    // Workers cannot access these collections at all
-    match / notes / { noteId } { allow read, write: if false; }
-    match / inventoryLogs / { logId } { allow read, write: if false; }
-
-    // Users collection
-    match / users / { userId } {
-      // Allow any authenticated user to read their own document (needed for role lookup)
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow owners to create worker accounts
-      allow create: if request.auth != null && 
-                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner' &&
-                       request.resource.data.role == 'worker';
     }
   }
 }

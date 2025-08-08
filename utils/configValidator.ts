@@ -83,30 +83,13 @@ export class ConfigValidator {
    * Validate Gemini API configuration
    */
   static validateGemini(): ConfigValidationResult {
-    const key = 'GEMINI_API_KEY';
-    const value = import.meta.env.GEMINI_API_KEY;
-    const present = !!value;
-    const valid = present && value !== 'undefined' && !value.includes('your_') && value.startsWith('AI');
-
-    const details = {
-      [key]: {
-        present,
-        valid,
-        message: !present ? 'Missing' : !valid ? 'Invalid or placeholder value' : 'Valid'
-      }
-    };
-
-    const missingKeys = !present ? [key] : [];
-    const invalidKeys = present && !valid ? [key] : [];
-    const isValid = missingKeys.length === 0 && invalidKeys.length === 0;
-
-    return {
-      isValid,
-      missingKeys,
-      invalidKeys,
-      suggestions: ConfigValidator.getGeminiSuggestions(missingKeys, invalidKeys),
-      details
-    };
+    // Client does not need to know server secrets. Consider Gemini configured if
+    // the backend API endpoint is present/assumed configured.
+    const key = 'SERVER_GEMINI_API';
+    const present = true; // assume configured via Vercel secrets
+    const valid = true;
+    const details = { [key]: { present, valid, message: 'Managed on server' } };
+    return { isValid: true, missingKeys: [], invalidKeys: [], suggestions: [], details };
   }
 
   /**
@@ -174,16 +157,11 @@ export class ConfigValidator {
    * Test Gemini API connection
    */
   static async testGeminiConnection(): Promise<boolean> {
+    // Ping one of the serverless AI endpoints to infer availability
     try {
-      const apiKey = import.meta.env.GEMINI_API_KEY;
-      if (!apiKey || apiKey.includes('your_')) {
-        return false;
-      }
-
-      // Simple API test (would need actual implementation)
-      return true;
-    } catch (error) {
-      console.warn('Gemini API test failed:', error);
+      const resp = await fetch('/api/getSalesForecast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ salesData: [], days: 1 }) });
+      return resp.ok;
+    } catch {
       return false;
     }
   }

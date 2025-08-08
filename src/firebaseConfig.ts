@@ -11,7 +11,8 @@ const firebaseConfig = {
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+    // measurementId is optional
+    measurementId: (import.meta.env as any).VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Validate configuration
@@ -38,7 +39,7 @@ export const db = getFirestore(app);
 export const functions = getFunctions(app);
 
 // Enable local emulator if in development
-if (import.meta.env.DEV) {
+if ((import.meta as any).env && (import.meta as any).env.DEV) {
     connectAuthEmulator(auth, 'http://localhost:9099');
     connectFirestoreEmulator(db, 'localhost', 8080);
     connectFunctionsEmulator(functions, 'localhost', 5002);

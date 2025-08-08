@@ -1,4 +1,6 @@
 // Vercel Serverless Function for Voice Sale Parsing
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - types provided by Vercel at runtime
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
