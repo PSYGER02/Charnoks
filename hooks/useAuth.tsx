@@ -60,7 +60,7 @@ function LegacyAuthAdapter({ children }: { children: React.ReactNode }) {
 export function useAuth(): LegacyAuthContext {
   const ctx = React.useContext(LegacyAuthContext);
   if (!ctx) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
   return ctx;
 }
