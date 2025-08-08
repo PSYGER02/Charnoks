@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import KPICard from '../ui/KPI_Card';
 import ChartContainer from '../charts/ChartContainer';
-import { getOwnerDashboard } from '../../services/firebaseService';
+import { getOwnerDashboard } from '../../services/supabaseService';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
 import CreateWorkerForm from '../CreateWorkerForm';
 import Spinner from '../ui/Spinner';

@@ -1,7 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { getProducts, addProduct } from '../services/firebaseService';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../src/firebaseConfig';
+import { getProducts, addProduct, uploadProductImage } from '../services/supabaseService';
 import type { Product } from '../types';
 import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 import Spinner from '../components/ui/Spinner';
@@ -77,10 +75,8 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
         setIsLoading(true);
 
         try {
-            // 1. Upload image to Firebase Storage
-            const imageRef = ref(storage, `product-images/${Date.now()}-${imageFile.name}`);
-            await uploadBytes(imageRef, imageFile);
-            const imageUrl = await getDownloadURL(imageRef);
+            // 1. Upload image to Supabase Storage
+            const imageUrl = await uploadProductImage(imageFile);
 
             // 2. Call addProduct service function
             const productId = await addProduct({

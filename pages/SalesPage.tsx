@@ -2,7 +2,8 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import type { ParsedSale } from '../types';
 import VoiceInputButton from '../components/ui/VoiceInputButton';
 import ConfirmationModal from '../components/ui/ConfirmationModal';
-import { subscribeToProducts, recordSale, parseSaleFromVoice } from '../services/firebaseService';
+import { subscribeToProducts, recordSale } from '../services/supabaseService';
+import { parseSaleFromVoice } from '../services/firebaseService';
 import type { Product } from '../types';
 
 interface CartItem {

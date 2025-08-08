@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Expense } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import Spinner from '../components/ui/Spinner';
-import { getExpenses, recordExpense } from '../services/firebaseService';
+import { getExpenses, recordExpense } from '../services/supabaseService';
 
 const ExpenseRow: React.FC<{ expense: Expense }> = ({ expense }) => {
     return (

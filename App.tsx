@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { useTheme, ThemeProvider } from './hooks/useTheme';
-import { AuthProvider, useAuth } from './hooks/useAuth';
+import { AuthProvider, useAuth } from './hooks/useSupabaseAuth';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 
 import ResponsiveLayout from './components/layout/ResponsiveLayout';
