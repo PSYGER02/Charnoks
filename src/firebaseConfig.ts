@@ -37,9 +37,14 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
 
-// Enable local emulator if in development
-if (import.meta.env.DEV) {
-    connectAuthEmulator(auth, 'http://localhost:9099');
-    connectFirestoreEmulator(db, 'localhost', 8080);
-    connectFunctionsEmulator(functions, 'localhost', 5002);
+// Enable local emulator only in development with explicit flag
+if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
+    try {
+        connectAuthEmulator(auth, 'http://localhost:9099');
+        connectFirestoreEmulator(db, 'localhost', 8080);
+        connectFunctionsEmulator(functions, 'localhost', 5002);
+        console.log('Connected to Firebase emulators');
+    } catch (error) {
+        console.warn('Failed to connect to emulators:', error);
+    }
 }

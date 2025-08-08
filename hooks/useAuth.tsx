@@ -112,7 +112,7 @@ export async function signOut(): Promise<void> {
     await firebaseSignOut(auth);
 }
 
-// Create worker account (owner only) - Client-side version
+// Create worker account (owner only) - Using Firebase Functions
 export async function createWorkerAccount(name: string, email: string, password: string): Promise<UserData> {
     // First check if current user is an owner
     if (!currentUser || currentUser.role !== 'owner') {
@@ -120,35 +120,29 @@ export async function createWorkerAccount(name: string, email: string, password:
     }
 
     try {
-        // Create the user account using Firebase Auth
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Import Firebase Functions dynamically
+        const { httpsCallable } = await import('firebase/functions');
+        const { functions } = await import('../src/firebaseConfig');
         
-        // Create user document in Firestore with worker role
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-            email,
-            displayName: name,
-            role: 'worker',
-            createdAt: serverTimestamp(),
-            createdBy: currentUser.uid
-        });
-
-        return {
-            uid: userCredential.user.uid,
-            email: userCredential.user.email,
-            role: 'worker',
-            displayName: name
-        };
+        // Call the cloud function
+        const createWorker = httpsCallable(functions, 'createWorkerAccount');
+        const result = await createWorker({ name, email, password });
+        
+        return result.data as UserData;
     } catch (error: any) {
         console.error('Error creating worker account:', error);
         
-        if (error.code === 'auth/email-already-exists') {
+        // Handle Firebase Functions errors
+        if (error.code === 'functions/already-exists') {
             throw new Error('An account with this email already exists');
-        } else if (error.code === 'auth/invalid-email') {
-            throw new Error('Invalid email address');
-        } else if (error.code === 'auth/weak-password') {
-            throw new Error('Password is too weak (minimum 6 characters)');
+        } else if (error.code === 'functions/invalid-argument') {
+            throw new Error(error.message || 'Invalid input provided');
+        } else if (error.code === 'functions/permission-denied') {
+            throw new Error('Only owners can create worker accounts');
+        } else if (error.code === 'functions/unauthenticated') {
+            throw new Error('Please log in to continue');
         } else {
-            throw new Error('Failed to create worker account: ' + error.message);
+            throw new Error('Failed to create worker account: ' + (error.message || 'Unknown error'));
         }
     }
 }

@@ -2,7 +2,7 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import type { Sale, ForecastDataPoint, AIInsights, Expense, Product, ParsedSaleFromAI } from '../types';
 
-const API_KEY = import.meta.env.VITE_API_KEY;
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
 
 if (!API_KEY) {
   console.warn("API_KEY environment variable not set. AI features will be disabled.");
@@ -72,10 +72,10 @@ export const getSalesForecast = async (sales: Sale[]): Promise<ForecastDataPoint
         }
     });
     
-    if (!response.text) {
+    if (!response.text()) {
         throw new Error("AI response was empty.");
     }
-    const jsonStr = response.text.trim();
+    const jsonStr = response.text().trim();
     const parsedData = JSON.parse(jsonStr);
     
     if (Array.isArray(parsedData) && parsedData.every(item => 'day' in item && 'predictedSales' in item)) {
@@ -113,10 +113,10 @@ export const getBusinessInsights = async (sales: Sale[], expenses: Expense[]): P
             }
         });
 
-        if (!response.text) {
+        if (!response.text()) {
             throw new Error("AI response was empty.");
         }
-        const jsonStr = response.text.trim();
+        const jsonStr = response.text().trim();
         const parsedData = JSON.parse(jsonStr);
         if (parsedData && 'insights' in parsedData && 'risks' in parsedData && 'opportunities' in parsedData) {
             return parsedData;
@@ -188,10 +188,10 @@ export const parseSaleFromVoice = async (transcript: string, products: Product[]
         }
     });
     
-    if (!response.text) {
+    if (!response.text()) {
         throw new Error("AI response was empty.");
     }
-    const jsonStr = response.text.trim();
+    const jsonStr = response.text().trim();
     const parsedData = JSON.parse(jsonStr) as ParsedSaleFromAI;
 
     // Basic validation
@@ -251,10 +251,10 @@ export const getAIAssistantResponse = async (
             }
         });
 
-        if (!response.text) {
+        if (!response.text()) {
             throw new Error("AI assistant did not provide a response.");
         }
-        return response.text;
+        return response.text();
     } catch (error) {
         console.error("Error fetching AI assistant response:", error);
         throw new Error("Failed to get response from AI assistant.");
