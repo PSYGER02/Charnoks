@@ -12,7 +12,7 @@ export const getProducts = async (): Promise<Product[]> => {
 
     if (error) throw error;
 
-    return data.map(product => ({
+    return data.map((product: any) => ({
       id: product.id,
       name: product.name,
       price: product.price,
@@ -66,7 +66,7 @@ export const getSales = async (limitCount: number = 50): Promise<Sale[]> => {
 
     if (error) throw error;
 
-    return data.map(sale => ({
+    return data.map((sale: any) => ({
       id: sale.id,
       date: sale.created_at,
       items: sale.items || [],
@@ -113,7 +113,7 @@ export const recordSale = async (saleData: {
     const stockUpdates: any[] = [];
 
     for (const item of saleData.items) {
-      const product = products?.find(p => p.id === item.productId);
+      const product = products?.find((p: any) => p.id === item.productId);
       if (!product) throw new Error(`Product ${item.productId} not found`);
       
       if (product.stock < item.quantity) {
@@ -179,7 +179,7 @@ export const getExpenses = async (limitCount: number = 50): Promise<Expense[]> =
 
     if (error) throw error;
 
-    return data.map(expense => ({
+    return data.map((expense: any) => ({
       id: expense.id,
       date: expense.created_at,
       description: expense.description,
@@ -244,8 +244,8 @@ export const getOwnerDashboard = async () => {
     const expenses = expensesResult.data || [];
 
     // Calculate totals
-    const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-    const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+    const totalRevenue = sales.reduce((sum: number, sale: any) => sum + (sale.total || 0), 0);
+    const totalExpenses = expenses.reduce((sum: number, expense: any) => sum + (expense.amount || 0), 0);
     const netProfit = totalRevenue - totalExpenses;
 
     // Calculate sales trend (last 7 days)
@@ -261,12 +261,12 @@ export const getOwnerDashboard = async () => {
       const nextDate = new Date(date);
       nextDate.setDate(nextDate.getDate() + 1);
       
-      const daySales = sales.filter(sale => {
+      const daySales = sales.filter((sale: any) => {
         const saleDate = new Date(sale.created_at);
         return saleDate >= date && saleDate < nextDate;
       });
       
-      const dayTotal = daySales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+      const dayTotal = daySales.reduce((sum: number, sale: any) => sum + (sale.total || 0), 0);
       
       salesTrend.push({
         name: dayNames[date.getDay()],
@@ -277,7 +277,7 @@ export const getOwnerDashboard = async () => {
     // Calculate top products
     const productSales: Record<string, { name: string; value: number }> = {};
     
-    sales.forEach(sale => {
+    sales.forEach((sale: any) => {
       if (sale.items && Array.isArray(sale.items)) {
         sale.items.forEach((item: any) => {
           const productName = item.productName || 'Unknown Product';
@@ -350,7 +350,7 @@ export const getNotes = async (limitCount: number = 50): Promise<Note[]> => {
 
     if (error) throw error;
 
-    return data.map(note => ({
+    return data.map((note: any) => ({
       id: note.id,
       title: note.title,
       description: note.description || '',
@@ -401,7 +401,7 @@ export const getWorkersList = async (): Promise<any[]> => {
 
     if (error) throw error;
 
-    return data.map(worker => ({
+    return data.map((worker: any) => ({
       id: worker.id,
       email: worker.email,
       displayName: worker.display_name,
@@ -429,13 +429,13 @@ export const getSalesAnalytics = async (days: number = 30) => {
     if (error) throw error;
 
     // Process analytics data
-    const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const totalRevenue = sales.reduce((sum: number, sale: any) => sum + (sale.total || 0), 0);
     const totalTransactions = sales.length;
     const averageTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
     // Daily sales trend
     const dailySales: Record<string, number> = {};
-    sales.forEach(sale => {
+    sales.forEach((sale: any) => {
       const date = new Date(sale.created_at).toDateString();
       dailySales[date] = (dailySales[date] || 0) + sale.total;
     });
@@ -482,8 +482,8 @@ export const getWorkerPerformance = async (workerId: string, days: number = 30) 
     const sales = salesResult.data || [];
     const expenses = expensesResult.data || [];
 
-    const totalSales = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-    const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+    const totalSales = sales.reduce((sum: number, sale: any) => sum + (sale.total || 0), 0);
+    const totalExpenses = expenses.reduce((sum: number, expense: any) => sum + (expense.amount || 0), 0);
 
     return {
       totalSales,
@@ -512,7 +512,7 @@ export const getAIAssistantResponse = async (message: string): Promise<string> =
 };
 
 // Voice parsing service (placeholder)
-export const parseSaleFromVoice = async (audioData: any): Promise<any> => {
+export const parseSaleFromVoice = async (_audioData: any): Promise<any> => {
   try {
     // This would typically process voice data
     // For now, return a placeholder response
@@ -627,7 +627,7 @@ export const subscribeToWorkerSales = (workerId: string, callback: (sales: Sale[
 
       if (error) throw error;
 
-      const sales = data.map(sale => ({
+      const sales = data.map((sale: any) => ({
         id: sale.id,
         date: sale.created_at,
         items: sale.items || [],

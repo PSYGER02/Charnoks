@@ -33,7 +33,7 @@ const TransactionRow: React.FC<{ sale: Sale; workers: any[] }> = ({ sale, worker
                         <div className="space-y-2 max-w-md mx-auto">
                              <h4 className="font-bold text-text-primary">Sale Items:</h4>
                              {sale.items.map((item, index) => {
-                                 const productName = item.productName || `Product ${item.productId}`;
+                                 const productName = (item as any).productName || item.name || `Product ${item.productId}`;
                                  const itemPrice = item.price || 0;
                                  return (
                                      <div key={index} className="flex justify-between text-text-secondary text-sm ml-4">
@@ -61,7 +61,7 @@ const TransactionsPage: React.FC = () => {
     type DateFilter = 'all' | 'today' | '7d' | '30d';
 
     // Load data with enhanced error handling
-    const { loadingState: salesState, refresh: refreshSales } = useEnhancedDataLoading(
+    const { loadingState: salesState } = useEnhancedDataLoading(
         () => getSales(200), // Load more transactions
         {
             cacheKey: 'transactions-sales',
@@ -84,7 +84,7 @@ const TransactionsPage: React.FC = () => {
     const workers = workersState.data || [];
     
     const isLoading = (salesState.loading && !salesState.data) || (workersState.loading && !workersState.data);
-    const hasError = (salesState.error && !salesState.data) || (workersState.error && !workersState.data);
+    // const hasError = (salesState.error && !salesState.data) || (workersState.error && !workersState.data);
 
     const dateFilters: { id: DateFilter, label: string }[] = [
         { id: 'all', label: 'All Time' },
@@ -134,7 +134,7 @@ const TransactionsPage: React.FC = () => {
     const totalPages = Math.ceil(sortedSales.length / TRANSACTIONS_PER_PAGE);
 
     const handleSort = () => {
-        setSortOrder(prev => (prev === 'desc' ? 'asc' : 'desc'));
+        setSortOrder((prev: string) => (prev === 'desc' ? 'asc' : 'desc'));
     };
 
     return (
@@ -197,7 +197,7 @@ const TransactionsPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                   {paginatedSales.map(sale => (
+                                   {paginatedSales.map((sale: any) => (
                                        <TransactionRow key={sale.id} sale={sale} workers={workers} />
                                    ))}
                                 </tbody>
@@ -232,7 +232,7 @@ const TransactionsPage: React.FC = () => {
                 {totalPages > 1 && (
                     <div className="flex justify-between items-center mt-4 pt-4 border-t border-border/50">
                         <button
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            onClick={() => setCurrentPage((p: number) => Math.max(1, p - 1))}
                             disabled={currentPage === 1}
                             className="px-4 py-2 bg-white/10 rounded-lg text-text-primary font-semibold transition hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -242,7 +242,7 @@ const TransactionsPage: React.FC = () => {
                             Page {currentPage} of {totalPages}
                         </span>
                         <button
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            onClick={() => setCurrentPage((p: number) => Math.min(totalPages, p + 1))}
                             disabled={currentPage === totalPages}
                             className="px-4 py-2 bg-white/10 rounded-lg text-text-primary font-semibold transition hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
                         >

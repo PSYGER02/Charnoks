@@ -38,8 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })) || [];
 
     // Calculate basic metrics
-    const totalRevenue = salesSummary.reduce((sum, sale) => sum + (sale.total || 0), 0);
-    const totalExpenses = expensesSummary.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+    const totalRevenue = salesSummary.reduce((sum: number, sale: any) => sum + (sale.total || 0), 0);
+    const totalExpenses = expensesSummary.reduce((sum: number, expense: any) => sum + (expense.amount || 0), 0);
     const netProfit = totalRevenue - totalExpenses;
 
     const prompt = `You are an AI business assistant for a Point of Sale (POS) system. Help the business owner with their query.

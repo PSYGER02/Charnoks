@@ -27,13 +27,13 @@ const WorkerDashboard: React.FC = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const todaySales = sales.filter(sale => {
+    const todaySales = sales.filter((sale: any) => {
         const saleDate = new Date(sale.date);
         return saleDate >= today;
     });
 
     const salesToday = todaySales.length;
-    const revenueToday = todaySales.reduce((sum, sale) => sum + sale.total, 0);
+    const revenueToday = todaySales.reduce((sum: number, sale: any) => sum + sale.total, 0);
 
     return (
         <div className="space-y-8">
