@@ -2,8 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import KPICard from '../components/ui/KPI_Card';
-import { subscribeToWorkerSales } from '../services/salesService';
-import { useAuth } from '../hooks/useAuth';
+import { subscribeToWorkerSales } from '../services/supabaseService';
+import { useAuth } from '../hooks/useSupabaseAuth';
 import type { Sale } from '../types';
 
 const WorkerDashboard: React.FC = () => {
@@ -26,7 +26,7 @@ const WorkerDashboard: React.FC = () => {
     // Calculate today's metrics
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const todaySales = sales.filter(sale => {
         const saleDate = new Date(sale.date);
         return saleDate >= today;
@@ -41,7 +41,7 @@ const WorkerDashboard: React.FC = () => {
                 <h1 className="text-4xl font-bold text-text-primary">Dashboard</h1>
                 <p className="text-text-secondary mt-1">Here's your summary for today.</p>
             </header>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {loading ? (
                     <>
@@ -57,10 +57,10 @@ const WorkerDashboard: React.FC = () => {
             </div>
 
             <div className="animate-slide-in-bottom">
-                 <Link 
-                    to="/worker/sales" 
+                <Link
+                    to="/worker/sales"
                     className="block w-full text-center p-6 bg-primary rounded-2xl text-text-on-primary font-bold text-2xl transition-transform duration-300 hover:scale-105 shadow-lg"
-                 >
+                >
                     + Record a New Sale
                 </Link>
             </div>

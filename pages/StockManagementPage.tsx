@@ -1,7 +1,7 @@
 
 import React, { useState, PropsWithChildren } from 'react';
 import KPICard from '../components/ui/KPI_Card';
-import { getWorkersList } from '../services/firebaseService';
+import { getWorkersList } from '../services/supabaseService';
 import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 import Spinner from '../components/ui/Spinner';
 

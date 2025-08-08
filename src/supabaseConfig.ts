@@ -3,22 +3,58 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please check your .env file.');
+// Create Supabase client or dummy client if not configured
+let supabaseClient: any;
+
+if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'undefined' || supabaseAnonKey === 'undefined') {
+  console.error('Supabase environment variables missing:', {
+    url: supabaseUrl ? 'SET' : 'MISSING',
+    key: supabaseAnonKey ? 'SET' : 'MISSING'
+  });
+  
+  // Create a dummy client to prevent crashes
+  supabaseClient = {
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      signUp: () => Promise.reject(new Error('Supabase not configured')),
+      signInWithPassword: () => Promise.reject(new Error('Supabase not configured')),
+      signOut: () => Promise.reject(new Error('Supabase not configured'))
+    },
+    from: () => ({
+      select: () => Promise.reject(new Error('Supabase not configured')),
+      insert: () => Promise.reject(new Error('Supabase not configured')),
+      update: () => Promise.reject(new Error('Supabase not configured')),
+      delete: () => Promise.reject(new Error('Supabase not configured'))
+    }),
+    storage: {
+      from: () => ({
+        upload: () => Promise.reject(new Error('Supabase not configured')),
+        getPublicUrl: () => ({ data: { publicUrl: '' } })
+      })
+    },
+    channel: () => ({
+      on: () => ({ subscribe: () => {} }),
+      subscribe: () => {}
+    })
+  };
+} else {
+  supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
+    }
+  });
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  }
-});
+export const supabase = supabaseClient;
 
 // Database types
 export interface Database {

@@ -25,7 +25,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Check if Supabase is configured
+  const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
+                               import.meta.env.VITE_SUPABASE_ANON_KEY &&
+                               import.meta.env.VITE_SUPABASE_URL !== 'undefined' &&
+                               import.meta.env.VITE_SUPABASE_ANON_KEY !== 'undefined';
+
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables.');
+      setLoading(false);
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -33,6 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setLoading(false);
       }
+    }).catch((error) => {
+      console.error('Error getting session:', error);
+      setLoading(false);
     });
 
     // Listen for auth changes
@@ -48,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isSupabaseConfigured]);
 
   const handleUserSession = async (authUser: User) => {
     try {
@@ -99,6 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signup = async (name: string, email: string, password: string): Promise<UserData> => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase not configured. Please set environment variables.');
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -138,6 +157,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, password: string): Promise<UserData> => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase not configured. Please set environment variables.');
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -169,6 +192,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async (): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase not configured. Please set environment variables.');
+    }
+
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -179,6 +206,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createWorkerAccount = async (name: string, email: string, password: string): Promise<UserData> => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase not configured. Please set environment variables.');
+    }
+
     try {
       // Check if current user is owner
       if (!user || user.role !== 'owner') {

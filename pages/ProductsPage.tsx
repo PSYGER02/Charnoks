@@ -201,7 +201,7 @@ const ProductsPage: React.FC = () => {
         }
     );
 
-    const handleProductAdd = (newProduct: Product) => {
+    const handleProductAdd = () => {
         refresh(); // Refresh to get the latest data from server
     };
 

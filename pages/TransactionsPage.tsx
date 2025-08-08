@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import type { Sale } from '../types';
-import { getSales, getWorkersList } from '../services/firebaseService';
+import { getSales, getWorkersList } from '../services/supabaseService';
 import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 import Spinner from '../components/ui/Spinner';
 

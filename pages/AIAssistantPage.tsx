@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ChatBubble from '../components/ai/ChatBubble';
 import ChatInput from '../components/ai/ChatInput';
 import PromptSuggestions from '../components/ai/PromptSuggestions';
-import { getAIAssistantResponse } from '../services/firebaseService';
+import { getAIAssistantResponse } from '../services/supabaseService';
 
 interface Message {
     id: number;

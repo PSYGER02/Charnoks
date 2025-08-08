@@ -9,7 +9,7 @@ import WorkerInsight from '../components/analysis/WorkerInsight';
 import AIPrediction from '../components/analysis/AIPrediction';
 
 // Services
-import { getSales, getExpenses, getWorkersList } from '../services/firebaseService';
+import { getSales, getExpenses, getWorkersList } from '../services/supabaseService';
 import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 import Spinner from '../components/ui/Spinner';
 

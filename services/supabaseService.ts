@@ -339,6 +339,240 @@ export const uploadProductImage = async (file: File): Promise<string> => {
   }
 };
 
+// Notes Service
+export const getNotes = async (limitCount: number = 50): Promise<Note[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limitCount);
+
+    if (error) throw error;
+
+    return data.map(note => ({
+      id: note.id,
+      title: note.title,
+      description: note.description || '',
+      category: note.category || '',
+      amount: note.amount || 0,
+      date: note.created_at
+    }));
+  } catch (error) {
+    console.error('Error fetching notes:', error);
+    throw new Error('Failed to fetch notes');
+  }
+};
+
+export const addNote = async (noteData: {
+  title: string;
+  description?: string;
+  category?: string;
+  amount?: number;
+}): Promise<string> => {
+  try {
+    const { data, error } = await supabase
+      .from('notes')
+      .insert({
+        title: noteData.title,
+        description: noteData.description,
+        category: noteData.category,
+        amount: noteData.amount
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data.id;
+  } catch (error) {
+    console.error('Error adding note:', error);
+    throw new Error('Failed to add note');
+  }
+};
+
+// Workers Service
+export const getWorkersList = async (): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('role', 'worker')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return data.map(worker => ({
+      id: worker.id,
+      email: worker.email,
+      displayName: worker.display_name,
+      role: worker.role,
+      createdAt: worker.created_at
+    }));
+  } catch (error) {
+    console.error('Error fetching workers:', error);
+    throw new Error('Failed to fetch workers');
+  }
+};
+
+// Analytics Service
+export const getSalesAnalytics = async (days: number = 30) => {
+  try {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const { data: sales, error } = await supabase
+      .from('sales')
+      .select('*')
+      .gte('created_at', startDate.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Process analytics data
+    const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const totalTransactions = sales.length;
+    const averageTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+
+    // Daily sales trend
+    const dailySales: Record<string, number> = {};
+    sales.forEach(sale => {
+      const date = new Date(sale.created_at).toDateString();
+      dailySales[date] = (dailySales[date] || 0) + sale.total;
+    });
+
+    const salesTrend = Object.entries(dailySales).map(([date, total]) => ({
+      date,
+      total
+    }));
+
+    return {
+      totalRevenue,
+      totalTransactions,
+      averageTransaction,
+      salesTrend,
+      sales
+    };
+  } catch (error) {
+    console.error('Error fetching sales analytics:', error);
+    throw new Error('Failed to fetch sales analytics');
+  }
+};
+
+export const getWorkerPerformance = async (workerId: string, days: number = 30) => {
+  try {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const [salesResult, expensesResult] = await Promise.all([
+      supabase
+        .from('sales')
+        .select('*')
+        .eq('worker_id', workerId)
+        .gte('created_at', startDate.toISOString()),
+      supabase
+        .from('expenses')
+        .select('*')
+        .eq('worker_id', workerId)
+        .gte('created_at', startDate.toISOString())
+    ]);
+
+    if (salesResult.error) throw salesResult.error;
+    if (expensesResult.error) throw expensesResult.error;
+
+    const sales = salesResult.data || [];
+    const expenses = expensesResult.data || [];
+
+    const totalSales = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+
+    return {
+      totalSales,
+      totalExpenses,
+      transactionCount: sales.length,
+      expenseCount: expenses.length,
+      sales,
+      expenses
+    };
+  } catch (error) {
+    console.error('Error fetching worker performance:', error);
+    throw new Error('Failed to fetch worker performance');
+  }
+};
+
+// AI Assistant Service (placeholder - requires external API)
+export const getAIAssistantResponse = async (message: string): Promise<string> => {
+  try {
+    // This would typically call an external AI service
+    // For now, return a placeholder response
+    return `AI Assistant response to: "${message}". This feature requires AI service configuration.`;
+  } catch (error) {
+    console.error('Error getting AI response:', error);
+    throw new Error('Failed to get AI response');
+  }
+};
+
+// Voice parsing service (placeholder)
+export const parseSaleFromVoice = async (audioData: any): Promise<any> => {
+  try {
+    // This would typically process voice data
+    // For now, return a placeholder response
+    return {
+      items: [],
+      total: 0,
+      confidence: 0
+    };
+  } catch (error) {
+    console.error('Error parsing voice sale:', error);
+    throw new Error('Failed to parse voice sale');
+  }
+};
+
+// Utility functions
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount);
+};
+
+export const formatDate = (date: string | Date): string => {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(date));
+};
+
+// User management
+export const setUserRole = async (userId: string, role: 'owner' | 'worker'): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ role, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error setting user role:', error);
+    throw new Error('Failed to set user role');
+  }
+};
+
+// Backup service (placeholder)
+export const createBackup = async (): Promise<string> => {
+  try {
+    // This would typically create a backup of all data
+    // For now, return a placeholder response
+    const timestamp = new Date().toISOString();
+    return `Backup created at ${timestamp}`;
+  } catch (error) {
+    console.error('Error creating backup:', error);
+    throw new Error('Failed to create backup');
+  }
+};
+
 // Real-time subscriptions
 export const subscribeToProducts = (callback: (products: Product[]) => void) => {
   const subscription = supabase
@@ -374,6 +608,59 @@ export const subscribeToSales = (callback: (sales: Sale[]) => void, limitCount: 
 
   // Initial fetch
   getSales(limitCount).then(callback).catch(console.error);
+
+  return () => {
+    subscription.unsubscribe();
+  };
+};
+
+// Worker-specific sales subscription
+export const subscribeToWorkerSales = (workerId: string, callback: (sales: Sale[]) => void, limitCount: number = 50) => {
+  const fetchWorkerSales = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('worker_id', workerId)
+        .order('created_at', { ascending: false })
+        .limit(limitCount);
+
+      if (error) throw error;
+
+      const sales = data.map(sale => ({
+        id: sale.id,
+        date: sale.created_at,
+        items: sale.items || [],
+        total: sale.total,
+        payment: sale.payment,
+        change: sale.change,
+        workerId: sale.worker_id || '',
+        workerName: sale.worker_name || 'Unknown'
+      }));
+
+      callback(sales);
+    } catch (error) {
+      console.error('Error fetching worker sales:', error);
+    }
+  };
+
+  const subscription = supabase
+    .channel('worker-sales-changes')
+    .on('postgres_changes',
+      { 
+        event: '*', 
+        schema: 'public', 
+        table: 'sales',
+        filter: `worker_id=eq.${workerId}`
+      },
+      () => {
+        fetchWorkerSales();
+      }
+    )
+    .subscribe();
+
+  // Initial fetch
+  fetchWorkerSales();
 
   return () => {
     subscription.unsubscribe();

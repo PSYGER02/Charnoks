@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useSupabaseAuth';
 import Spinner from '../components/ui/Spinner';
 
 const UserIcon = () => (

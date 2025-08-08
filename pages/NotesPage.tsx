@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Note } from '../types';
 import Spinner from '../components/ui/Spinner';
-import { getNotes } from '../services/firebaseService';
+import { getNotes } from '../services/supabaseService';
 import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 
 type NoteCategory = Note['category'] | 'All';

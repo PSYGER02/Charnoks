@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import ThemeSelector from '../components/ui/ThemeSelector';
-import { useAuth } from '../hooks/useAuth';
-import { getWorkersList, setUserRole, createBackup, formatDate } from '../services/firebaseService';
+import { useAuth } from '../hooks/useSupabaseAuth';
+import { getWorkersList, setUserRole, createBackup, formatDate } from '../services/supabaseService';
 import Spinner from '../components/ui/Spinner';
 
 const CreateWorkerForm: React.FC = () => {

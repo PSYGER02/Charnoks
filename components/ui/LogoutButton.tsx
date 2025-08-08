@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../hooks/useSupabaseAuth';
 
 const LogoutButton: React.FC = () => {
     const auth = useAuth();

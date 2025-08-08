@@ -3,7 +3,7 @@ import type { ParsedSale } from '../types';
 import VoiceInputButton from '../components/ui/VoiceInputButton';
 import ConfirmationModal from '../components/ui/ConfirmationModal';
 import { subscribeToProducts, recordSale } from '../services/supabaseService';
-import { parseSaleFromVoice } from '../services/firebaseService';
+import { parseSaleFromVoice } from '../services/supabaseService';
 import type { Product } from '../types';
 
 interface CartItem {

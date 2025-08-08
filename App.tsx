@@ -22,6 +22,7 @@ import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import Spinner from './components/ui/Spinner';
 import SalesPage from './pages/SalesPage';
+import SupabaseStatus from './components/ui/SupabaseStatus';
 
 // This component ensures a user is authenticated before rendering the child routes.
 const AuthLayout: React.FC = () => {
@@ -125,6 +126,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
+      <SupabaseStatus />
       <HashRouter>
         <ThemeProvider>
           <AuthProvider>

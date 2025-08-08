@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Expense } from '../types';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useSupabaseAuth';
 import Spinner from '../components/ui/Spinner';
 import { getExpenses, recordExpense } from '../services/supabaseService';
 
