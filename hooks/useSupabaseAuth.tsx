@@ -139,8 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: data.user.id,
           email,
           display_name: name,
-          role: 'owner'
-        });
+          role: 'worker'
+        })
 
       if (profileError) throw profileError;
 
