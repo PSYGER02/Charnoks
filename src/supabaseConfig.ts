@@ -3,14 +3,20 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Debug logging in development
+if (import.meta.env.DEV) {
+  console.log('🔧 Supabase Config Debug:');
+  console.log('URL:', supabaseUrl ? '✅ SET' : '❌ MISSING');
+  console.log('Key:', supabaseAnonKey ? '✅ SET' : '❌ MISSING');
+  console.log('Mode:', import.meta.env.MODE);
+}
+
 // Create Supabase client or dummy client if not configured
 let supabaseClient: any;
 
 if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'undefined' || supabaseAnonKey === 'undefined') {
-  console.error('Supabase environment variables missing:', {
-    url: supabaseUrl ? 'SET' : 'MISSING',
-    key: supabaseAnonKey ? 'SET' : 'MISSING'
-  });
+  console.warn('⚠️ Supabase not configured - using demo mode');
+  console.warn('Expected variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
   
   // Create a dummy client to prevent crashes
   supabaseClient = {

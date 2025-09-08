@@ -77,10 +77,10 @@ export function useEnhancedDataLoading<T>(
   // Check if cached data is available and fresh
   const getCachedData = useCallback((): T | null => {
     if (!cacheKey) return null;
-    
+
     const cached = dataCache.get(cacheKey);
     if (!cached) return null;
-    
+
     const isExpired = Date.now() - cached.timestamp > cacheDuration;
     return isExpired ? null : cached.data;
   }, [cacheKey, cacheDuration]);
@@ -117,7 +117,7 @@ export function useEnhancedDataLoading<T>(
           lastUpdated: new Date(),
           retryCount: 0
         }));
-        
+
         if (onSuccess) {
           onSuccess(cachedData);
         }

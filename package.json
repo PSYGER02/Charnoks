@@ -8,6 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "npm run build && vercel --prod",
+    "setup": "node scripts/setup-env.js",
+    "setup:env": "node scripts/setup-env.js",
+    "check:env": "node -e \"console.log('Environment Check:'); console.log('VITE_SUPABASE_URL:', process.env.VITE_SUPABASE_URL ? '✅ SET' : '❌ MISSING'); console.log('VITE_SUPABASE_ANON_KEY:', process.env.VITE_SUPABASE_ANON_KEY ? '✅ SET' : '❌ MISSING');\"",
     "test": "echo 'Tests will be added in future updates'",
     "lint": "echo 'Linting will be added in future updates'"
   },

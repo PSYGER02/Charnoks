@@ -6,7 +6,7 @@ import { getWorkersList, setUserRole, createBackup, formatDate } from '../servic
 import Spinner from '../components/ui/Spinner';
 
 const CreateWorkerForm: React.FC = () => {
-  const { createWorker } = useAuth();
+  const { createWorkerAccount } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +27,7 @@ const CreateWorkerForm: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await createWorker(name, email, password);
+      await createWorkerAccount(name, email, password);
       setSuccess(`Worker account for ${name} created successfully! An email would be sent in a real app.`);
       // Reset form
       setName('');

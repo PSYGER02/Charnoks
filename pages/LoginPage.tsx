@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import React from 'react';
+import { useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useSupabaseAuth';
-import Spinner from '../components/ui/Spinner';
+import { InlineLoader } from '../components/ui/LoadingScreen';
+import { LoginDebug } from '../components/ui/LoginDebug';
 
 const UserIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -40,8 +42,8 @@ const LogoIcon = () => (
 );
 
 const LoginPage: React.FC = () => {
-    const navigate = ReactRouterDOM.useNavigate();
-    const location = ReactRouterDOM.useLocation();
+    const navigate = useNavigate();
+    const location = useLocation();
     const auth = useAuth();
     
     const [email, setEmail] = useState('');
@@ -49,7 +51,7 @@ const LoginPage: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-    const [isDemoLoggingIn, setIsDemoLoggingIn] = useState<'owner' | 'worker' | null>(null);
+
 
     const from = (location.state as any)?.from?.pathname || "/";
 
@@ -58,8 +60,10 @@ const LoginPage: React.FC = () => {
         setError('');
         setIsLoggingIn(true);
         try {
-            await auth.login(email, password);
-            navigate(from, { replace: true });
+            const userData = await auth.login(email, password);
+            // Redirect based on user role
+            const redirectPath = userData.role === 'owner' ? '/owner/dashboard' : '/worker/dashboard';
+            navigate(redirectPath, { replace: true });
         } catch (err: any) {
             setError(err.message || "Failed to log in. Please check your credentials.");
         } finally {
@@ -72,8 +76,10 @@ const LoginPage: React.FC = () => {
         setIsDemoLoggingIn(role);
         try {
             const email = role === 'owner' ? 'owner@charnoks.com' : 'worker@charnoks.com';
-            await auth.login(email, 'password');
-            navigate(from, { replace: true });
+            const userData = await auth.login(email, 'password');
+            // Redirect based on user role
+            const redirectPath = userData.role === 'owner' ? '/owner/dashboard' : '/worker/dashboard';
+            navigate(redirectPath, { replace: true });
         } catch (err: any) {
             setError(err.message || "Failed to log in.");
         } finally {
@@ -83,6 +89,7 @@ const LoginPage: React.FC = () => {
 
     return (
         <div className="min-h-screen w-full flex items-center justify-center p-4">
+            <LoginDebug />
             <div className="w-full max-w-sm space-y-6">
                 <div className="text-center space-y-4 animate-bounce-in" style={{animationDelay: '100ms'}}>
                     <div className="flex justify-center">
@@ -167,46 +174,23 @@ const LoginPage: React.FC = () => {
                     <div>
                         <button
                             type="submit"
-                            disabled={isLoggingIn || !!isDemoLoggingIn}
+                            disabled={isLoggingIn}
                             className="w-full flex justify-center py-3 px-4 text-base font-bold rounded-lg text-text-on-primary bg-card-bg-solid shadow-lg shadow-black/20 transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-primary disabled:opacity-50"
                         >
-                            {isLoggingIn ? <Spinner size="sm" /> : 'Login'}
+                            {isLoggingIn ? (
+                                <div className="flex items-center space-x-2">
+                                    <InlineLoader message="" size="sm" />
+                                    <span>Signing in...</span>
+                                </div>
+                            ) : 'Login'}
                         </button>
                     </div>
                 </form>
 
-                <div className="animate-bounce-in" style={{animationDelay: '500ms'}}>
-                    <div className="relative my-4">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-border/50"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-card-bg text-text-secondary rounded-full">Quick Demo Login</span>
-                        </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                        <button
-                            type="button"
-                            onClick={() => handleDemoLogin('owner')}
-                            disabled={isLoggingIn || !!isDemoLoggingIn}
-                            className="w-full flex justify-center items-center py-2.5 px-4 font-semibold rounded-lg border-2 border-border/50 text-text-secondary transition hover:bg-white/10 hover:text-white disabled:opacity-50"
-                        >
-                            {isDemoLoggingIn === 'owner' ? <Spinner size="sm" /> : 'Login as Owner'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleDemoLogin('worker')}
-                            disabled={isLoggingIn || !!isDemoLoggingIn}
-                            className="w-full flex justify-center items-center py-2.5 px-4 font-semibold rounded-lg border-2 border-border/50 text-text-secondary transition hover:bg-white/10 hover:text-white disabled:opacity-50"
-                        >
-                            {isDemoLoggingIn === 'worker' ? <Spinner size="sm" /> : 'Login as Worker'}
-                        </button>
-                    </div>
-                </div>
+
 
                 <p className="text-center text-sm text-white/60 animate-bounce-in" style={{animationDelay: '600ms'}}>
-                    Don't have an account? <ReactRouterDOM.Link to="/signup" className="font-medium text-white/80 hover:text-white">Sign Up</ReactRouterDOM.Link>
+                    Don't have an account? <Link to="/signup" className="font-medium text-white/80 hover:text-white">Sign Up</Link>
                 </p>
             </div>
         </div>

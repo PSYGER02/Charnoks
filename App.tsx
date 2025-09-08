@@ -3,6 +3,10 @@ import { HashRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-
 import { useTheme, ThemeProvider } from './hooks/useTheme';
 import { AuthProvider, useAuth } from './hooks/useSupabaseAuth';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import { LoadingScreen } from './components/ui/LoadingScreen';
+import { ConnectionStatus } from './components/ui/ConnectionStatus';
+import { EnvDebug } from './components/ui/EnvDebug';
+import { AuthStatus } from './components/ui/AuthStatus';
 
 import ResponsiveLayout from './components/layout/ResponsiveLayout';
 import { WorkerLayout } from './components/layout/WorkerLayout';
@@ -20,7 +24,7 @@ import NotesPage from './pages/NotesPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
-import Spinner from './components/ui/Spinner';
+
 import SalesPage from './pages/SalesPage';
 import SupabaseStatus from './components/ui/SupabaseStatus';
 
@@ -31,9 +35,11 @@ const AuthLayout: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-screen bg-background">
-                <Spinner size="lg" />
-            </div>
+            <LoadingScreen 
+                message="Authenticating..." 
+                submessage="Verifying your credentials"
+                type="auth"
+            />
         );
     }
 
@@ -49,9 +55,11 @@ const RoleRedirect: React.FC = () => {
     const { user, loading } = useAuth();
     if (loading) {
         return (
-          <div className="flex justify-center items-center h-screen bg-background">
-            <Spinner size="lg" />
-          </div>
+            <LoadingScreen 
+                message="Loading Dashboard..." 
+                submessage="Preparing your workspace"
+                type="data"
+            />
         );
     }
 
@@ -97,6 +105,10 @@ const AppContent: React.FC = () => {
   }, [theme]);
 
   return (
+    <>
+      <ConnectionStatus />
+      <EnvDebug />
+      <AuthStatus />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
@@ -130,6 +142,7 @@ const AppContent: React.FC = () => {
 
         <Route path="/" element={<RoleRedirect />} />
       </Routes>
+    </>
   );
 }
 

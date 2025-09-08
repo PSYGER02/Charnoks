@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { getProducts, addProduct, uploadProductImage } from '../services/supabaseService';
 import type { Product } from '../types';
 import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
-import Spinner from '../components/ui/Spinner';
+import { DataLoadingWrapper } from '../components/ui/LoadingWrapper';
+import { InlineLoader } from '../components/ui/LoadingScreen';
 
 const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ onProductAdd }) => {
     const [name, setName] = useState('');
@@ -157,35 +158,15 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
             <div className="flex justify-end space-x-4">
                 <button type="button" onClick={resetForm} className="px-6 py-3 rounded-lg bg-white/10 text-text-primary font-semibold transition hover:bg-white/20">Reset</button>
                 <button type="submit" disabled={isLoading} className="px-6 py-3 rounded-lg bg-primary text-text-on-primary font-bold transition hover:bg-primary/80 disabled:opacity-50 flex items-center">
-                    {isLoading && <Spinner size="sm" />}
-                    <span className={isLoading ? 'ml-2' : ''}>Save Product</span>
+                    {isLoading && <InlineLoader message="" size="sm" />}
+                    <span className={isLoading ? 'ml-2' : ''}>
+                        {isLoading ? 'Saving...' : 'Save Product'}
+                    </span>
                 </button>
             </div>
         </form>
     );
 };
-
-const ProductList: React.FC<{ products: Product[] }> = ({ products }) => (
-    <div className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg">
-        <h2 className="text-2xl font-bold mb-4">Current Products ({products.length})</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto p-1">
-            {products.map(product => (
-                <div key={product.id} className="bg-card-bg-solid/50 rounded-xl p-4 border border-border/30 flex flex-col justify-between transition-all hover:shadow-lg hover:border-primary/50 hover:scale-105">
-                    <img src={product.imageUrl} alt={product.name} className="w-full h-32 object-cover rounded-lg mb-3" />
-                    <div>
-                        <p className="font-bold text-text-primary truncate">{product.name}</p>
-                        <p className="text-sm text-text-secondary capitalize">{product.category || 'Uncategorized'}</p>
-                    </div>
-                    <div className="flex justify-between items-end mt-3">
-                        <p className="font-bold text-xl text-primary">{`$${product.price.toFixed(2)}`}</p>
-                        <p className="text-sm text-text-secondary font-medium">Stock: {product.stock}</p>
-                    </div>
-                </div>
-            ))}
-        </div>
-    </div>
-);
-
 
 const ProductsPage: React.FC = () => {
     const { loadingState, reload, refresh } = useEnhancedDataLoading(
@@ -256,34 +237,15 @@ const ProductsPage: React.FC = () => {
                     )}
                 </div>
                 
-                {isLoading ? (
-                    <div className="flex justify-center items-center h-32">
-                        <Spinner size="lg" />
-                    </div>
-                ) : products.length === 0 ? (
-                    <div className="text-center py-12">
-                        <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="text-primary text-2xl">📦</span>
-                        </div>
-                        <h3 className="text-lg font-semibold text-text-primary mb-2">No Products Yet</h3>
-                        <p className="text-text-secondary mb-4">
-                            Start building your inventory by adding your first product above.
-                        </p>
-                        <button
-                            onClick={() => {
-                                const form = document.querySelector('form');
-                                if (form) {
-                                    form.scrollIntoView({ behavior: 'smooth' });
-                                    const nameInput = form.querySelector('input[id="product-name"]') as HTMLInputElement;
-                                    if (nameInput) nameInput.focus();
-                                }
-                            }}
-                            className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-colors"
-                        >
-                            Add First Product
-                        </button>
-                    </div>
-                ) : (
+                <DataLoadingWrapper
+                    loading={isLoading}
+                    error={hasError ? 'Unable to load products' : null}
+                    data={products}
+                    emptyMessage="No Products Yet"
+                    emptyIcon="📦"
+                    onRetry={reload}
+                    skeletonLines={4}
+                >
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto p-1">
                         {products.map(product => (
                             <div key={product.id} className="bg-card-bg-solid/50 rounded-xl p-4 border border-border/30 flex flex-col justify-between transition-all hover:shadow-lg hover:border-primary/50 hover:scale-105">
@@ -299,7 +261,7 @@ const ProductsPage: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                )}
+                </DataLoadingWrapper>
             </div>
         </div>
     );

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import * as ReactRouterDOM from 'react-router-dom';
+import React from 'react';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useSupabaseAuth';
 import Spinner from '../components/ui/Spinner';
 
@@ -47,7 +48,7 @@ const LogoIcon = () => (
 );
 
 const SignUpPage: React.FC = () => {
-    const navigate = ReactRouterDOM.useNavigate();
+    const navigate = useNavigate();
     const auth = useAuth();
     
     const [name, setName] = useState('');
@@ -70,7 +71,7 @@ const SignUpPage: React.FC = () => {
         setIsSigningUp(true);
         try {
             // Always create as owner account through signup page
-            const user = await auth.signup(name, email, password, 'owner');
+            const user = await auth.signup(name, email, password);
             // Navigate based on role
             if (user.role === 'owner') {
                 navigate('/owner/dashboard', { replace: true });
@@ -208,7 +209,7 @@ const SignUpPage: React.FC = () => {
                 </form>
 
                 <p className="text-center text-sm text-white/60 animate-bounce-in" style={{animationDelay: '500ms'}}>
-                    Already have an account? <ReactRouterDOM.Link to="/login" className="font-medium text-white/80 hover:text-white">Login</ReactRouterDOM.Link>
+                    Already have an account? <Link to="/login" className="font-medium text-white/80 hover:text-white">Login</Link>
                 </p>
             </div>
         </div>

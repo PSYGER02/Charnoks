@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../src/supabaseConfig';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -26,10 +27,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   // Check if Supabase is configured
-  const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
-                               import.meta.env.VITE_SUPABASE_ANON_KEY &&
-                               import.meta.env.VITE_SUPABASE_URL !== 'undefined' &&
-                               import.meta.env.VITE_SUPABASE_ANON_KEY !== 'undefined';
+  const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL &&
+    import.meta.env.VITE_SUPABASE_ANON_KEY &&
+    import.meta.env.VITE_SUPABASE_URL !== 'undefined' &&
+    import.meta.env.VITE_SUPABASE_ANON_KEY !== 'undefined';
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -124,7 +125,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         options: {
           data: {
-            display_name: name
+            display_name: name,
+            role: 'owner' // Set role in metadata for trigger
           }
         }
       });
@@ -132,23 +134,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       if (!data.user) throw new Error('No user returned from signup');
 
-      // Create user profile
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: data.user.id,
-          email,
-          display_name: name,
-          role: 'worker'
-        })
+      // The trigger will automatically create the profile
+      // Wait a moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (profileError) throw profileError;
+      // Get the created profile
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        console.warn('Profile not found, creating manually:', profileError);
+        // Fallback: create profile manually if trigger failed
+        const { data: newProfile, error: createError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: data.user.id,
+            email,
+            display_name: name,
+            role: 'owner'
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+
+        return {
+          uid: data.user.id,
+          email: data.user.email,
+          role: 'owner',
+          displayName: name
+        };
+      }
 
       return {
         uid: data.user.id,
         email: data.user.email,
-        role: 'owner',
-        displayName: name
+        role: profile.role,
+        displayName: profile.display_name
       };
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -177,7 +202,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', data.user.id)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.warn('Profile not found for existing user, creating it:', profileError);
+        // Create profile for existing user (like manually created Supabase users)
+        const { data: newProfile, error: createError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
+            display_name: data.user.email?.split('@')[0] || 'User',
+            role: 'owner' // Default to owner for existing users
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Failed to create profile for existing user:', createError);
+          throw new Error('Account exists but profile creation failed. Please contact support.');
+        }
+
+        return {
+          uid: data.user.id,
+          email: data.user.email,
+          role: 'owner',
+          displayName: newProfile.display_name
+        };
+      }
 
       return {
         uid: data.user.id,
@@ -216,37 +266,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Only owners can create worker accounts');
       }
 
-      // Create auth user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            display_name: name
-          }
-        }
+      // Get current user's session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No valid session found');
+      }
+
+      // Use the API endpoint to create worker account
+      const response = await fetch('/api/createWorkerAccount', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          ownerToken: session.access_token
+        })
       });
 
-      if (error) throw error;
-      if (!data.user) throw new Error('No user returned from signup');
+      const result = await response.json();
 
-      // Create worker profile
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: data.user.id,
-          email,
-          display_name: name,
-          role: 'worker'
-        });
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create worker account');
+      }
 
-      if (profileError) throw profileError;
+      if (!result.success || !result.worker) {
+        throw new Error('Invalid response from server');
+      }
 
       return {
-        uid: data.user.id,
-        email: data.user.email,
-        role: 'worker',
-        displayName: name
+        uid: result.worker.id,
+        email: result.worker.email,
+        role: result.worker.role,
+        displayName: result.worker.displayName
       };
     } catch (error: any) {
       console.error('Create worker error:', error);
