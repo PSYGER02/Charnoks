@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useSupabaseAuth';
 import { InlineLoader } from '../components/ui/LoadingScreen';
@@ -53,6 +53,14 @@ const LoginPage: React.FC = () => {
 
 
     const from = (location.state as any)?.from?.pathname || "/";
+
+    // Auto-redirect if already authenticated
+    React.useEffect(() => {
+        if (auth.isAuthenticated && auth.user) {
+            const redirectPath = auth.user.role === 'owner' ? '/owner/dashboard' : '/worker/dashboard';
+            navigate(redirectPath, { replace: true });
+        }
+    }, [auth.isAuthenticated, auth.user, navigate]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
