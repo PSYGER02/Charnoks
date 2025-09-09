@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useSupabaseAuth';
 import { InlineLoader } from '../components/ui/LoadingScreen';
-import { LoginDebug } from '../components/ui/LoginDebug';
 
 const UserIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -71,25 +70,10 @@ const LoginPage: React.FC = () => {
         }
     };
     
-    const handleDemoLogin = async (role: 'owner' | 'worker') => {
-        setError('');
-        setIsDemoLoggingIn(role);
-        try {
-            const email = role === 'owner' ? 'owner@charnoks.com' : 'worker@charnoks.com';
-            const userData = await auth.login(email, 'password');
-            // Redirect based on user role
-            const redirectPath = userData.role === 'owner' ? '/owner/dashboard' : '/worker/dashboard';
-            navigate(redirectPath, { replace: true });
-        } catch (err: any) {
-            setError(err.message || "Failed to log in.");
-        } finally {
-            setIsDemoLoggingIn(null);
-        }
-    };
+
 
     return (
         <div className="min-h-screen w-full flex items-center justify-center p-4">
-            <LoginDebug />
             <div className="w-full max-w-sm space-y-6">
                 <div className="text-center space-y-4 animate-bounce-in" style={{animationDelay: '100ms'}}>
                     <div className="flex justify-center">

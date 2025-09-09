@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import ThemeSelector from '../components/ui/ThemeSelector';
 import { useAuth } from '../hooks/useSupabaseAuth';
-import { getWorkersList, setUserRole, createBackup, formatDate } from '../services/supabaseService';
+import { supabase } from '../src/supabaseConfig';
 import Spinner from '../components/ui/Spinner';
 
 const CreateWorkerForm: React.FC = () => {
@@ -28,7 +27,7 @@ const CreateWorkerForm: React.FC = () => {
 
     try {
       await createWorkerAccount(name, email, password);
-      setSuccess(`Worker account for ${name} created successfully! An email would be sent in a real app.`);
+      setSuccess(`Worker account for ${name} created successfully!`);
       // Reset form
       setName('');
       setEmail('');
@@ -76,9 +75,11 @@ const CreateWorkerForm: React.FC = () => {
 
 interface Worker {
   id: string;
-  name: string;
+  display_name: string;
   email: string;
-  createdAt: string;
+  created_at: string;
+  is_active: boolean;
+  created_by: string | null;
 }
 
 const UserManagement: React.FC = () => {
@@ -86,6 +87,7 @@ const UserManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [promotingUser, setPromotingUser] = useState<string | null>(null);
+  const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWorkers();
@@ -93,8 +95,14 @@ const UserManagement: React.FC = () => {
 
   const fetchWorkers = async () => {
     try {
-      const workersList = await getWorkersList();
-      setWorkers(workersList);
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, display_name, email, created_at, is_active, created_by')
+        .eq('role', 'worker')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setWorkers(data || []);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch workers');
     } finally {
@@ -109,7 +117,12 @@ const UserManagement: React.FC = () => {
 
     setPromotingUser(workerId);
     try {
-      await setUserRole(workerId, 'owner');
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ role: 'owner' })
+        .eq('id', workerId);
+
+      if (error) throw error;
       await fetchWorkers(); // Refresh the list
       alert(`${workerName} has been promoted to Owner successfully!`);
     } catch (err: any) {
@@ -117,6 +130,35 @@ const UserManagement: React.FC = () => {
     } finally {
       setPromotingUser(null);
     }
+  };
+
+  const handleToggleStatus = async (workerId: string, currentStatus: boolean, workerName: string) => {
+    const newStatus = !currentStatus;
+    const action = newStatus ? 'activate' : 'deactivate';
+    
+    if (!confirm(`Are you sure you want to ${action} ${workerName}'s account?`)) {
+      return;
+    }
+
+    setTogglingStatus(workerId);
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ is_active: newStatus })
+        .eq('id', workerId);
+
+      if (error) throw error;
+      await fetchWorkers(); // Refresh the list
+      alert(`${workerName}'s account has been ${action}d successfully!`);
+    } catch (err: any) {
+      alert(err.message || `Failed to ${action} user`);
+    } finally {
+      setTogglingStatus(null);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
   };
 
   if (loading) {
@@ -148,6 +190,7 @@ const UserManagement: React.FC = () => {
               <tr className="border-b border-border/50">
                 <th className="text-left py-3 px-2 text-text-secondary font-medium">Name</th>
                 <th className="text-left py-3 px-2 text-text-secondary font-medium">Email</th>
+                <th className="text-left py-3 px-2 text-text-secondary font-medium">Status</th>
                 <th className="text-left py-3 px-2 text-text-secondary font-medium">Created</th>
                 <th className="text-left py-3 px-2 text-text-secondary font-medium">Actions</th>
               </tr>
@@ -155,12 +198,35 @@ const UserManagement: React.FC = () => {
             <tbody>
               {workers.map((worker) => (
                 <tr key={worker.id} className="border-b border-border/30 hover:bg-white/5">
-                  <td className="py-3 px-2 text-text-primary font-medium">{worker.name}</td>
+                  <td className="py-3 px-2 text-text-primary font-medium">{worker.display_name}</td>
                   <td className="py-3 px-2 text-text-secondary">{worker.email}</td>
-                  <td className="py-3 px-2 text-text-secondary">{formatDate(worker.createdAt)}</td>
                   <td className="py-3 px-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      worker.is_active 
+                        ? 'bg-green-500/20 text-green-400' 
+                        : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {worker.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-2 text-text-secondary">{formatDate(worker.created_at)}</td>
+                  <td className="py-3 px-2 space-x-2">
                     <button
-                      onClick={() => handlePromoteToOwner(worker.id, worker.name)}
+                      onClick={() => handleToggleStatus(worker.id, worker.is_active, worker.display_name)}
+                      disabled={togglingStatus === worker.id}
+                      className={`px-3 py-1 text-sm rounded-lg transition disabled:opacity-50 flex items-center ${
+                        worker.is_active
+                          ? 'bg-red-600 hover:bg-red-700 text-white'
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      {togglingStatus === worker.id && <Spinner size="sm" />}
+                      <span className={togglingStatus === worker.id ? 'ml-2' : ''}>
+                        {worker.is_active ? 'Deactivate' : 'Activate'}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => handlePromoteToOwner(worker.id, worker.display_name)}
                       disabled={promotingUser === worker.id}
                       className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-lg transition disabled:opacity-50 flex items-center"
                     >
@@ -189,7 +255,29 @@ const BackupSection: React.FC = () => {
     setBackupStatus(null);
 
     try {
-      const backup = await createBackup();
+      // Get all data for backup
+      const [
+        { data: products },
+        { data: sales },
+        { data: expenses },
+        { data: notes },
+        { data: userProfiles }
+      ] = await Promise.all([
+        supabase.from('products').select('*'),
+        supabase.from('sales').select('*'),
+        supabase.from('expenses').select('*'),
+        supabase.from('notes').select('*'),
+        supabase.from('user_profiles').select('*')
+      ]);
+
+      const backup = {
+        timestamp: new Date().toISOString(),
+        products,
+        sales,
+        expenses,
+        notes,
+        userProfiles
+      };
 
       // Create and download the backup file
       const dataStr = JSON.stringify(backup, null, 2);

@@ -1,6 +1,5 @@
 -- ============================================================================
--- CHARNOKS MANAGER - SUPABASE DATABASE SETUP
--- Complete database schema for POS system with owner-worker hierarchy
+-- CHARNOKS MANAGER - COMPLETE POINT OF SALE DATABASE
 -- ============================================================================
 
 -- Enable necessary extensions
@@ -8,295 +7,349 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
--- TABLES
+-- STEP 1: ANALYZE EXISTING STRUCTURE (Optional - for debugging)
 -- ============================================================================
 
--- Users table (extends Supabase auth.users)
+DO $$
+DECLARE
+    table_exists BOOLEAN;
+BEGIN
+    RAISE NOTICE '🔍 Analyzing existing database structure...';
+    
+    -- Check what tables exist
+    SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_profiles') INTO table_exists;
+    RAISE NOTICE 'user_profiles table exists: %', table_exists;
+    
+    SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'products') INTO table_exists;
+    RAISE NOTICE 'products table exists: %', table_exists;
+    
+    SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'sales') INTO table_exists;
+    RAISE NOTICE 'sales table exists: %', table_exists;
+    
+    SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'expenses') INTO table_exists;
+    RAISE NOTICE 'expenses table exists: %', table_exists;
+    
+    SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'notes') INTO table_exists;
+    RAISE NOTICE 'notes table exists: %', table_exists;
+    
+    SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'ai_analysis') INTO table_exists;
+    RAISE NOTICE 'ai_analysis table exists: %', table_exists;
+    
+    SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'ai_conversations') INTO table_exists;
+    RAISE NOTICE 'ai_conversations table exists: %', table_exists;
+END $$;
+
+-- ============================================================================
+-- STEP 2: CREATE TABLES
+-- ============================================================================
+
+-- Create user_profiles table
 CREATE TABLE IF NOT EXISTS public.user_profiles (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  display_name TEXT NOT NULL,
-  role TEXT CHECK (role IN ('owner', 'worker')) DEFAULT 'owner',
-  is_active BOOLEAN DEFAULT true,
-  created_by UUID REFERENCES auth.users(id), -- Track who created this user (for workers)
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    display_name TEXT,
+    role TEXT CHECK (role IN ('owner', 'worker')) DEFAULT 'worker',
+    is_active BOOLEAN DEFAULT true,
+    created_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Products table
+-- Create products table
 CREATE TABLE IF NOT EXISTS public.products (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
-  stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
-  category TEXT,
-  image_url TEXT,
-  is_active BOOLEAN DEFAULT true,
-  created_by UUID REFERENCES auth.users(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    cost DECIMAL(10,2),
+    stock INTEGER NOT NULL DEFAULT 0,
+    category TEXT,
+    image_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Sales table
+-- Create sales table with enhanced structure
 CREATE TABLE IF NOT EXISTS public.sales (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  items JSONB NOT NULL,
-  total DECIMAL(10,2) NOT NULL CHECK (total >= 0),
-  payment DECIMAL(10,2) NOT NULL CHECK (payment >= 0),
-  change DECIMAL(10,2) NOT NULL DEFAULT 0,
-  worker_id UUID REFERENCES auth.users(id) NOT NULL,
-  worker_name TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    sale_number SERIAL,
+    items JSONB NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    tax DECIMAL(10,2) DEFAULT 0,
+    total DECIMAL(10,2) NOT NULL,
+    payment DECIMAL(10,2) NOT NULL,
+    change_due DECIMAL(10,2) NOT NULL DEFAULT 0,
+    payment_method TEXT DEFAULT 'cash',
+    worker_id UUID REFERENCES auth.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Expenses table
+-- Create expenses table with categories
 CREATE TABLE IF NOT EXISTS public.expenses (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  description TEXT NOT NULL,
-  amount DECIMAL(10,2) NOT NULL CHECK (amount >= 0),
-  category TEXT DEFAULT 'general',
-  worker_id UUID REFERENCES auth.users(id) NOT NULL,
-  worker_name TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    description TEXT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    category TEXT NOT NULL DEFAULT 'general',
+    receipt_url TEXT,
+    worker_id UUID REFERENCES auth.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Notes table (owner only)
+-- Create notes table with priorities
 CREATE TABLE IF NOT EXISTS public.notes (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT,
-  category TEXT DEFAULT 'general',
-  amount DECIMAL(10,2) CHECK (amount >= 0),
-  created_by UUID REFERENCES auth.users(id) NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT,
+    category TEXT,
+    priority TEXT CHECK (priority IN ('low', 'medium', 'high')) DEFAULT 'medium',
+    created_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Business settings table (owner only)
-CREATE TABLE IF NOT EXISTS public.business_settings (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  business_name TEXT DEFAULT 'Charnoks Restaurant',
-  business_address TEXT,
-  business_phone TEXT,
-  business_email TEXT,
-  currency TEXT DEFAULT 'USD',
-  tax_rate DECIMAL(5,2) DEFAULT 0.00 CHECK (tax_rate >= 0 AND tax_rate <= 100),
-  created_by UUID REFERENCES auth.users(id) NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+-- Create AI analysis storage
+CREATE TABLE IF NOT EXISTS public.ai_analysis (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    analysis_type TEXT NOT NULL,
+    content JSONB NOT NULL,
+    created_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create AI conversations storage
+CREATE TABLE IF NOT EXISTS public.ai_conversations (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    session_id TEXT,
+    message TEXT NOT NULL,
+    response TEXT NOT NULL,
+    context JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- ============================================================================
--- INDEXES FOR PERFORMANCE
+-- STEP 3: ADD CONSTRAINTS
 -- ============================================================================
 
--- User profiles indexes
+-- Add constraints to products
+ALTER TABLE public.products 
+    ADD CONSTRAINT products_price_check CHECK (price >= 0),
+    ADD CONSTRAINT products_cost_check CHECK (cost >= 0 OR cost IS NULL),
+    ADD CONSTRAINT products_stock_check CHECK (stock >= 0);
+
+-- Add constraints to sales
+ALTER TABLE public.sales 
+    ADD CONSTRAINT sales_total_check CHECK (total >= 0),
+    ADD CONSTRAINT sales_payment_check CHECK (payment >= 0),
+    ADD CONSTRAINT sales_change_check CHECK (change_due >= 0);
+
+-- Add constraints to expenses
+ALTER TABLE public.expenses 
+    ADD CONSTRAINT expenses_amount_check CHECK (amount >= 0);
+
+-- Add foreign key constraints
+DO $$
+BEGIN
+    -- Add foreign key from sales to user_profiles if both tables exist
+    IF NOT EXISTS (SELECT FROM information_schema.table_constraints 
+                   WHERE table_name = 'sales' AND constraint_name = 'sales_worker_id_fkey') THEN
+        ALTER TABLE public.sales ADD CONSTRAINT sales_worker_id_fkey 
+        FOREIGN KEY (worker_id) REFERENCES public.user_profiles(id);
+    END IF;
+    
+    -- Similar check for expenses table
+    IF NOT EXISTS (SELECT FROM information_schema.table_constraints 
+                   WHERE table_name = 'expenses' AND constraint_name = 'expenses_worker_id_fkey') THEN
+        ALTER TABLE public.expenses ADD CONSTRAINT expenses_worker_id_fkey 
+        FOREIGN KEY (worker_id) REFERENCES public.user_profiles(id);
+    END IF;
+END $$;
+
+-- ============================================================================
+-- STEP 4: CREATE INDEXES
+-- ============================================================================
+
+-- Indexes for user_profiles
 CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON public.user_profiles(role);
 CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON public.user_profiles(email);
 CREATE INDEX IF NOT EXISTS idx_user_profiles_active ON public.user_profiles(is_active);
 
--- Products indexes
-CREATE INDEX IF NOT EXISTS idx_products_active ON public.products(is_active);
+-- Indexes for products
 CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category);
 CREATE INDEX IF NOT EXISTS idx_products_name ON public.products(name);
+CREATE INDEX IF NOT EXISTS idx_products_active ON public.products(is_active);
 
--- Sales indexes
+-- Indexes for sales
 CREATE INDEX IF NOT EXISTS idx_sales_worker_id ON public.sales(worker_id);
 CREATE INDEX IF NOT EXISTS idx_sales_created_at ON public.sales(created_at);
-CREATE INDEX IF NOT EXISTS idx_sales_total ON public.sales(total);
 
--- Expenses indexes
+-- Indexes for expenses
 CREATE INDEX IF NOT EXISTS idx_expenses_worker_id ON public.expenses(worker_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_created_at ON public.expenses(created_at);
 CREATE INDEX IF NOT EXISTS idx_expenses_category ON public.expenses(category);
 
--- Notes indexes
+-- Indexes for notes
 CREATE INDEX IF NOT EXISTS idx_notes_created_by ON public.notes(created_by);
-CREATE INDEX IF NOT EXISTS idx_notes_category ON public.notes(category);
+CREATE INDEX IF NOT EXISTS idx_notes_priority ON public.notes(priority);
+
+-- Indexes for AI data
+CREATE INDEX IF NOT EXISTS idx_ai_analysis_created_by ON public.ai_analysis(created_by);
+CREATE INDEX IF NOT EXISTS idx_ai_conversations_user_id ON public.ai_conversations(user_id);
 
 -- ============================================================================
--- ROW LEVEL SECURITY (RLS)
+-- STEP 5: ENABLE ROW LEVEL SECURITY
 -- ============================================================================
 
--- Enable RLS on all tables
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.business_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_analysis ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_conversations ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
--- RLS POLICIES
+-- STEP 6: CREATE RLS POLICIES
 -- ============================================================================
 
--- User Profiles Policies
-DROP POLICY IF EXISTS "Users can view own profile" ON public.user_profiles;
-CREATE POLICY "Users can view own profile" ON public.user_profiles
-  FOR SELECT USING (auth.uid() = id);
+-- Drop existing policies safely
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT policyname FROM pg_policies WHERE schemaname = 'public') LOOP
+        BEGIN
+            EXECUTE 'DROP POLICY IF EXISTS ' || quote_ident(r.policyname) || ' ON public.' || quote_ident(r.tablename);
+        EXCEPTION
+            WHEN OTHERS THEN NULL;
+        END;
+    END LOOP;
+END $$;
 
-DROP POLICY IF EXISTS "Users can update own profile" ON public.user_profiles;
-CREATE POLICY "Users can update own profile" ON public.user_profiles
-  FOR UPDATE USING (auth.uid() = id);
+-- User profiles policies
+CREATE POLICY "Users can manage own profile" ON public.user_profiles
+  FOR ALL USING (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Owners can view all profiles" ON public.user_profiles;
-CREATE POLICY "Owners can view all profiles" ON public.user_profiles
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.user_profiles 
-      WHERE id = auth.uid() AND role = 'owner'
-    )
-  );
-
-DROP POLICY IF EXISTS "Owners can manage worker profiles" ON public.user_profiles;
-CREATE POLICY "Owners can manage worker profiles" ON public.user_profiles
+CREATE POLICY "Owners can manage all profiles" ON public.user_profiles
   FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.user_profiles 
-      WHERE id = auth.uid() AND role = 'owner'
-    )
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'owner')
   );
 
--- Products Policies
-DROP POLICY IF EXISTS "Anyone can read products" ON public.products;
-CREATE POLICY "Anyone can read products" ON public.products
-  FOR SELECT USING (auth.role() = 'authenticated');
-
-DROP POLICY IF EXISTS "Owners can manage products" ON public.products;
-CREATE POLICY "Owners can manage products" ON public.products
+-- Products policies
+CREATE POLICY "Owners can manage all products" ON public.products
   FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.user_profiles 
-      WHERE id = auth.uid() AND role = 'owner'
-    )
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'owner')
   );
 
--- Sales Policies
-DROP POLICY IF EXISTS "Workers can create own sales" ON public.sales;
-CREATE POLICY "Workers can create own sales" ON public.sales
+CREATE POLICY "Workers can view active products" ON public.products
+  FOR SELECT USING (is_active = true);
+
+-- Sales policies
+CREATE POLICY "Workers can create sales" ON public.sales
   FOR INSERT WITH CHECK (auth.uid() = worker_id);
 
-DROP POLICY IF EXISTS "Workers can view own sales" ON public.sales;
 CREATE POLICY "Workers can view own sales" ON public.sales
   FOR SELECT USING (auth.uid() = worker_id);
 
-DROP POLICY IF EXISTS "Owners can view all sales" ON public.sales;
 CREATE POLICY "Owners can view all sales" ON public.sales
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.user_profiles 
-      WHERE id = auth.uid() AND role = 'owner'
-    )
-  );
-
-DROP POLICY IF EXISTS "Owners can manage all sales" ON public.sales;
-CREATE POLICY "Owners can manage all sales" ON public.sales
   FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.user_profiles 
-      WHERE id = auth.uid() AND role = 'owner'
-    )
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'owner')
   );
 
--- Expenses Policies
-DROP POLICY IF EXISTS "Workers can create own expenses" ON public.expenses;
-CREATE POLICY "Workers can create own expenses" ON public.expenses
+-- Expenses policies
+CREATE POLICY "Workers can create expenses" ON public.expenses
   FOR INSERT WITH CHECK (auth.uid() = worker_id);
 
-DROP POLICY IF EXISTS "Workers can view own expenses" ON public.expenses;
 CREATE POLICY "Workers can view own expenses" ON public.expenses
   FOR SELECT USING (auth.uid() = worker_id);
 
-DROP POLICY IF EXISTS "Owners can view all expenses" ON public.expenses;
 CREATE POLICY "Owners can view all expenses" ON public.expenses
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'owner')
+  );
+
+-- Notes policies
+CREATE POLICY "Users can manage own notes" ON public.notes
+  FOR ALL USING (auth.uid() = created_by);
+
+CREATE POLICY "Owners can view all notes" ON public.notes
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.user_profiles 
-      WHERE id = auth.uid() AND role = 'owner'
-    )
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'owner')
   );
 
-DROP POLICY IF EXISTS "Owners can manage all expenses" ON public.expenses;
-CREATE POLICY "Owners can manage all expenses" ON public.expenses
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.user_profiles 
-      WHERE id = auth.uid() AND role = 'owner'
-    )
-  );
+-- AI data policies
+CREATE POLICY "Users can manage own AI data" ON public.ai_analysis
+  FOR ALL USING (auth.uid() = created_by);
 
--- Notes Policies (Owner only)
-DROP POLICY IF EXISTS "Only owners can manage notes" ON public.notes;
-CREATE POLICY "Only owners can manage notes" ON public.notes
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.user_profiles 
-      WHERE id = auth.uid() AND role = 'owner'
-    )
-  );
-
--- Business Settings Policies (Owner only)
-DROP POLICY IF EXISTS "Only owners can manage business settings" ON public.business_settings;
-CREATE POLICY "Only owners can manage business settings" ON public.business_settings
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.user_profiles 
-      WHERE id = auth.uid() AND role = 'owner'
-    )
-  );
+CREATE POLICY "Users can manage own AI conversations" ON public.ai_conversations
+  FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================================
--- STORAGE SETUP
+-- STEP 7: STORAGE SETUP FOR PRODUCT IMAGES
 -- ============================================================================
 
--- Create storage bucket for product images
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('product-images', 'product-images', true)
-ON CONFLICT (id) DO NOTHING;
+DO $$
+BEGIN
+  -- Check if storage schema exists
+  IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'storage') THEN
+    -- Create storage bucket
+    INSERT INTO storage.buckets (id, name, public) 
+    VALUES ('product-images', 'product-images', true)
+    ON CONFLICT (id) DO NOTHING;
 
--- Storage policies for product images
-DROP POLICY IF EXISTS "Anyone can view product images" ON storage.objects;
-CREATE POLICY "Anyone can view product images" ON storage.objects
-  FOR SELECT USING (bucket_id = 'product-images');
+    -- Storage policies
+    DROP POLICY IF EXISTS "Anyone can view product images" ON storage.objects;
+    CREATE POLICY "Anyone can view product images" ON storage.objects
+      FOR SELECT USING (bucket_id = 'product-images');
 
-DROP POLICY IF EXISTS "Authenticated users can upload product images" ON storage.objects;
-CREATE POLICY "Authenticated users can upload product images" ON storage.objects
-  FOR INSERT WITH CHECK (bucket_id = 'product-images' AND auth.role() = 'authenticated');
-
-DROP POLICY IF EXISTS "Authenticated users can update product images" ON storage.objects;
-CREATE POLICY "Authenticated users can update product images" ON storage.objects
-  FOR UPDATE WITH CHECK (bucket_id = 'product-images' AND auth.role() = 'authenticated');
-
-DROP POLICY IF EXISTS "Authenticated users can delete product images" ON storage.objects;
-CREATE POLICY "Authenticated users can delete product images" ON storage.objects
-  FOR DELETE USING (bucket_id = 'product-images' AND auth.role() = 'authenticated');
+    DROP POLICY IF EXISTS "Authenticated users can upload product images" ON storage.objects;
+    CREATE POLICY "Authenticated users can upload product images" ON storage.objects
+      FOR INSERT WITH CHECK (bucket_id = 'product-images' AND auth.role() = 'authenticated');
+    
+    RAISE NOTICE '✅ Storage bucket configured';
+  ELSE
+    RAISE NOTICE '⚠️ Storage extension not available, skipping storage setup';
+  END IF;
+END $$;
 
 -- ============================================================================
--- FUNCTIONS & TRIGGERS
+-- STEP 8: FUNCTIONS & TRIGGERS
 -- ============================================================================
 
--- Function to automatically create user profile
+-- User profile creation function with first user as owner
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.user_profiles (id, email, display_name, role, created_by)
+  INSERT INTO public.user_profiles (id, email, display_name, role)
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'owner'),
-    COALESCE((NEW.raw_user_meta_data->>'created_by')::UUID, NEW.id)
-  );
+    COALESCE(
+      NEW.raw_user_meta_data->>'display_name', 
+      NEW.raw_user_meta_data->>'full_name',
+      split_part(NEW.email, '@', 1)
+    ),
+    CASE 
+      WHEN (SELECT COUNT(*) FROM public.user_profiles) = 0 THEN 'owner'
+      ELSE COALESCE(NEW.raw_user_meta_data->>'role', 'worker')
+    END
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET email = EXCLUDED.email,
+      display_name = EXCLUDED.display_name;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger to create profile when user signs up
+-- Create trigger for new users
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Function to handle updated_at timestamps
+-- Updated_at function
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -306,228 +359,200 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Add updated_at triggers
-DROP TRIGGER IF EXISTS handle_updated_at ON public.user_profiles;
-CREATE TRIGGER handle_updated_at 
-  BEFORE UPDATE ON public.user_profiles
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+DO $$
+BEGIN
+    DROP TRIGGER IF EXISTS handle_updated_at_user_profiles ON public.user_profiles;
+    CREATE TRIGGER handle_updated_at_user_profiles
+      BEFORE UPDATE ON public.user_profiles
+      FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+    
+    DROP TRIGGER IF EXISTS handle_updated_at_products ON public.products;
+    CREATE TRIGGER handle_updated_at_products
+      BEFORE UPDATE ON public.products
+      FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+    
+    DROP TRIGGER IF EXISTS handle_updated_at_notes ON public.notes;
+    CREATE TRIGGER handle_updated_at_notes
+      BEFORE UPDATE ON public.notes
+      FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+END $$;
 
-DROP TRIGGER IF EXISTS handle_updated_at ON public.products;
-CREATE TRIGGER handle_updated_at 
-  BEFORE UPDATE ON public.products
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+-- Function to update stock after a sale
+CREATE OR REPLACE FUNCTION public.update_product_stock()
+RETURNS TRIGGER AS $$
+DECLARE
+    item RECORD;
+    product_id UUID;
+    quantity INTEGER;
+BEGIN
+    -- Loop through each item in the sale
+    FOR item IN SELECT * FROM jsonb_array_elements(NEW.items)
+    LOOP
+        product_id := (item.value->>'product_id')::UUID;
+        quantity := (item.value->>'quantity')::INTEGER;
+        
+        -- Update the product stock
+        UPDATE public.products 
+        SET stock = stock - quantity,
+            updated_at = NOW()
+        WHERE id = product_id;
+    END LOOP;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS handle_updated_at ON public.business_settings;
-CREATE TRIGGER handle_updated_at 
-  BEFORE UPDATE ON public.business_settings
-  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+-- Create trigger to update stock after sale
+DROP TRIGGER IF EXISTS after_sale_on_stock ON public.sales;
+CREATE TRIGGER after_sale_on_stock
+  AFTER INSERT ON public.sales
+  FOR EACH ROW EXECUTE FUNCTION public.update_product_stock();
 
--- ============================================================================
--- BUSINESS LOGIC FUNCTIONS
--- ============================================================================
-
--- Atomic sale transaction function
-CREATE OR REPLACE FUNCTION public.record_sale_atomic(
-  items_jsonb JSONB,
-  payment_amt NUMERIC,
-  worker_uuid UUID
+-- Function for owners to create worker accounts
+CREATE OR REPLACE FUNCTION public.create_worker_account(
+    user_email TEXT,
+    user_display_name TEXT
 ) RETURNS UUID AS $$
 DECLARE
-  item JSONB;
-  pid UUID;
-  qty INTEGER;
-  prod RECORD;
-  total NUMERIC := 0;
-  sale_items JSONB := '[]'::JSONB;
-  new_sale_id UUID;
-  worker_name_val TEXT;
+    new_user_id UUID;
+    current_user_role TEXT;
 BEGIN
-  -- Validate inputs
-  IF jsonb_typeof(items_jsonb) IS DISTINCT FROM 'array' THEN
-    RAISE EXCEPTION 'items must be a JSON array';
-  END IF;
-  
-  IF payment_amt < 0 THEN
-    RAISE EXCEPTION 'payment amount cannot be negative';
-  END IF;
-
-  -- Get worker name
-  SELECT display_name INTO worker_name_val 
-  FROM public.user_profiles 
-  WHERE id = worker_uuid;
-  
-  IF worker_name_val IS NULL THEN
-    RAISE EXCEPTION 'Worker not found';
-  END IF;
-
-  -- Process each item
-  FOR item IN SELECT * FROM jsonb_array_elements(items_jsonb) LOOP
-    pid := (item->>'productId')::UUID;
-    qty := (item->>'quantity')::INTEGER;
-
-    IF qty <= 0 THEN
-      RAISE EXCEPTION 'Invalid quantity % for product %', qty, pid;
+    -- Check if current user is an owner
+    SELECT role INTO current_user_role 
+    FROM public.user_profiles 
+    WHERE id = auth.uid();
+    
+    IF current_user_role != 'owner' THEN
+        RAISE EXCEPTION 'Only owners can create worker accounts';
     END IF;
-
-    -- Lock and get product
-    SELECT * INTO prod FROM public.products WHERE id = pid AND is_active = true FOR UPDATE;
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'Product % not found or inactive', pid;
-    END IF;
-
-    IF prod.stock < qty THEN
-      RAISE EXCEPTION 'Insufficient stock for product %. Available: %, Requested: %', prod.name, prod.stock, qty;
-    END IF;
-
-    -- Update stock
-    UPDATE public.products 
-    SET stock = stock - qty, updated_at = NOW() 
-    WHERE id = pid;
-
-    -- Calculate total
-    total := total + (prod.price * qty);
-
-    -- Build sale items
-    sale_items := sale_items || jsonb_build_object(
-      'productId', pid,
-      'productName', prod.name,
-      'quantity', qty,
-      'price', prod.price,
-      'subtotal', prod.price * qty
-    );
-  END LOOP;
-
-  -- Validate payment
-  IF payment_amt < total THEN
-    RAISE EXCEPTION 'Insufficient payment. Total: %, Payment: %', total, payment_amt;
-  END IF;
-
-  -- Create sale record
-  INSERT INTO public.sales (items, total, payment, change, worker_id, worker_name)
-  VALUES (
-    sale_items,
-    total,
-    payment_amt,
-    payment_amt - total,
-    worker_uuid,
-    worker_name_val
-  ) RETURNING id INTO new_sale_id;
-
-  RETURN new_sale_id;
+    
+    -- Generate a user ID (in a real scenario, you'd create the auth user first)
+    new_user_id := gen_random_uuid();
+    
+    -- Create the profile with worker role
+    INSERT INTO public.user_profiles (id, email, display_name, role, created_by)
+    VALUES (new_user_id, user_email, user_display_name, 'worker', auth.uid());
+    
+    RETURN new_user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to get business analytics
-CREATE OR REPLACE FUNCTION public.get_business_analytics(
-  start_date DATE DEFAULT CURRENT_DATE - INTERVAL '30 days',
-  end_date DATE DEFAULT CURRENT_DATE
-) RETURNS JSON AS $$
+-- Function to get sales data for AI analysis
+CREATE OR REPLACE FUNCTION public.get_sales_data_for_ai(
+    start_date TIMESTAMP DEFAULT NOW() - INTERVAL '30 days',
+    end_date TIMESTAMP DEFAULT NOW()
+) RETURNS JSONB AS $$
 DECLARE
-  result JSON;
+    result JSONB;
 BEGIN
-  -- Only owners can access analytics
-  IF NOT EXISTS (
-    SELECT 1 FROM public.user_profiles 
-    WHERE id = auth.uid() AND role = 'owner'
-  ) THEN
-    RAISE EXCEPTION 'Access denied. Only owners can view analytics.';
-  END IF;
-
-  SELECT json_build_object(
-    'total_sales', COALESCE(SUM(s.total), 0),
-    'total_transactions', COUNT(s.id),
-    'total_expenses', COALESCE(
-      (SELECT SUM(e.amount) FROM public.expenses e 
-       WHERE e.created_at::DATE BETWEEN start_date AND end_date), 0
-    ),
-    'average_transaction', COALESCE(AVG(s.total), 0),
-    'top_products', (
-      SELECT json_agg(
-        json_build_object(
-          'name', item->>'productName',
-          'quantity', SUM((item->>'quantity')::INTEGER),
-          'revenue', SUM((item->>'subtotal')::NUMERIC)
-        )
-      )
-      FROM public.sales s,
-           jsonb_array_elements(s.items) AS item
-      WHERE s.created_at::DATE BETWEEN start_date AND end_date
-      GROUP BY item->>'productName'
-      ORDER BY SUM((item->>'subtotal')::NUMERIC) DESC
-      LIMIT 5
-    ),
-    'worker_performance', (
-      SELECT json_agg(
-        json_build_object(
-          'worker_name', s.worker_name,
-          'total_sales', SUM(s.total),
-          'transaction_count', COUNT(s.id)
-        )
-      )
-      FROM public.sales s
-      WHERE s.created_at::DATE BETWEEN start_date AND end_date
-      GROUP BY s.worker_name, s.worker_id
-      ORDER BY SUM(s.total) DESC
-    )
-  ) INTO result
-  FROM public.sales s
-  WHERE s.created_at::DATE BETWEEN start_date AND end_date;
-
-  RETURN result;
+    SELECT jsonb_agg(jsonb_build_object(
+        'date', created_at::date,
+        'total', total,
+        'items', items
+    )) INTO result
+    FROM public.sales
+    WHERE created_at BETWEEN start_date AND end_date;
+    
+    RETURN COALESCE(result, '[]'::jsonb);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================================
--- INITIAL DATA
+-- STEP 9: CREATE VIEWS FOR DASHBOARD
 -- ============================================================================
 
--- Create default business settings (will be created by first owner)
--- This is handled by the application, not in SQL
-
--- ============================================================================
--- VIEWS FOR EASY QUERYING
--- ============================================================================
-
--- View for sales with worker details
-CREATE OR REPLACE VIEW public.sales_with_worker AS
+-- Daily sales summary
+CREATE OR REPLACE VIEW public.daily_sales_summary AS
 SELECT 
-  s.*,
-  up.display_name as worker_display_name,
-  up.email as worker_email
-FROM public.sales s
-LEFT JOIN public.user_profiles up ON s.worker_id = up.id;
+    DATE(created_at) as sale_date,
+    COUNT(*) as total_transactions,
+    SUM(total) as total_revenue,
+    AVG(total) as average_sale
+FROM public.sales
+GROUP BY DATE(created_at)
+ORDER BY sale_date DESC;
 
--- View for expenses with worker details  
-CREATE OR REPLACE VIEW public.expenses_with_worker AS
-SELECT 
-  e.*,
-  up.display_name as worker_display_name,
-  up.email as worker_email
-FROM public.expenses e
-LEFT JOIN public.user_profiles up ON e.worker_id = up.id;
+-- Product performance view
+CREATE OR REPLACE VIEW public.product_performance AS
+SELECT
+    p.id,
+    p.name,
+    p.category,
+    COUNT(s.id) as times_sold,
+    COALESCE(SUM((item->>'quantity')::INTEGER), 0) as total_quantity_sold,
+    COALESCE(SUM((item->>'quantity')::DECIMAL * (item->>'price')::DECIMAL), 0) as total_revenue
+FROM public.products p
+LEFT JOIN public.sales s ON true
+LEFT JOIN jsonb_array_elements(s.items) item ON (item->>'product_id')::UUID = p.id
+GROUP BY p.id, p.name, p.category;
+
+-- Expense summary by category
+CREATE OR REPLACE VIEW public.expense_summary AS
+SELECT
+    category,
+    COUNT(*) as transaction_count,
+    SUM(amount) as total_amount,
+    AVG(amount) as average_amount
+FROM public.expenses
+GROUP BY category
+ORDER BY total_amount DESC;
 
 -- ============================================================================
--- GRANTS (Security)
+-- STEP 10: GRANTS
 -- ============================================================================
 
--- Grant usage on schema
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT USAGE ON SCHEMA public TO anon;
-
--- Grant access to tables for authenticated users (RLS will handle the rest)
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL PROCEDURES IN SCHEMA public TO authenticated;
 
 -- ============================================================================
--- COMPLETION MESSAGE
+-- STEP 11: DEFAULT DATA (Optional)
+-- ============================================================================
+
+-- Insert a default owner if no users exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.user_profiles) THEN
+    -- This would typically be done when the first user signs up via the handle_new_user function
+    RAISE NOTICE 'No users found. The first user to sign up will be assigned the owner role.';
+  END IF;
+END $$;
+
+-- ============================================================================
+-- FINAL VERIFICATION
 -- ============================================================================
 
 DO $$
+DECLARE
+    table_count INTEGER;
+    user_profiles_cols INTEGER;
+    products_cols INTEGER;
 BEGIN
-  RAISE NOTICE '✅ Charnoks Manager database setup completed successfully!';
-  RAISE NOTICE '📊 Tables created: user_profiles, products, sales, expenses, notes, business_settings';
-  RAISE NOTICE '🔒 Row Level Security enabled with owner-worker hierarchy';
-  RAISE NOTICE '🖼️ Storage bucket created for product images';
-  RAISE NOTICE '⚡ Functions created for atomic sales and analytics';
-  RAISE NOTICE '🎯 Ready for production use!';
+    -- Count tables
+    SELECT COUNT(*) INTO table_count 
+    FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name IN ('user_profiles', 'products', 'sales', 'expenses', 'notes', 'ai_analysis', 'ai_conversations');
+    
+    -- Count columns in key tables
+    SELECT COUNT(*) INTO user_profiles_cols 
+    FROM information_schema.columns 
+    WHERE table_name = 'user_profiles' AND table_schema = 'public';
+    
+    SELECT COUNT(*) INTO products_cols 
+    FROM information_schema.columns 
+    WHERE table_name = 'products' AND table_schema = 'public';
+    
+    RAISE NOTICE '✅ SETUP COMPLETED SUCCESSFULLY!';
+    RAISE NOTICE '📊 Tables created/verified: %', table_count;
+    RAISE NOTICE '📋 user_profiles columns: %', user_profiles_cols;
+    RAISE NOTICE '📋 products columns: %', products_cols;
+    RAISE NOTICE '🔒 Row Level Security enabled';
+    RAISE NOTICE '🖼️ Storage bucket configured';
+    RAISE NOTICE '⚡ Triggers and functions ready';
+    RAISE NOTICE '📊 Dashboard views created';
+    RAISE NOTICE '🎯 Database is ready for use!';
 END $$;

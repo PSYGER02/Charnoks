@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useState } from 'react';
 import KPICard from '../ui/KPI_Card';
 import ChartContainer from '../charts/ChartContainer';
 import { getOwnerDashboard } from '../../services/supabaseService';
@@ -68,13 +69,13 @@ const Ownersdashboard: React.FC = () => {
     }
 
     const { totalRevenue, netProfit, transactions, salesTrend, topProducts } = dashboardData;
-    
+
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
-    
+
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: CustomizedLabelProps) => {
         if (midAngle === undefined) return null;
-        
+
         const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
         const x = cx + radius * Math.cos(-midAngle * RADIAN);
         const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -123,7 +124,7 @@ const Ownersdashboard: React.FC = () => {
                     </div>
                 </div>
             )}
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <KPICard 
                     title="Total Revenue" 
