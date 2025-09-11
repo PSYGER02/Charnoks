@@ -39,95 +39,23 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     }
   };
 
-  const containerClass = fullScreen 
-    ? 'fixed inset-0 z-50 flex items-center justify-center bg-gray-900/95 backdrop-blur-sm'
-    : 'flex items-center justify-center p-8';
-
   return (
-    <div className={containerClass}>
-      <div className="text-center">
-        {/* Animated Logo/Icon */}
-        <div className="relative mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 relative">
-            {/* Spinning Ring */}
-            <div className={`absolute inset-0 rounded-full bg-gradient-to-r ${getGradient()} animate-spin`}>
-              <div className="absolute inset-2 bg-gray-900 rounded-full"></div>
-            </div>
-            
-            {/* Center Icon */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl animate-pulse">{getIcon()}</span>
-            </div>
-          </div>
-          
-          {/* Pulsing Dots */}
-          <div className="flex justify-center space-x-2">
-            <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${getGradient()} animate-bounce`} style={{ animationDelay: '0ms' }}></div>
-            <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${getGradient()} animate-bounce`} style={{ animationDelay: '150ms' }}></div>
-            <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${getGradient()} animate-bounce`} style={{ animationDelay: '300ms' }}></div>
-          </div>
+    <div className={`${fullScreen ? 'fixed inset-0' : 'relative w-full'} z-50 flex items-center justify-center bg-black bg-opacity-40`}>
+      <div className="flex flex-col items-center space-y-4">
+        <div className={`w-16 h-16 rounded-xl flex items-center justify-center bg-gradient-to-br ${getGradient()} shadow-lg p-3`}>
+          <span className="text-2xl drop-shadow-lg" role="img" aria-label={type}>{getIcon()}</span>
         </div>
-
-        {/* Loading Text */}
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold text-white animate-pulse">
-            {message}
-          </h2>
+        <div className="text-center space-y-2">
+          <div className="text-lg font-semibold text-white drop-shadow-lg">{message}</div>
           {submessage && (
-            <p className="text-gray-400 text-sm animate-pulse" style={{ animationDelay: '500ms' }}>
-              {submessage}
-            </p>
+            <div className="text-sm text-white/70">{submessage}</div>
           )}
         </div>
-
-        {/* Progress Bar */}
-        <div className="mt-6 w-64 mx-auto">
-          <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
-            <div className={`h-full bg-gradient-to-r ${getGradient()} animate-pulse`} 
-                 style={{ 
-                   width: '100%',
-                   animation: 'loading-progress 2s ease-in-out infinite'
-                 }}>
-            </div>
-          </div>
-        </div>
       </div>
-
-      <style jsx>{`
-        @keyframes loading-progress {
-          0% { transform: translateX(-100%); }
-          50% { transform: translateX(0%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
     </div>
   );
 };
 
-// Compact loading component for inline use
-export const InlineLoader: React.FC<{ message?: string; size?: 'sm' | 'md' | 'lg' }> = ({ 
-  message = 'Loading...', 
-  size = 'md' 
-}) => {
-  const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6',
-    lg: 'w-8 h-8'
-  };
-
-  return (
-    <div className="flex items-center justify-center space-x-3 p-4">
-      <div className={`${sizeClasses[size]} relative`}>
-        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 animate-spin">
-          <div className="absolute inset-1 bg-gray-900 rounded-full"></div>
-        </div>
-      </div>
-      <span className="text-gray-300 text-sm animate-pulse">{message}</span>
-    </div>
-  );
-};
-
-// Skeleton loader for content
 export const SkeletonLoader: React.FC<{ lines?: number; className?: string }> = ({ 
   lines = 3, 
   className = '' 
@@ -143,6 +71,26 @@ export const SkeletonLoader: React.FC<{ lines?: number; className?: string }> = 
           </div>
         </div>
       ))}
+    </div>
+  );
+};
+
+export const InlineLoader: React.FC<{
+  message?: string;
+  size?: 'sm' | 'md' | 'lg';
+}> = ({ message = 'Loading...', size = 'md' }) => {
+  const sizeClasses = {
+    sm: 'w-4 h-4 border-2',
+    md: 'w-6 h-6 border-2',
+    lg: 'w-8 h-8 border-3'
+  };
+
+  return (
+    <div className="flex items-center space-x-3">
+      <div className={`${sizeClasses[size]} border-primary border-t-transparent rounded-full animate-spin`} />
+      {message && (
+        <span className="text-text-secondary">{message}</span>
+      )}
     </div>
   );
 };

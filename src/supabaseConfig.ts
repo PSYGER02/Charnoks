@@ -14,9 +14,13 @@ if (import.meta.env.DEV) {
 // Create Supabase client or dummy client if not configured
 let supabaseClient: any;
 
-if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'undefined' || supabaseAnonKey === 'undefined') {
+// More robust environment variable validation
+const isValidUrl = typeof supabaseUrl === 'string' && supabaseUrl.length > 0 && supabaseUrl !== 'undefined';
+const isValidKey = typeof supabaseAnonKey === 'string' && supabaseAnonKey.length > 0 && supabaseAnonKey !== 'undefined';
+
+if (!isValidUrl || !isValidKey) {
   console.warn('⚠️ Supabase not configured - using demo mode');
-  console.warn('Expected variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
+  console.warn('Expected valid values for: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
   
   // Create a dummy client to prevent crashes
   supabaseClient = {

@@ -26,10 +26,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if Supabase is configured
-  const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL &&
-    import.meta.env.VITE_SUPABASE_ANON_KEY &&
+  // Robust Supabase config validation
+  const isSupabaseConfigured = 
+    typeof import.meta.env.VITE_SUPABASE_URL === 'string' && 
+    import.meta.env.VITE_SUPABASE_URL.length > 0 &&
     import.meta.env.VITE_SUPABASE_URL !== 'undefined' &&
+    typeof import.meta.env.VITE_SUPABASE_ANON_KEY === 'string' && 
+    import.meta.env.VITE_SUPABASE_ANON_KEY.length > 0 &&
     import.meta.env.VITE_SUPABASE_ANON_KEY !== 'undefined';
 
   useEffect(() => {

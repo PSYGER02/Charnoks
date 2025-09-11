@@ -12,7 +12,8 @@ import ResponsiveLayout from './components/layout/ResponsiveLayout';
 import { WorkerLayout } from './components/layout/WorkerLayout';
 import WorkerDashboard from './pages/Workerdashboard';
 
-import Ownersdashboard from './components/ui/Ownersdashboard';
+import OwnerDashboard from './pages/owner/OwnerDashboard';
+import OwnerHomePage from './pages/owner/OwnerHomePage';
 import AnalysisPage from './pages/AnalysisPage';
 import AdvancedAnalyticsPage from './pages/AdvancedAnalyticsPage';
 import AIAssistantPage from './pages/AIAssistantPage';
@@ -117,7 +118,8 @@ const AppContent: React.FC = () => {
         <Route element={<AuthLayout />}>
             {/* Owner Routes are nested under their own layout */}
             <Route path="/owner" element={<ResponsiveLayout><Outlet /></ResponsiveLayout>}>
-                <Route path="dashboard" element={<Ownersdashboard />} />
+                <Route path="dashboard" element={<OwnerDashboard />} />
+                <Route path="home" element={<OwnerHomePage />} />
                 <Route path="analysis" element={<AnalysisPage />} />
                 <Route path="advanced-analytics" element={<AdvancedAnalyticsPage />} />
                 <Route path="ai-assistant" element={<AIAssistantPage />} />
