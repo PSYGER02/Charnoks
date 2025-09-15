@@ -7,53 +7,16 @@ interface LoadingScreenProps {
   fullScreen?: boolean;
 }
 
+// DISABLED: Full-screen loading moved to PreservedLoadingScreen.tsx
+// This component now returns null to prevent full-screen overlays
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({ 
   message = 'Loading...', 
   submessage,
   type = 'general',
   fullScreen = true 
 }) => {
-  const getIcon = () => {
-    switch (type) {
-      case 'auth':
-        return '🔐';
-      case 'api':
-        return '🌐';
-      case 'data':
-        return '📊';
-      default:
-        return '⚡';
-    }
-  };
-
-  const getGradient = () => {
-    switch (type) {
-      case 'auth':
-        return 'from-blue-500 to-purple-600';
-      case 'api':
-        return 'from-green-500 to-teal-600';
-      case 'data':
-        return 'from-orange-500 to-red-600';
-      default:
-        return 'from-yellow-500 to-orange-600';
-    }
-  };
-
-  return (
-    <div className={`${fullScreen ? 'fixed inset-0' : 'relative w-full'} z-50 flex items-center justify-center bg-black bg-opacity-40`}>
-      <div className="flex flex-col items-center space-y-4">
-        <div className={`w-16 h-16 rounded-xl flex items-center justify-center bg-gradient-to-br ${getGradient()} shadow-lg p-3`}>
-          <span className="text-2xl drop-shadow-lg" role="img" aria-label={type}>{getIcon()}</span>
-        </div>
-        <div className="text-center space-y-2">
-          <div className="text-lg font-semibold text-white drop-shadow-lg">{message}</div>
-          {submessage && (
-            <div className="text-sm text-white/70">{submessage}</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  // Return null to disable full-screen loading overlays
+  return null;
 };
 
 export const SkeletonLoader: React.FC<{ lines?: number; className?: string }> = ({ 

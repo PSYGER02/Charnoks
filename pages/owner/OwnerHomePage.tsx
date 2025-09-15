@@ -49,11 +49,10 @@ const OwnerHomePage: React.FC = () => {
     );
 
     const dashboardData = loadingState.data || getEmptyDashboardData();
-    const isLoading = loadingState.loading && !loadingState.data;
-    const hasError = loadingState.error && !loadingState.data;
-
-    // Show loading spinner only on initial load
-    if (isLoading) {
+    const isInitialLoading = loadingState.loading && !loadingState.data && !loadingState.error;
+    
+    // Show loading spinner only on very first load with no data or error
+    if (isInitialLoading) {
         return (
             <div className="flex justify-center items-center h-64">
                 <Spinner size="lg" />

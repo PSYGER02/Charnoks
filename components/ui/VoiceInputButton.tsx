@@ -69,7 +69,8 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({ onTranscript, isPro
         };
         recognition.onresult = (event: SpeechRecognitionEvent) => {
             const transcript = event.results[0][0].transcript;
-            onTranscript(transcript);
+            const sanitizedTranscript = transcript.replace(/[<>&"']/g, '');
+            onTranscript(sanitizedTranscript);
         };
         
         recognitionRef.current = recognition;
@@ -95,7 +96,7 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({ onTranscript, isPro
         if (status === 'unsupported') return <span>Voice not supported</span>;
         if (status === 'denied') return <span>Mic access denied</span>;
         if (isProcessing) return <><Spinner size="sm" /> Processing...</>;
-        if (error) return <>⚠️ {error.slice(0, 20)}...</>;
+        if (error) return <>⚠️ {error.replace(/[<>&"']/g, '').slice(0, 20)}...</>;
         if (status === 'listening') return <div className="flex items-center"><div className="w-3 h-3 bg-red-500 rounded-full animate-pulse mr-2" /> Listening...</div>;
 
         return <>🎙️ Voice Input</>;

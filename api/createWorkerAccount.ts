@@ -82,7 +82,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         if (createError) {
-            console.error('Error creating worker:', createError);
+            const sanitizedError = createError.message?.replace(/[\r\n]/g, ' ') || 'Unknown error';
+            console.error('Error creating worker:', sanitizedError);
             res.status(400).json({ error: createError.message });
             return;
         }
@@ -113,7 +114,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
 
             if (manualCreateError) {
-                console.error('Error creating worker profile:', manualCreateError);
+                const sanitizedError = manualCreateError.message?.replace(/[\r\n]/g, ' ') || 'Unknown error';
+                console.error('Error creating worker profile:', sanitizedError);
                 res.status(500).json({ error: 'Failed to create worker profile' });
                 return;
             }

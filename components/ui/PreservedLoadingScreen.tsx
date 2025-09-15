@@ -1,6 +1,12 @@
 import React from 'react';
 
-// Original LoadingScreen code preserved for reference
+/**
+ * PRESERVED LOADING COMPONENTS - DISABLED FOR NOW
+ * These are the original full-screen loading components that were causing issues
+ * They can be re-enabled when needed for specific scenarios
+ */
+
+// Original full-screen loading that was causing issues on refresh
 
 interface LoadingScreenProps {
   message?: string;
@@ -42,9 +48,9 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
   };
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 ${fullScreen ? '' : 'rounded-lg shadow-lg p-8'}`}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70`}>
       <div className="flex flex-col items-center space-y-4">
-        <div className={`w-16 h-16 flex items-center justify-center rounded-full bg-gradient-to-r ${getGradient()} animate-spin-slow text-4xl`}>
+        <div className={`w-16 h-16 rounded-xl flex items-center justify-center bg-gradient-to-br ${getGradient()} shadow-lg p-3`}>
           {getIcon()}
         </div>
         <div className="text-lg font-semibold text-white drop-shadow-lg">{message}</div>

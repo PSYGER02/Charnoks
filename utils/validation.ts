@@ -116,7 +116,10 @@ export const ValidationRules = {
 
   positiveNumber: (message = 'Must be a positive number') => (value: any) => {
     const num = Number(value);
-    if (!isNaN(num) && num <= 0) {
+    if (isNaN(num)) {
+      return message;
+    }
+    if (num <= 0) {
       return message;
     }
     return null;

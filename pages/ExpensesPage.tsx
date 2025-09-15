@@ -41,7 +41,7 @@ const ExpensesPage: React.FC = () => {
 
     const handleAddExpense = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!description || !amount || parseFloat(amount) <= 0) {
+        if (!description || !amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
             setError('Please fill out all fields with valid values.');
             return;
         }

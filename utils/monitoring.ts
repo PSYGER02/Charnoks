@@ -324,7 +324,7 @@ export function monitorFunction<T extends any[], R>(
       return result;
     } catch (error: any) {
       performanceMonitor.endTimer(timerId, false, error.message);
-      performanceMonitor.logError(error, { operation: name, args });
+      performanceMonitor.logError(error, { operation: name, argsCount: args.length });
       throw error;
     }
   };
@@ -349,7 +349,7 @@ export function monitorSyncFunction<T extends any[], R>(
       return result;
     } catch (error: any) {
       performanceMonitor.endTimer(timerId, false, error.message);
-      performanceMonitor.logError(error, { operation: name, args });
+      performanceMonitor.logError(error, { operation: name, argsCount: args.length });
       throw error;
     }
   };

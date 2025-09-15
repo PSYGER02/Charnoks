@@ -50,7 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     }).catch((error) => {
-      console.error('Error getting session:', error);
+      const sanitizedError = error?.message?.replace(/[\r\n]/g, ' ') || 'Unknown error';
+      console.error('Error getting session:', sanitizedError);
       setLoading(false);
     });
 

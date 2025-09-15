@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import Spinner from '../ui/Spinner';
 
 interface ChatBubbleProps {
@@ -69,7 +70,7 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ sender, text, isTyping = false,
                     </div>
                 ) : (
                     <div className="flex items-start">
-                      <div className="prose prose-invert prose-sm min-h-[1em]" dangerouslySetInnerHTML={{ __html: formatText(displayedText) }} />
+                      <div className="prose prose-invert prose-sm min-h-[1em]" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatText(displayedText)) }} />
                       {isAnimating && <TypingCursor />}
                     </div>
                 )}

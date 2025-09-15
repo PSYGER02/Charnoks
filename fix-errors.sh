@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 echo "🔧 Fixing TypeScript and build errors..."
 

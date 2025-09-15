@@ -4,15 +4,10 @@ import { useTheme, ThemeProvider } from './hooks/useTheme';
 import { AuthProvider, useAuth } from './hooks/useSupabaseAuth';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { LoadingScreen } from './components/ui/LoadingScreen';
-import { ConnectionStatus } from './components/ui/ConnectionStatus';
-import { EnvDebug } from './components/ui/EnvDebug';
-import { AuthStatus } from './components/ui/AuthStatus';
-
 import ResponsiveLayout from './components/layout/ResponsiveLayout';
 import { WorkerLayout } from './components/layout/WorkerLayout';
 import WorkerDashboard from './pages/Workerdashboard';
 
-import OwnerDashboard from './pages/owner/OwnerDashboard';
 import OwnerHomePage from './pages/owner/OwnerHomePage';
 import AnalysisPage from './pages/AnalysisPage';
 import AdvancedAnalyticsPage from './pages/AdvancedAnalyticsPage';
@@ -27,24 +22,13 @@ import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 
 import SalesPage from './pages/SalesPage';
-import SupabaseStatus from './components/ui/SupabaseStatus';
 
 // This component ensures a user is authenticated before rendering the child routes.
 const AuthLayout: React.FC = () => {
     const { user, loading } = useAuth();
     const location = useLocation();
 
-    if (loading) {
-        return (
-            <LoadingScreen 
-                message="Authenticating..." 
-                submessage="Verifying your credentials"
-                type="auth"
-            />
-        );
-    }
-
-    if (!user) {
+    if (!loading && !user) {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
@@ -54,24 +38,18 @@ const AuthLayout: React.FC = () => {
 
 const RoleRedirect: React.FC = () => {
     const { user, loading } = useAuth();
-    if (loading) {
-        return (
-            <LoadingScreen 
-                message="Loading Dashboard..." 
-                submessage="Preparing your workspace"
-                type="data"
-            />
-        );
+    
+    if (!loading) {
+        if (user?.role === 'owner') {
+            return <Navigate to="/owner/dashboard" replace />;
+        }
+        if (user?.role === 'worker') {
+            return <Navigate to="/worker/dashboard" replace />;
+        }
+        return <Navigate to="/login" replace />;
     }
-
-    if (user?.role === 'owner') {
-        return <Navigate to="/owner/dashboard" replace />;
-    }
-    if (user?.role === 'worker') {
-        return <Navigate to="/worker/dashboard" replace />;
-    }
-    // Fallback to login if role is not defined or user is null
-    return <Navigate to="/login" replace />;
+    
+    return null;
 }
 
 
@@ -107,9 +85,6 @@ const AppContent: React.FC = () => {
 
   return (
     <>
-      <ConnectionStatus />
-      <EnvDebug />
-      <AuthStatus />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
@@ -118,7 +93,7 @@ const AppContent: React.FC = () => {
         <Route element={<AuthLayout />}>
             {/* Owner Routes are nested under their own layout */}
             <Route path="/owner" element={<ResponsiveLayout><Outlet /></ResponsiveLayout>}>
-                <Route path="dashboard" element={<OwnerDashboard />} />
+                <Route path="dashboard" element={<OwnerHomePage />} />
                 <Route path="home" element={<OwnerHomePage />} />
                 <Route path="analysis" element={<AnalysisPage />} />
                 <Route path="advanced-analytics" element={<AdvancedAnalyticsPage />} />
@@ -151,7 +126,6 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <SupabaseStatus />
       <HashRouter>
         <ThemeProvider>
           <AuthProvider>
