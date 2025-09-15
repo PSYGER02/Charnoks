@@ -18,31 +18,36 @@ export type AnalysisMode = 'home' | 'all-workers' | 'compare-workers' | 'worker-
 const AnalysisPage: React.FC = () => {
     const [mode, setMode] = useState<AnalysisMode>('home');
 
-    // Load data with enhanced error handling
+    // Load data only when needed (not on home mode)
+    const shouldLoadData = mode !== 'home';
+    
     const { loadingState: salesState } = useEnhancedDataLoading(
-        () => getSales(100),
+        () => shouldLoadData ? getSales(50) : Promise.resolve([]), // Load less data initially
         {
             cacheKey: 'analysis-sales',
-            cacheDuration: 5 * 60 * 1000, // 5 minutes
-            maxRetries: 2
+            cacheDuration: 10 * 60 * 1000, // 10 minutes
+            maxRetries: 1, // Fail faster
+            autoRefresh: false
         }
     );
 
     const { loadingState: expensesState } = useEnhancedDataLoading(
-        () => getExpenses(100),
+        () => shouldLoadData ? getExpenses(50) : Promise.resolve([]),
         {
-            cacheKey: 'analysis-expenses',
-            cacheDuration: 5 * 60 * 1000,
-            maxRetries: 2
+            cacheKey: 'analysis-expenses', 
+            cacheDuration: 10 * 60 * 1000,
+            maxRetries: 1,
+            autoRefresh: false
         }
     );
 
     const { loadingState: workersState } = useEnhancedDataLoading(
-        () => getWorkersList(),
+        () => shouldLoadData ? getWorkersList() : Promise.resolve([]),
         {
             cacheKey: 'analysis-workers',
-            cacheDuration: 10 * 60 * 1000, // 10 minutes
-            maxRetries: 2
+            cacheDuration: 15 * 60 * 1000, // 15 minutes
+            maxRetries: 1,
+            autoRefresh: false
         }
     );
 
@@ -52,36 +57,54 @@ const AnalysisPage: React.FC = () => {
     const workers = workersState.data || [];
     const products = []; // Will be loaded separately if needed
 
-    const isLoading = (salesState.loading && !salesState.data) || 
-                     (expensesState.loading && !expensesState.data) || 
-                     (workersState.loading && !workersState.data);
+    // Only show loading on initial load with no data and no errors
+    const isLoading = shouldLoadData && (
+        (salesState.loading && !salesState.data && !salesState.error) || 
+        (expensesState.loading && !expensesState.data && !expensesState.error) || 
+        (workersState.loading && !workersState.data && !workersState.error)
+    );
 
-    const hasError = (salesState.error && !salesState.data) || 
-                    (expensesState.error && !expensesState.data) || 
-                    (workersState.error && !workersState.data);
+    const hasError = shouldLoadData && (
+        (salesState.error && !salesState.data) || 
+        (expensesState.error && !expensesState.data) || 
+        (workersState.error && !workersState.data)
+    );
 
     const renderContent = () => {
-        if (isLoading && mode !== 'home') {
-            return (
-                <div className="flex justify-center items-center h-64">
-                    <Spinner size="lg" />
-                </div>
-            );
-        }
+        // Show loading indicator in header instead of blocking content
+        const showLoadingIndicator = shouldLoadData && (salesState.loading || expensesState.loading || workersState.loading);
 
-        switch (mode) {
-            case 'all-workers':
-                return <AllWorkersOverview sales={sales} expenses={expenses} hasError={hasError} />;
-            case 'compare-workers':
-                return <CompareWorkers sales={sales} expenses={expenses} workers={workers} hasError={hasError} />;
-            case 'worker-insight':
-                return <WorkerInsight sales={sales} expenses={expenses} workers={workers} products={products} hasError={hasError} />;
-            case 'ai-prediction':
-                return <AIPrediction sales={sales} hasError={hasError} />;
-            case 'home':
-            default:
-                return <AnalysisHome setMode={setMode} />;
-        }
+        return (
+            <div>
+                {/* Loading indicator */}
+                {showLoadingIndicator && (
+                    <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
+                        <div className="flex items-center text-sm">
+                            <Spinner size="sm" className="mr-2" />
+                            <span className="text-blue-300">Loading analysis data...</span>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Content */}
+                {(() => {
+                    switch (mode) {
+                        case 'all-workers':
+                            return <AllWorkersOverview sales={sales} expenses={expenses} hasError={hasError} />;
+                        case 'compare-workers':
+                            return <CompareWorkers sales={sales} expenses={expenses} workers={workers} hasError={hasError} />;
+                        case 'worker-insight':
+                            return <WorkerInsight sales={sales} expenses={expenses} workers={workers} products={products} hasError={hasError} />;
+                        case 'ai-prediction':
+                            return <AIPrediction sales={sales} hasError={hasError} />;
+                        case 'home':
+                        default:
+                            return <AnalysisHome setMode={setMode} />;
+                    }
+                })()
+                }
+            </div>
+        )
     };
 
     const getPageTitle = () => {

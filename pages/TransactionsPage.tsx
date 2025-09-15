@@ -60,22 +60,24 @@ const TransactionsPage: React.FC = () => {
     const TRANSACTIONS_PER_PAGE = 15;
     type DateFilter = 'all' | 'today' | '7d' | '30d';
 
-    // Load data with enhanced error handling
+    // Load data with enhanced error handling - optimized for immediate UI
     const { loadingState: salesState } = useEnhancedDataLoading(
-        () => getSales(200), // Load more transactions
+        () => getSales(50), // Load fewer initially for faster response
         {
             cacheKey: 'transactions-sales',
-            cacheDuration: 2 * 60 * 1000, // 2 minutes
-            maxRetries: 2
+            cacheDuration: 5 * 60 * 1000, // 5 minutes
+            maxRetries: 1, // Fail faster
+            autoRefresh: false // Manual refresh only
         }
     );
 
     const { loadingState: workersState } = useEnhancedDataLoading(
         () => getWorkersList(),
         {
-            cacheKey: 'transactions-workers',
-            cacheDuration: 10 * 60 * 1000, // 10 minutes
-            maxRetries: 2
+            cacheKey: 'transactions-workers', 
+            cacheDuration: 15 * 60 * 1000, // 15 minutes
+            maxRetries: 1,
+            autoRefresh: false
         }
     );
 
@@ -83,7 +85,9 @@ const TransactionsPage: React.FC = () => {
     const sales = salesState.data || [];
     const workers = workersState.data || [];
     
-    const isLoading = (salesState.loading && !salesState.data) || (workersState.loading && !workersState.data);
+    // Only show loading on initial load with no data
+    const isLoading = (salesState.loading && !salesState.data && !salesState.error) || 
+                     (workersState.loading && !workersState.data && !workersState.error);
     // const hasError = (salesState.error && !salesState.data) || (workersState.error && !workersState.data);
 
     const dateFilters: { id: DateFilter, label: string }[] = [
@@ -175,11 +179,17 @@ const TransactionsPage: React.FC = () => {
                     </div>
                 </div>
                  <div className="overflow-auto max-h-[60vh]">
-                    {isLoading ? (
-                        <div className="flex justify-center items-center h-32">
-                            <Spinner size="lg" />
+                    {/* Show loading indicator in header instead of blocking UI */}
+                    {(salesState.loading || workersState.loading) && (
+                        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-2 mb-4">
+                            <div className="flex items-center text-sm">
+                                <Spinner size="sm" className="mr-2" />
+                                <span className="text-blue-300">Loading transaction data...</span>
+                            </div>
                         </div>
-                    ) : (
+                    )}
+                    {/* Always show table structure */}
+                    {(
                         <>
                             <table className="w-full text-left table-auto">
                                 <thead className="sticky top-0 bg-card-bg-solid/80 backdrop-blur-sm">

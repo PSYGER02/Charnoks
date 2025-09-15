@@ -22,22 +22,29 @@ const ExpensesPage: React.FC = () => {
     const [amount, setAmount] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [loadingExpenses, setLoadingExpenses] = useState(true);
+    const [loadingExpenses, setLoadingExpenses] = useState(false);
+    const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
 
     useEffect(() => {
         const fetchExpenses = async () => {
+            if (hasAttemptedLoad) return;
+            setLoadingExpenses(true);
+            setHasAttemptedLoad(true);
+            
             try {
                 const fetchedExpenses = await getExpenses();
                 setExpenses(fetchedExpenses);
             } catch (err) {
-                setError('Failed to load expenses.');
-                console.error(err);
+                // Don't show error for new users, just keep empty state
+                console.warn('Expenses not loaded:', err);
             } finally {
                 setLoadingExpenses(false);
             }
         };
-        fetchExpenses();
-    }, []);
+        
+        // Small delay to show UI first, then load data
+        setTimeout(fetchExpenses, 100);
+    }, [hasAttemptedLoad]);
 
     const handleAddExpense = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -68,9 +75,8 @@ const ExpensesPage: React.FC = () => {
         }
     };
 
-    if (loadingExpenses) {
-        return <div className="flex justify-center items-center h-64"><Spinner size="lg" /></div>;
-    }
+    // Show content immediately, with loading indicator if needed
+    const showLoadingSpinner = loadingExpenses && expenses.length === 0;
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -112,6 +118,10 @@ const ExpensesPage: React.FC = () => {
 
             {/* Expenses Table */}
             <div className="bg-white/5 rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between p-4 border-b border-border/50">
+                    <h2 className="text-xl font-bold">Expense History ({expenses.length})</h2>
+                    {showLoadingSpinner && <Spinner size="sm" />}
+                </div>
                 <table className="w-full">
                     <thead>
                         <tr className="bg-white/10">

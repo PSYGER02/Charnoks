@@ -38,27 +38,44 @@ const getEmptyDashboardData = () => ({
 });
 
 const OwnerHomePage: React.FC = () => {
-    const { loadingState, reload, refresh } = useEnhancedDataLoading(
-        () => getOwnerDashboard(),
-        {
-            cacheKey: 'owner-dashboard',
-            cacheDuration: 2 * 60 * 1000, // 2 minutes
-            autoRefresh: true, // Enable auto-refresh for real-time updates
-            maxRetries: 2
-        }
-    );
+    const [dashboardData, setDashboardData] = React.useState(getEmptyDashboardData());
+    const [isLoading, setIsLoading] = React.useState(false);
+    const [hasLoaded, setHasLoaded] = React.useState(false);
 
-    const dashboardData = loadingState.data || getEmptyDashboardData();
-    const isInitialLoading = loadingState.loading && !loadingState.data && !loadingState.error;
-    
-    // Show loading spinner only on very first load with no data or error
-    if (isInitialLoading) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <Spinner size="lg" />
-            </div>
-        );
-    }
+    // Load data in background after component mounts
+    React.useEffect(() => {
+        const loadDashboardData = async () => {
+            if (hasLoaded) return;
+            
+            setIsLoading(true);
+            setHasLoaded(true);
+            
+            try {
+                const data = await getOwnerDashboard();
+                setDashboardData(data);
+            } catch (error) {
+                console.warn('Dashboard data not loaded:', error);
+                // Keep empty data, don't show error to new users
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        // Small delay to show UI first
+        setTimeout(loadDashboardData, 100);
+    }, [hasLoaded]);
+
+    const refresh = async () => {
+        setIsLoading(true);
+        try {
+            const data = await getOwnerDashboard();
+            setDashboardData(data);
+        } catch (error) {
+            console.warn('Dashboard refresh failed:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const { totalRevenue, netProfit, transactions, salesTrend, topProducts } = dashboardData;
 
@@ -82,8 +99,26 @@ const OwnerHomePage: React.FC = () => {
     return (
         <div className="space-y-8">
             <header className="animate-bounce-in">
-                <h1 className="text-4xl font-bold text-text-primary">Dashboard Overview</h1>
-                <p className="text-text-secondary mt-1">Monitor your business performance</p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-4xl font-bold text-text-primary">Dashboard Overview</h1>
+                        <p className="text-text-secondary mt-1">Monitor your business performance</p>
+                    </div>
+                    {isLoading && (
+                        <div className="flex items-center text-sm text-text-secondary">
+                            <Spinner size="sm" className="mr-2" />
+                            <span>Updating...</span>
+                        </div>
+                    )}
+                    {!isLoading && hasLoaded && (
+                        <button
+                            onClick={refresh}
+                            className="text-text-secondary hover:text-text-primary transition-colors text-sm"
+                        >
+                            🔄 Refresh
+                        </button>
+                    )}
+                </div>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -55,16 +55,26 @@ export const addProduct = async (productData: {
   }
 };
 
-// Sales Service
+// Sales Service - Optimized with timeout
 export const getSales = async (limitCount: number = 50): Promise<Sale[]> => {
   try {
-    const { data, error } = await supabase
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout')), 10000)
+    );
+    
+    const dataPromise = supabase
       .from('sales')
-      .select('*')
+      .select('id, created_at, items, total, payment, change_due, worker_id')
       .order('created_at', { ascending: false })
-      .limit(limitCount);
+      .limit(Math.min(limitCount, 100)); // Cap at 100 for performance
 
-    if (error) throw error;
+    const { data, error } = await Promise.race([dataPromise, timeoutPromise]) as any;
+
+    if (error) {
+      console.warn('Sales fetch error:', error);
+      return []; // Return empty array instead of throwing
+    }
 
     return data.map((sale: any) => ({
       id: sale.id,
@@ -168,16 +178,26 @@ export const recordSale = async (saleData: {
   }
 };
 
-// Expenses Service
+// Expenses Service - Optimized with timeout
 export const getExpenses = async (limitCount: number = 50): Promise<Expense[]> => {
   try {
-    const { data, error } = await supabase
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout')), 8000)
+    );
+    
+    const dataPromise = supabase
       .from('expenses')
-      .select('*')
+      .select('id, created_at, description, amount, worker_id')
       .order('created_at', { ascending: false })
-      .limit(limitCount);
+      .limit(Math.min(limitCount, 100)); // Cap at 100 for performance
 
-    if (error) throw error;
+    const { data, error } = await Promise.race([dataPromise, timeoutPromise]) as any;
+
+    if (error) {
+      console.warn('Expenses fetch error:', error);
+      return []; // Return empty array instead of throwing
+    }
 
     return data.map((expense: any) => ({
       id: expense.id,
@@ -228,20 +248,20 @@ export const recordExpense = async (expenseData: {
   }
 };
 
-// Dashboard Service
+// Dashboard Service - Optimized for new users
 export const getOwnerDashboard = async () => {
   try {
-    // Get sales and expenses in parallel
-    const [salesResult, expensesResult] = await Promise.all([
-      supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(100),
-      supabase.from('expenses').select('*').order('created_at', { ascending: false }).limit(100)
+    // Use Promise.allSettled to handle partial failures gracefully
+    const [salesResult, expensesResult] = await Promise.allSettled([
+      supabase.from('sales').select('id, total, created_at, items').order('created_at', { ascending: false }).limit(30),
+      supabase.from('expenses').select('id, amount, created_at').order('created_at', { ascending: false }).limit(30)
     ]);
 
-    if (salesResult.error) throw salesResult.error;
-    if (expensesResult.error) throw expensesResult.error;
-
-    const sales = salesResult.data || [];
-    const expenses = expensesResult.data || [];
+    // Extract data, defaulting to empty arrays if failed
+    const sales = salesResult.status === 'fulfilled' && !salesResult.value.error ? 
+      salesResult.value.data || [] : [];
+    const expenses = expensesResult.status === 'fulfilled' && !expensesResult.value.error ? 
+      expensesResult.value.data || [] : [];
 
     // Calculate totals
     const totalRevenue = sales.reduce((sum: number, sale: any) => sum + (sale.total || 0), 0);
@@ -390,16 +410,27 @@ export const addNote = async (noteData: {
   }
 };
 
-// Workers Service
+// Workers Service - Optimized with timeout
 export const getWorkersList = async (): Promise<any[]> => {
   try {
-    const { data, error } = await supabase
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout')), 5000)
+    );
+    
+    const dataPromise = supabase
       .from('user_profiles')
-      .select('*')
+      .select('id, email, display_name, role, created_at')
       .eq('role', 'worker')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50); // Reasonable limit
 
-    if (error) throw error;
+    const { data, error } = await Promise.race([dataPromise, timeoutPromise]) as any;
+
+    if (error) {
+      console.warn('Workers fetch error:', error);
+      return []; // Return empty array instead of throwing
+    }
 
     return data.map((worker: any) => ({
       id: worker.id,
