@@ -43,9 +43,16 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
             setIsListening(false);
         };
         recognition.onresult = (event: SpeechRecognitionEvent) => {
-            const transcript = event.results[0][0].transcript;
-            setInput(transcript);
-            onSendMessage(transcript);
+            // XSS Protection: Validate speech recognition results
+            if (event.results && event.results[0] && event.results[0][0]) {
+                const transcript = event.results[0][0].transcript;
+                // Sanitize transcript by removing HTML tags and dangerous characters
+                const sanitizedTranscript = transcript.replace(/[<>&"']/g, '').trim();
+                if (sanitizedTranscript) {
+                    setInput(sanitizedTranscript);
+                    onSendMessage(sanitizedTranscript);
+                }
+            }
         };
         recognitionRef.current = recognition;
     }, [onSendMessage]);
@@ -53,8 +60,12 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (input.trim() && !isLoading) {
-            onSendMessage(input);
-            setInput('');
+            // XSS Protection: Sanitize user input
+            const sanitizedInput = input.replace(/[<>&"']/g, '').trim();
+            if (sanitizedInput) {
+                onSendMessage(sanitizedInput);
+                setInput('');
+            }
         }
     };
 

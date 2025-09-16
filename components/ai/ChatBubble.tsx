@@ -48,9 +48,12 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ sender, text, isTyping = false,
         background: `linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)))`
     } : {};
 
-    // A simple markdown-to-HTML converter
+    // XSS Protection: Enhanced markdown-to-HTML converter with input validation
     const formatText = (inputText: string) => {
-        return inputText
+        // First sanitize the input text to remove any existing HTML/scripts
+        const cleanInput = DOMPurify.sanitize(inputText, { ALLOWED_TAGS: [] });
+        
+        return cleanInput
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
             .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italics
             .replace(/^- (.*$)/gm, '<ul class="list-disc list-inside ml-2"><li>$1</li></ul>') // Lists
@@ -70,7 +73,12 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ sender, text, isTyping = false,
                     </div>
                 ) : (
                     <div className="flex items-start">
-                      <div className="prose prose-invert prose-sm min-h-[1em]" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatText(displayedText)) }} />
+                      <div className="prose prose-invert prose-sm min-h-[1em]" dangerouslySetInnerHTML={{ 
+                        __html: DOMPurify.sanitize(formatText(displayedText), {
+                          ALLOWED_TAGS: ['strong', 'em', 'br', 'ul', 'li'],
+                          ALLOWED_ATTR: ['class']
+                        })
+                      }} />
                       {isAnimating && <TypingCursor />}
                     </div>
                 )}

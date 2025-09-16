@@ -27,17 +27,18 @@ Return JSON array with productId, productName, and quantity:
 
 Return only the JSON array.`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 512 }
-        })
-      }
-    );
+    // SSRF Protection: Validate API endpoint
+    const allowedHost = 'generativelanguage.googleapis.com';
+    const apiUrl = `https://${allowedHost}/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.VITE_GEMINI_API_KEY}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 512 }
+      })
+    });
 
     if (!response.ok) {
       return res.status(500).json({ error: 'Failed to parse voice input' });

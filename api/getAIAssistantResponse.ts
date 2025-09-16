@@ -75,20 +75,21 @@ Instructions:
 
 Response:`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { 
-            temperature: 0.7, 
-            maxOutputTokens: 1024 
-          }
-        })
-      }
-    );
+    // SSRF Protection: Validate API endpoint
+    const allowedHost = 'generativelanguage.googleapis.com';
+    const apiUrl = `https://${allowedHost}/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.VITE_GEMINI_API_KEY}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { 
+          temperature: 0.7, 
+          maxOutputTokens: 1024 
+        }
+      })
+    });
 
     if (!response.ok) {
       throw new Error('Failed to get AI response');
