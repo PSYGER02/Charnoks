@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ChatBubble from '../components/ai/ChatBubble';
 import ChatInput from '../components/ai/ChatInput';
 import PromptSuggestions from '../components/ai/PromptSuggestions';
-import { getAIAssistantResponse } from '../services/supabaseService';
+import { aiService } from '../services/optimizedAIService';
 
 interface Message {
     id: number;
@@ -50,7 +50,7 @@ const AIAssistantPage: React.FC = () => {
         const historyForAI = messages.slice(1).map(m => ({ text: m.text, sender: m.sender as 'user' | 'ai' }));
 
         try {
-            const responseText = await getAIAssistantResponse(query, historyForAI);
+            const responseText = await aiService.getAIResponse(query, historyForAI);
             const aiMessage: Message = { id: Date.now() + 1, text: responseText, sender: 'ai' };
             setMessages(prev => [...prev, aiMessage]);
             setLastMessageId(aiMessage.id);

@@ -77,7 +77,7 @@ Response:`;
 
     // SSRF Protection: Validate API endpoint
     const allowedHost = 'generativelanguage.googleapis.com';
-    const apiUrl = `https://${allowedHost}/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.VITE_GEMINI_API_KEY}`;
+    const apiUrl = `https://${allowedHost}/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`;
     
     const response = await fetch(apiUrl, {
       method: 'POST',

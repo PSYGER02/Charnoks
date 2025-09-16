@@ -22,11 +22,11 @@ const AnalysisPage: React.FC = () => {
     const shouldLoadData = mode !== 'home';
     
     const { loadingState: salesState } = useEnhancedDataLoading(
-        () => shouldLoadData ? getSales(50) : Promise.resolve([]), // Load less data initially
+        () => shouldLoadData ? getSales(20) : Promise.resolve([]), // Load even less initially
         {
-            cacheKey: 'analysis-sales',
-            cacheDuration: 10 * 60 * 1000, // 10 minutes
-            maxRetries: 1, // Fail faster
+            cacheKey: `analysis-sales-${mode}`,
+            cacheDuration: 15 * 60 * 1000, // 15 minutes
+            maxRetries: 1,
             autoRefresh: false
         }
     );

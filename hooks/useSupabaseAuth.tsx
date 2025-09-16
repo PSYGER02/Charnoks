@@ -36,23 +36,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     import.meta.env.VITE_SUPABASE_ANON_KEY !== 'undefined';
 
   useEffect(() => {
+    // FORCE loading to false after 2 seconds to prevent infinite loading
+    const forceTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Auth timeout - forcing login redirect');
+        setLoading(false);
+      }
+    }, 2000);
+
     if (!isSupabaseConfigured) {
-      console.warn('Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables.');
       setLoading(false);
+      clearTimeout(forceTimeout);
       return;
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Get initial session with timeout
+    Promise.race([
+      supabase.auth.getSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Session timeout')), 3000))
+    ]).then(({ data: { session } }: any) => {
       if (session?.user) {
         handleUserSession(session.user);
       } else {
         setLoading(false);
       }
-    }).catch((error) => {
-      const sanitizedError = error?.message?.replace(/[\r\n]/g, ' ') || 'Unknown error';
-      console.error('Error getting session:', sanitizedError);
+    }).catch(() => {
       setLoading(false);
+    }).finally(() => {
+      clearTimeout(forceTimeout);
     });
 
     // Listen for auth changes
@@ -67,54 +78,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(forceTimeout);
+    };
   }, [isSupabaseConfigured]);
 
   const handleUserSession = async (authUser: User) => {
+    // ALWAYS set user immediately to prevent white pages
+    const fallbackUser = {
+      uid: authUser.id,
+      email: authUser.email,
+      role: 'owner' as const,
+      displayName: authUser.email?.split('@')[0] || 'User'
+    };
+    
+    setUser(fallbackUser);
+    setLoading(false);
+
+    // Try to get profile in background (non-blocking)
     try {
-      // Get or create user profile
-      let { data: profile, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
-
-      if (error && error.code === 'PGRST116') {
-        // Profile doesn't exist, create it
-        const { data: newProfile, error: createError } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: authUser.id,
-            email: authUser.email,
-            display_name: authUser.user_metadata?.display_name || authUser.email?.split('@')[0] || 'User',
-            role: 'owner' // Default to owner for new signups
-          })
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        profile = newProfile;
-      } else if (error) {
-        throw error;
+      const { data: profile } = await Promise.race([
+        supabase.from('user_profiles').select('*').eq('id', authUser.id).single(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Profile timeout')), 2000))
+      ]);
+      
+      if (profile) {
+        setUser({
+          uid: authUser.id,
+          email: authUser.email,
+          role: profile.role || 'owner',
+          displayName: profile.display_name || fallbackUser.displayName
+        });
       }
-
-      setUser({
-        uid: authUser.id,
-        email: authUser.email,
-        role: profile?.role || 'owner',
-        displayName: profile?.display_name || authUser.email?.split('@')[0] || 'User'
-      });
     } catch (error) {
-      console.error('Error handling user session:', error);
-      // Fallback user data
-      setUser({
-        uid: authUser.id,
-        email: authUser.email,
-        role: 'owner',
-        displayName: authUser.email?.split('@')[0] || 'User'
-      });
-    } finally {
-      setLoading(false);
+      // Keep fallback user, don't block UI
+      console.warn('Profile fetch failed, using fallback:', error);
     }
   };
 

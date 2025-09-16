@@ -72,6 +72,7 @@ const LoginPage: React.FC = () => {
             const redirectPath = userData.role === 'owner' ? '/owner/dashboard' : '/worker/dashboard';
             navigate(redirectPath, { replace: true });
         } catch (err: any) {
+            console.error('Login error:', err);
             setError(err.message || "Failed to log in. Please check your credentials.");
         } finally {
             setIsLoggingIn(false);

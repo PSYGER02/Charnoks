@@ -163,7 +163,7 @@ export const recordSale = async (saleData: {
         items: saleItems,
         total,
         payment: saleData.payment,
-        change: saleData.payment - total,
+        change_due: saleData.payment - total,
         worker_id: user.id,
         worker_name: profile?.display_name || user.email?.split('@')[0] || 'Unknown Worker'
       })
@@ -530,28 +530,50 @@ export const getWorkerPerformance = async (workerId: string, days: number = 30) 
   }
 };
 
-// AI Assistant Service (placeholder - requires external API)
-export const getAIAssistantResponse = async (message: string): Promise<string> => {
+// AI Assistant Service
+export const getAIAssistantResponse = async (message: string, history: any[] = []): Promise<string> => {
   try {
-    // This would typically call an external AI service
-    // For now, return a placeholder response
-    return `AI Assistant response to: "${message}". This feature requires AI service configuration.`;
+    const businessData = await getOwnerDashboard();
+    
+    const response = await fetch('/api/getAIAssistantResponse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: message,
+        businessData: {
+          sales: await getSales(10),
+          expenses: await getExpenses(10),
+          products: await getProducts()
+        },
+        history
+      })
+    });
+
+    if (!response.ok) throw new Error('AI service unavailable');
+    
+    const result = await response.json();
+    return result.response || 'Sorry, I could not process your request.';
   } catch (error) {
     console.error('Error getting AI response:', error);
-    throw new Error('Failed to get AI response');
+    return 'I\'m having trouble connecting to the AI service. Please try again later.';
   }
 };
 
-// Voice parsing service (placeholder)
-export const parseSaleFromVoice = async (_audioData: any): Promise<any> => {
+// Voice parsing service
+export const parseSaleFromVoice = async (transcript: string): Promise<any> => {
   try {
-    // This would typically process voice data
-    // For now, return a placeholder response
-    return {
-      items: [],
-      total: 0,
-      confidence: 0
-    };
+    const products = await getProducts();
+    
+    const response = await fetch('/api/parseSaleFromVoice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript, products })
+    });
+
+    if (!response.ok) throw new Error('Voice parsing failed');
+    
+    const result = await response.json();
+    return result;
   } catch (error) {
     console.error('Error parsing voice sale:', error);
     throw new Error('Failed to parse voice sale');
@@ -664,7 +686,7 @@ export const subscribeToWorkerSales = (workerId: string, callback: (sales: Sale[
         items: sale.items || [],
         total: sale.total,
         payment: sale.payment,
-        change: sale.change,
+        change: sale.change_due,
         workerId: sale.worker_id || '',
         workerName: sale.worker_name || 'Unknown'
       }));
