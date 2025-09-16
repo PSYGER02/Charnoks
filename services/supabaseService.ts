@@ -82,7 +82,7 @@ export const getSales = async (limitCount: number = 50): Promise<Sale[]> => {
       items: sale.items || [],
       total: sale.total,
       payment: sale.payment,
-      change: sale.change,
+      change: sale.change_due,
       workerId: sale.worker_id || '',
       workerName: sale.worker_name || 'Unknown'
     }));
@@ -101,35 +101,23 @@ export const recordSale = async (saleData: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    // Get user profile for worker name
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('display_name')
-      .eq('id', user.id)
-      .single();
+    // Calculate total first
+    let total = 0;
+    const saleItems: any[] = [];
 
-    // Start transaction by getting products and updating stock
+    // Get products for calculation
     const productIds = saleData.items.map(item => item.productId);
-    const { data: products, error: productsError } = await supabase
+    const { data: products } = await supabase
       .from('products')
       .select('*')
       .in('id', productIds);
 
-    if (productsError) throw productsError;
-
-    // Calculate total and prepare sale items
-    let total = 0;
-    const saleItems: any[] = [];
-    const stockUpdates: any[] = [];
+    if (!products) throw new Error('Products not found');
 
     for (const item of saleData.items) {
-      const product = products?.find((p: any) => p.id === item.productId);
+      const product = products.find((p: any) => p.id === item.productId);
       if (!product) throw new Error(`Product ${item.productId} not found`);
       
-      if (product.stock < item.quantity) {
-        throw new Error(`Insufficient stock for ${product.name}`);
-      }
-
       const itemTotal = product.price * item.quantity;
       total += itemTotal;
 
@@ -139,24 +127,9 @@ export const recordSale = async (saleData: {
         quantity: item.quantity,
         price: product.price
       });
-
-      stockUpdates.push({
-        id: product.id,
-        stock: product.stock - item.quantity
-      });
     }
 
-    // Update product stock
-    for (const update of stockUpdates) {
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ stock: update.stock, updated_at: new Date().toISOString() })
-        .eq('id', update.id);
-      
-      if (updateError) throw updateError;
-    }
-
-    // Create sale record
+    // Create sale record with simplified structure
     const { data: sale, error: saleError } = await supabase
       .from('sales')
       .insert({
@@ -164,8 +137,7 @@ export const recordSale = async (saleData: {
         total,
         payment: saleData.payment,
         change_due: saleData.payment - total,
-        worker_id: user.id,
-        worker_name: profile?.display_name || user.email?.split('@')[0] || 'Unknown Worker'
+        worker_id: user.id
       })
       .select()
       .single();
@@ -222,20 +194,12 @@ export const recordExpense = async (expenseData: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    // Get user profile for worker name
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('display_name')
-      .eq('id', user.id)
-      .single();
-
     const { data, error } = await supabase
       .from('expenses')
       .insert({
         description: expenseData.description,
         amount: expenseData.amount,
-        worker_id: user.id,
-        worker_name: profile?.display_name || user.email?.split('@')[0] || 'Unknown Worker'
+        worker_id: user.id
       })
       .select()
       .single();
