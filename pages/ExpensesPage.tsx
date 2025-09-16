@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Expense } from '../types';
 import { useAuth } from '../hooks/useSupabaseAuth';
 import Spinner from '../components/ui/Spinner';
+import SuccessOverlay from '../components/ui/SuccessOverlay';
 import { getExpenses, recordExpense } from '../services/supabaseService';
 
 const ExpenseRow: React.FC<{ expense: Expense }> = ({ expense }) => {
@@ -24,6 +25,7 @@ const ExpensesPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [loadingExpenses, setLoadingExpenses] = useState(false);
     const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     useEffect(() => {
         const fetchExpenses = async () => {
@@ -61,12 +63,20 @@ const ExpensesPage: React.FC = () => {
                 amount: parseFloat(amount)
             });
 
-            // Refresh expenses list
-            const updatedExpenses = await getExpenses();
-            setExpenses(updatedExpenses);
-            
-            setDescription('');
-            setAmount('');
+            setShowSuccess(true);
+            setTimeout(() => {
+                setShowSuccess(false);
+                setDescription('');
+                setAmount('');
+            }, 1500);
+
+            // Refresh expenses list in background
+            try {
+                const updatedExpenses = await getExpenses();
+                setExpenses(updatedExpenses);
+            } catch (refreshErr) {
+                console.warn('Could not refresh expenses list:', refreshErr);
+            }
         } catch (err) {
             setError('Failed to add expense. Please try again.');
             console.error(err);
@@ -79,7 +89,8 @@ const ExpensesPage: React.FC = () => {
     const showLoadingSpinner = loadingExpenses && expenses.length === 0;
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 relative">
+            {showSuccess && <SuccessOverlay />}
             <h1 className="text-2xl font-bold mb-6">Expenses</h1>
             
             {/* Add Expense Form */}

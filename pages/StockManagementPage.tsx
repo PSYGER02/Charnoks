@@ -4,6 +4,7 @@ import KPICard from '../components/ui/KPI_Card';
 import { getWorkersList } from '../services/supabaseService';
 import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 import Spinner from '../components/ui/Spinner';
+import SuccessOverlay from '../components/ui/SuccessOverlay';
 
 // Reusable CollapsibleSection component for this page
 const CollapsibleSection: React.FC<PropsWithChildren<{ title: string; defaultOpen?: boolean }>> = ({ title, children, defaultOpen = false }) => {
@@ -41,6 +42,7 @@ const StockManagementPage: React.FC = () => {
     const [stockSentToday] = useState(0);
     const [remainingStock] = useState(0);
     const [selectedBranch, setSelectedBranch] = useState('');
+    const [showSuccess, setShowSuccess] = useState(false);
 
     // Load workers data
     const { loadingState: workersState } = useEnhancedDataLoading(
@@ -64,7 +66,8 @@ const StockManagementPage: React.FC = () => {
     }, [workers, selectedBranch]);
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 relative">
+            {showSuccess && <SuccessOverlay />}
             {/* Error banner for data loading issues (non-blocking) */}
             {hasError && (
                 <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
@@ -118,7 +121,7 @@ const StockManagementPage: React.FC = () => {
                             <textarea placeholder="Notes about the delivery..." rows={3} className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition"></textarea>
                         </div>
                         <div className="flex justify-end">
-                            <button type="button" className="px-6 py-3 rounded-lg bg-primary text-text-on-primary font-bold transition hover:bg-primary/80">Record Received Stock</button>
+                            <button type="button" onClick={() => { setShowSuccess(true); setTimeout(() => setShowSuccess(false), 1500); }} className="px-6 py-3 rounded-lg bg-primary text-text-on-primary font-bold transition hover:bg-primary/80">Record Received Stock</button>
                         </div>
                     </form>
                 </CollapsibleSection>
@@ -141,7 +144,7 @@ const StockManagementPage: React.FC = () => {
                          ))}
                      </div>
                      <div className="flex justify-end mt-4">
-                        <button type="button" className="px-6 py-3 rounded-lg bg-primary text-text-on-primary font-bold transition hover:bg-primary/80">Record Processed Stock</button>
+                        <button type="button" onClick={() => { setShowSuccess(true); setTimeout(() => setShowSuccess(false), 1500); }} className="px-6 py-3 rounded-lg bg-primary text-text-on-primary font-bold transition hover:bg-primary/80">Record Processed Stock</button>
                     </div>
                 </CollapsibleSection>
 
@@ -173,7 +176,7 @@ const StockManagementPage: React.FC = () => {
                             <textarea placeholder="e.g. Delivery instructions" rows={3} className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition"></textarea>
                         </div>
                         <div className="flex justify-end">
-                            <button type="button" className="px-6 py-3 rounded-lg bg-primary text-text-on-primary font-bold transition hover:bg-primary/80">Send Stock to Branch</button>
+                            <button type="button" onClick={() => { setShowSuccess(true); setTimeout(() => setShowSuccess(false), 1500); }} className="px-6 py-3 rounded-lg bg-primary text-text-on-primary font-bold transition hover:bg-primary/80">Send Stock to Branch</button>
                         </div>
                     </form>
                 </CollapsibleSection>

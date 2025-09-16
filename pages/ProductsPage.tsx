@@ -4,6 +4,7 @@ import type { Product } from '../types';
 import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 import { DataLoadingWrapper } from '../components/ui/LoadingWrapper';
 import { InlineLoader } from '../components/ui/LoadingScreen';
+import SuccessOverlay from '../components/ui/SuccessOverlay';
 
 const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ onProductAdd }) => {
     const [name, setName] = useState('');
@@ -17,6 +18,7 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const handleFileChange = (file: File | null) => {
         if (file && file.type.startsWith('image/')) {
@@ -88,15 +90,22 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
                 imageUrl,
             });
 
-            setSuccess(`Product "${name}" added successfully!`);
+            setShowSuccess(true);
+            setTimeout(() => {
+                setShowSuccess(false);
+                resetForm();
+            }, 1500);
             
-            // Refresh the product list
-            const products = await getProducts();
-            const newProduct = products.find(p => p.id === productId);
-            if (newProduct) {
-                onProductAdd(newProduct);
+            // Refresh the product list in background
+            try {
+                const products = await getProducts();
+                const newProduct = products.find(p => p.id === productId);
+                if (newProduct) {
+                    onProductAdd(newProduct);
+                }
+            } catch (refreshErr) {
+                console.warn('Could not refresh products:', refreshErr);
             }
-            resetForm();
         } catch (err) {
             setError('Failed to add product. Please try again.');
             console.error(err);
@@ -107,7 +116,8 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
     };
 
     return (
-        <form onSubmit={handleSubmit} className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg space-y-6">
+        <form onSubmit={handleSubmit} className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg space-y-6 relative">
+            {showSuccess && <SuccessOverlay />}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
                      <div>

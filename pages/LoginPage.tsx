@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useSupabaseAuth';
 import { InlineLoader } from '../components/ui/LoadingScreen';
+import SuccessOverlay from '../components/ui/SuccessOverlay';
 
 const UserIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -50,6 +51,7 @@ const LoginPage: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
 
 
     const from = (location.state as any)?.from?.pathname || "/";
@@ -68,9 +70,11 @@ const LoginPage: React.FC = () => {
         setIsLoggingIn(true);
         try {
             const userData = await auth.login(email, password);
-            // Redirect based on user role
-            const redirectPath = userData.role === 'owner' ? '/owner/dashboard' : '/worker/dashboard';
-            navigate(redirectPath, { replace: true });
+            setShowSuccess(true);
+            setTimeout(() => {
+                const redirectPath = userData.role === 'owner' ? '/owner/dashboard' : '/worker/dashboard';
+                navigate(redirectPath, { replace: true });
+            }, 1000);
         } catch (err: any) {
             console.error('Login error:', err);
             setError(err.message || "Failed to log in. Please check your credentials.");
@@ -82,7 +86,8 @@ const LoginPage: React.FC = () => {
 
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-4">
+        <div className="min-h-screen w-full flex items-center justify-center p-4 relative">
+            {showSuccess && <SuccessOverlay />}
             <div className="w-full max-w-sm space-y-6">
                 <div className="text-center space-y-4 animate-bounce-in" style={{animationDelay: '100ms'}}>
                     <div className="flex justify-center">

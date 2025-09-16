@@ -129,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           data: {
             display_name: name,
+            full_name: name,
             role: 'owner' // Set role in metadata for trigger
           }
         }
@@ -269,41 +270,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Only owners can create worker accounts');
       }
 
-      // Get current user's session token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('No valid session found');
-      }
-
-      // Use the API endpoint to create worker account
-      const response = await fetch('/api/createWorkerAccount', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          ownerToken: session.access_token
-        })
+      // Create worker account directly using Supabase auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: name,
+            full_name: name,
+            role: 'worker'
+          },
+          emailRedirectTo: undefined // Disable email confirmation
+        }
       });
 
-      const result = await response.json();
+      if (error) throw error;
+      if (!data.user) throw new Error('No user returned from signup');
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create worker account');
-      }
+      // Wait for trigger to create profile
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (!result.success || !result.worker) {
-        throw new Error('Invalid response from server');
+      // Manually create profile if trigger failed
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: data.user.id,
+          email,
+          display_name: name,
+          role: 'worker'
+        });
+
+      if (profileError) {
+        console.warn('Profile creation warning:', profileError);
       }
 
       return {
-        uid: result.worker.id,
-        email: result.worker.email,
-        role: result.worker.role,
-        displayName: result.worker.displayName
+        uid: data.user.id,
+        email: data.user.email,
+        role: 'worker',
+        displayName: name
       };
     } catch (error: any) {
       console.error('Create worker error:', error);

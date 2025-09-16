@@ -129,15 +129,25 @@ export const recordSale = async (saleData: {
       });
     }
 
-    // Create sale record with simplified structure
+    // Debug and get worker name
+    console.log('User metadata:', user.user_metadata);
+    console.log('User email:', user.email);
+    
+    const workerName = user.user_metadata?.display_name || 
+                       user.user_metadata?.full_name || 
+                       user.email?.split('@')[0] || 
+                       'User';
+    
     const { data: sale, error: saleError } = await supabase
       .from('sales')
       .insert({
         items: saleItems,
+        subtotal: total,
         total,
         payment: saleData.payment,
         change_due: saleData.payment - total,
-        worker_id: user.id
+        worker_id: user.id,
+        worker_name: workerName
       })
       .select()
       .single();
@@ -150,38 +160,31 @@ export const recordSale = async (saleData: {
   }
 };
 
-// Expenses Service - Optimized with timeout
+// Expenses Service - Simplified without timeout
 export const getExpenses = async (limitCount: number = 50): Promise<Expense[]> => {
   try {
-    // Add timeout to prevent hanging
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Request timeout')), 8000)
-    );
-    
-    const dataPromise = supabase
+    const { data, error } = await supabase
       .from('expenses')
       .select('id, created_at, description, amount, worker_id')
       .order('created_at', { ascending: false })
-      .limit(Math.min(limitCount, 100)); // Cap at 100 for performance
-
-    const { data, error } = await Promise.race([dataPromise, timeoutPromise]) as any;
+      .limit(Math.min(limitCount, 100));
 
     if (error) {
       console.warn('Expenses fetch error:', error);
-      return []; // Return empty array instead of throwing
+      return [];
     }
 
-    return data.map((expense: any) => ({
+    return (data || []).map((expense: any) => ({
       id: expense.id,
       date: expense.created_at,
       description: expense.description,
       amount: expense.amount,
       workerId: expense.worker_id || '',
-      workerName: expense.worker_name || 'Unknown'
+      workerName: expense.worker_name || 'User'
     }));
   } catch (error) {
     console.error('Error fetching expenses:', error);
-    throw new Error('Failed to fetch expenses');
+    return []; // Return empty array instead of throwing
   }
 };
 
@@ -194,12 +197,16 @@ export const recordExpense = async (expenseData: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
+    // Simple worker name from email
+    const workerName = user.email?.split('@')[0] || 'User';
+
     const { data, error } = await supabase
       .from('expenses')
       .insert({
         description: expenseData.description,
         amount: expenseData.amount,
-        worker_id: user.id
+        worker_id: user.id,
+        worker_name: workerName
       })
       .select()
       .single();
@@ -494,50 +501,66 @@ export const getWorkerPerformance = async (workerId: string, days: number = 30) 
   }
 };
 
-// AI Assistant Service
+// AI Assistant Service - simplified without API
 export const getAIAssistantResponse = async (message: string, history: any[] = []): Promise<string> => {
   try {
-    const businessData = await getOwnerDashboard();
+    // Simple rule-based responses
+    const lowerMessage = message.toLowerCase();
     
-    const response = await fetch('/api/getAIAssistantResponse', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: message,
-        businessData: {
-          sales: await getSales(10),
-          expenses: await getExpenses(10),
-          products: await getProducts()
-        },
-        history
-      })
-    });
-
-    if (!response.ok) throw new Error('AI service unavailable');
+    if (lowerMessage.includes('sales') || lowerMessage.includes('revenue')) {
+      const sales = await getSales(10);
+      const total = sales.reduce((sum, sale) => sum + sale.total, 0);
+      return `You have ${sales.length} recent sales with total revenue of $${total.toFixed(2)}.`;
+    }
     
-    const result = await response.json();
-    return result.response || 'Sorry, I could not process your request.';
+    if (lowerMessage.includes('product') || lowerMessage.includes('inventory')) {
+      const products = await getProducts();
+      return `You have ${products.length} products in your inventory.`;
+    }
+    
+    if (lowerMessage.includes('expense')) {
+      const expenses = await getExpenses(10);
+      const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+      return `You have ${expenses.length} recent expenses totaling $${total.toFixed(2)}.`;
+    }
+    
+    return 'I can help you with sales, products, and expenses. What would you like to know?';
   } catch (error) {
     console.error('Error getting AI response:', error);
-    return 'I\'m having trouble connecting to the AI service. Please try again later.';
+    return 'I can provide basic business information. What would you like to know about your sales, products, or expenses?';
   }
 };
 
-// Voice parsing service
+// Voice parsing service - simplified without API
 export const parseSaleFromVoice = async (transcript: string): Promise<any> => {
   try {
     const products = await getProducts();
     
-    const response = await fetch('/api/parseSaleFromVoice', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transcript, products })
-    });
-
-    if (!response.ok) throw new Error('Voice parsing failed');
+    // Simple voice parsing logic
+    const words = transcript.toLowerCase().split(' ');
+    const items: any[] = [];
     
-    const result = await response.json();
-    return result;
+    // Look for product names and quantities
+    products.forEach(product => {
+      const productWords = product.name.toLowerCase().split(' ');
+      const hasProduct = productWords.some(word => words.includes(word));
+      
+      if (hasProduct) {
+        // Look for numbers before/after product name
+        let quantity = 1;
+        const numbers = words.filter(word => !isNaN(Number(word)));
+        if (numbers.length > 0) {
+          quantity = parseInt(numbers[0]) || 1;
+        }
+        
+        items.push({
+          productName: product.name,
+          quantity: Math.min(quantity, product.stock)
+        });
+      }
+    });
+    
+    return { items };
   } catch (error) {
     console.error('Error parsing voice sale:', error);
     throw new Error('Failed to parse voice sale');

@@ -1,13 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import type { Note } from '../types';
 import Spinner from '../components/ui/Spinner';
-import { getNotes } from '../services/supabaseService';
+import SuccessOverlay from '../components/ui/SuccessOverlay';
+import { getNotes, addNote } from '../services/supabaseService';
 import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
 
 type NoteCategory = Note['category'] | 'All';
 
 const NotesPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     // Load notes data
     const { loadingState: notesState, refresh: refreshNotes } = useEnhancedDataLoading(
@@ -39,16 +41,22 @@ const NotesPage: React.FC = () => {
         setIsSubmitting(true);
 
         try {
-            // For now, this will show a message that the feature needs backend implementation
-            alert('Note saving feature requires backend implementation. The form works but data won\'t persist yet.');
+            await addNote({
+                title,
+                description,
+                category,
+                amount: amount ? parseFloat(amount) : undefined
+            });
+
+            setShowSuccess(true);
+            setTimeout(() => {
+                setShowSuccess(false);
+                setTitle('');
+                setDescription('');
+                setAmount('');
+                setCategory('Other');
+            }, 1500);
             
-            // Reset form
-            setTitle('');
-            setDescription('');
-            setAmount('');
-            setCategory('Other');
-            
-            // Refresh notes (will still be empty until backend is implemented)
             refreshNotes();
         } catch (error) {
             console.error('Error saving note:', error);
@@ -68,7 +76,8 @@ const NotesPage: React.FC = () => {
     const noteCategories: Note['category'][] = ['Delivery Note', 'Reminder', 'Supply Cost', 'Internal Expense', 'Other'];
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 relative">
+            {showSuccess && <SuccessOverlay />}
             {/* Error banner for data loading issues (non-blocking) */}
             {hasError && (
                 <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">

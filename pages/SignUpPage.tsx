@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useSupabaseAuth';
 import Spinner from '../components/ui/Spinner';
+import SuccessOverlay from '../components/ui/SuccessOverlay';
 
 const UserIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -58,6 +59,7 @@ const SignUpPage: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isSigningUp, setIsSigningUp] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,15 +72,15 @@ const SignUpPage: React.FC = () => {
 
         setIsSigningUp(true);
         try {
-            // Always create as owner account through signup page
             const user = await auth.signup(name, email, password);
-            // Navigate based on role
-            if (user.role === 'owner') {
-                navigate('/owner/dashboard', { replace: true });
-            } else {
-                // This should never happen for new signups
-                navigate('/worker/dashboard', { replace: true });
-            }
+            setShowSuccess(true);
+            setTimeout(() => {
+                if (user.role === 'owner') {
+                    navigate('/owner/dashboard', { replace: true });
+                } else {
+                    navigate('/worker/dashboard', { replace: true });
+                }
+            }, 1000);
         } catch (err: any) {
             setError(err.message || "Failed to create an account. Please try again.");
         } finally {
@@ -87,7 +89,8 @@ const SignUpPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-4">
+        <div className="min-h-screen w-full flex items-center justify-center p-4 relative">
+            {showSuccess && <SuccessOverlay />}
             <div className="w-full max-w-sm space-y-6">
                 <div className="text-center space-y-4 animate-bounce-in" style={{animationDelay: '100ms'}}>
                     <div className="flex justify-center">

@@ -3,6 +3,7 @@ import ThemeSelector from '../components/ui/ThemeSelector';
 import { useAuth } from '../hooks/useSupabaseAuth';
 import { supabase } from '../src/supabaseConfig';
 import Spinner from '../components/ui/Spinner';
+import SuccessOverlay from '../components/ui/SuccessOverlay';
 
 const CreateWorkerForm: React.FC = () => {
   const { createWorkerAccount } = useAuth();
@@ -12,6 +13,7 @@ const CreateWorkerForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,11 +29,13 @@ const CreateWorkerForm: React.FC = () => {
 
     try {
       await createWorkerAccount(name, email, password);
-      setSuccess(`Worker account for ${name} created successfully!`);
-      // Reset form
-      setName('');
-      setEmail('');
-      setPassword('');
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        setName('');
+        setEmail('');
+        setPassword('');
+      }, 1500);
     } catch (err: any) {
       setError(err.message || 'Failed to create worker account.');
     } finally {
@@ -41,7 +45,8 @@ const CreateWorkerForm: React.FC = () => {
   };
 
   return (
-    <div className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg mt-8 animate-slide-in-bottom">
+    <div className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg mt-8 animate-slide-in-bottom relative">
+      {showSuccess && <SuccessOverlay />}
       <h3 className="text-xl font-bold mb-4 text-text-primary">Create Worker Account</h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

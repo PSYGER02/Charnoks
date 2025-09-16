@@ -7,7 +7,7 @@ import Spinner from '../components/ui/Spinner';
 
 const TransactionRow: React.FC<{ sale: Sale; workers: any[] }> = ({ sale, workers }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const workerName = workers.find(w => w.id === sale.workerId)?.name || sale.workerName || 'Unknown';
+    const workerName = workers.find(w => w.id === sale.workerId)?.displayName || sale.workerName || 'Worker';
 
     return (
         <>
@@ -159,7 +159,7 @@ const TransactionsPage: React.FC = () => {
                             <label htmlFor="worker-filter" className="block text-sm font-medium text-text-secondary mb-1">Filter by Worker</label>
                             <select id="worker-filter" value={workerFilter} onChange={e => { setWorkerFilter(e.target.value); setCurrentPage(1); }} className="w-full max-w-xs bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary">
                                 <option value="all">All Workers</option>
-                                {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                {workers.map(w => <option key={w.id} value={w.id}>{w.displayName}</option>)}
                             </select>
                         </div>
                         <div>
