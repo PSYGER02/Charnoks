@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import type { Expense } from '../types';
-import { useAuth } from '../hooks/useSupabaseAuth';
-import Spinner from '../components/ui/Spinner';
-import SuccessOverlay from '../components/ui/SuccessOverlay';
-import { getExpenses, recordExpense } from '../services/supabaseService';
+import type { Expense } from '../../types';
+import { useAuth } from '../../hooks/useSupabaseAuth';
+import Spinner from '../../components/ui/Spinner';
+import SuccessOverlay from '../../components/ui/SuccessOverlay';
+import { getExpenses, recordExpense } from '../../services/supabaseService';
 
 const ExpenseRow: React.FC<{ expense: Expense }> = ({ expense }) => {
     return (
@@ -11,7 +11,7 @@ const ExpenseRow: React.FC<{ expense: Expense }> = ({ expense }) => {
             <td className="p-3 whitespace-nowrap">{new Date(expense.date).toLocaleDateString()}</td>
             <td className="p-3">{expense.description}</td>
             <td className="p-3 whitespace-nowrap">{expense.workerName || 'Unknown'}</td>
-            <td className="p-3 text-right font-semibold text-red-400 whitespace-nowrap">{`$${expense.amount.toFixed(2)}`}</td>
+            <td className="p-3 text-right font-semibold text-red-400 whitespace-nowrap">{`₱${expense.amount.toFixed(2)}`}</td>
         </tr>
     );
 };
@@ -44,8 +44,8 @@ const ExpensesPage: React.FC = () => {
             }
         };
         
-        // Small delay to show UI first, then load data
-        setTimeout(fetchExpenses, 100);
+        // Load data immediately without delay
+        fetchExpenses();
     }, [hasAttemptedLoad]);
 
     const handleAddExpense = async (e: React.FormEvent) => {

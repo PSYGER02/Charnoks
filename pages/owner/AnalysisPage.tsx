@@ -2,16 +2,16 @@
 import React, { useState } from 'react';
 
 // New analysis mode components
-import AnalysisHome from '../components/analysis/AnalysisHome';
-import AllWorkersOverview from '../components/analysis/AllWorkersOverview';
-import CompareWorkers from '../components/analysis/CompareWorkers';
-import WorkerInsight from '../components/analysis/WorkerInsight';
-import AIPrediction from '../components/analysis/AIPrediction';
+import AnalysisHome from '../../components/analysis/AnalysisHome';
+import AllWorkersOverview from '../../components/analysis/AllWorkersOverview';
+import CompareWorkers from '../../components/analysis/CompareWorkers';
+import WorkerInsight from '../../components/analysis/WorkerInsight';
+import AIPrediction from '../../components/analysis/AIPrediction';
 
 // Services
-import { getSales, getExpenses, getWorkersList } from '../services/supabaseService';
-import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
-import Spinner from '../components/ui/Spinner';
+import { getSales, getExpenses, getWorkersList } from '../../services/supabaseService';
+import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
+import Spinner from '../../components/ui/Spinner';
 
 export type AnalysisMode = 'home' | 'all-workers' | 'compare-workers' | 'worker-insight' | 'ai-prediction';
 

@@ -27,8 +27,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .insert([{ type: payload.type, data: payload.data || {}, created_at: new Date().toISOString() }]);
 
       if (error) {
-        const sanitizedError = error.message?.replace(/[\r\n]/g, ' ') || 'Unknown error';
-        console.warn('Failed to insert log to Supabase:', sanitizedError);
+        // Import secure logger
+        const { secureLogger } = require('../utils/securityConfig');
+        secureLogger.warn('Failed to insert log to Supabase', error.message || 'Unknown error');
         return res.status(500).json({ error: 'Failed to store log' });
       }
 

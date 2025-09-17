@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getSalesAnalytics, getWorkersList, getWorkerPerformance, formatCurrency, formatDate } from '../services/supabaseService';
+import { getSalesAnalytics, getWorkersList, getWorkerPerformance, formatCurrency, formatDate } from '../../services/supabaseService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import Spinner from '../components/ui/Spinner';
-import ChartContainer from '../components/charts/ChartContainer';
+import Spinner from '../../components/ui/Spinner';
+import ChartContainer from '../../components/charts/ChartContainer';
 
 interface AnalyticsData {
   totalSales: number;

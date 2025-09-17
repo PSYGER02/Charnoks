@@ -1,10 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import KPICard from '../components/ui/KPI_Card';
-import { subscribeToWorkerSales } from '../services/supabaseService';
-import { useAuth } from '../hooks/useSupabaseAuth';
-import type { Sale } from '../types';
+import KPICard from '../../components/ui/KPI_Card';
+import { subscribeToWorkerSales } from '../../services/supabaseService';
+import { useAuth } from '../../hooks/useSupabaseAuth';
+import type { Sale } from '../../types';
 
 const WorkerDashboard: React.FC = () => {
     const { user } = useAuth();

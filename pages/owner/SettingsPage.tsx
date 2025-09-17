@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import ThemeSelector from '../components/ui/ThemeSelector';
-import { useAuth } from '../hooks/useSupabaseAuth';
-import { supabase } from '../src/supabaseConfig';
-import Spinner from '../components/ui/Spinner';
-import SuccessOverlay from '../components/ui/SuccessOverlay';
+import ThemeSelector from '../../components/ui/ThemeSelector';
+import { useAuth } from '../../hooks/useSupabaseAuth';
+import { supabase } from '../../src/supabaseConfig';
+import Spinner from '../../components/ui/Spinner';
+import SuccessOverlay from '../../components/ui/SuccessOverlay';
 
 const CreateWorkerForm: React.FC = () => {
   const { createWorkerAccount } = useAuth();

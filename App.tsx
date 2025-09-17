@@ -6,22 +6,26 @@ import ErrorBoundary from './components/ui/ErrorBoundary';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import ResponsiveLayout from './components/layout/ResponsiveLayout';
 import { WorkerLayout } from './components/layout/WorkerLayout';
-import WorkerDashboard from './pages/Workerdashboard';
+
 
 import OwnerHomePage from './pages/owner/OwnerHomePage';
-import AnalysisPage from './pages/AnalysisPage';
-import AdvancedAnalyticsPage from './pages/AdvancedAnalyticsPage';
-import AIAssistantPage from './pages/AIAssistantPage';
-import StockManagementPage from './pages/StockManagementPage';
-import ProductsPage from './pages/ProductsPage';
-import ExpensesPage from './pages/ExpensesPage';
-import TransactionsPage from './pages/TransactionsPage';
-import NotesPage from './pages/NotesPage';
-import SettingsPage from './pages/SettingsPage';
+import AnalysisPage from './pages/owner/AnalysisPage';
+import AdvancedAnalyticsPage from './pages/owner/AdvancedAnalyticsPage';
+import AIAssistantPage from './pages/owner/AIAssistantPage';
+import StockManagementPage from './pages/owner/StockManagementPage';
+import ProductsPage from './pages/owner/ProductsPage';
+import ExpensesPage from './pages/owner/ExpensesPage';
+import TransactionsPage from './pages/owner/TransactionsPage';
+import NotesPage from './pages/owner/NotesPage';
+import SettingsPage from './pages/owner/SettingsPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 
-import SalesPage from './pages/SalesPage';
+import WorkerDashboard from './pages/worker/WorkerDashboard';
+import SalesPage from './pages/worker/SalesPage';
+import WorkerExpensePage from './pages/worker/WorkerExpensePage';
+import WorkerNotesPage from './pages/worker/WorkerNotesPage';
+import WorkerTransactionsPage from './pages/worker/WorkerTransactionsPage';
 
 // This component ensures a user is authenticated before rendering the child routes.
 const AuthLayout: React.FC = () => {
@@ -111,7 +115,9 @@ const AppContent: React.FC = () => {
             <Route path="/worker" element={<WorkerLayout><Outlet /></WorkerLayout>}>
                 <Route path="dashboard" element={<WorkerDashboard />} />
                 <Route path="sales" element={<SalesPage />} />
-                <Route path="expenses" element={<ExpensesPage />} />
+                <Route path="expenses" element={<WorkerExpensePage />} />
+                <Route path="transactions" element={<WorkerTransactionsPage />} />
+                <Route path="notes" element={<WorkerNotesPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route index element={<Navigate to="/worker/dashboard" replace />} />
             </Route>

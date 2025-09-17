@@ -27,7 +27,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, parsedSal
                                 {parsedSale.items.map(item => (
                                     <li key={item.product.id} className="flex justify-between text-text-secondary">
                                         <span>{item.quantity} &times; {item.product.name}</span>
-                                        <span>${(item.product.price * item.quantity).toFixed(2)}</span>
+                                        <span>₱{(item.product.price * item.quantity).toFixed(2)}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -37,18 +37,18 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, parsedSal
                          <div className="border-t border-border/50 my-2"></div>
                         <div className="flex justify-between font-bold text-text-primary text-lg">
                             <span>Total</span>
-                            <span>${parsedSale.total.toFixed(2)}</span>
+                            <span>₱{parsedSale.total.toFixed(2)}</span>
                         </div>
                     </div>
 
                     <div className="bg-black/20 p-4 rounded-lg space-y-2">
                         <div className="flex justify-between text-text-primary">
                             <span>Payment Received</span>
-                            <span className="font-semibold">${parsedSale.payment.toFixed(2)}</span>
+                            <span className="font-semibold">₱{parsedSale.payment.toFixed(2)}</span>
                         </div>
                          <div className="flex justify-between text-green-400 font-bold text-lg">
                             <span>Change Due</span>
-                            <span>${Math.max(0, parsedSale.payment - parsedSale.total).toFixed(2)}</span>
+                            <span>₱{Math.max(0, parsedSale.payment - parsedSale.total).toFixed(2)}</span>
                         </div>
                     </div>
                 </div>

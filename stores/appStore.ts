@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { validateEnv } from '../utils/envValidator';
-import { logError } from '../utils/errorHandling';
+import { secureLogger } from '../utils/securityConfig';
 
 interface AppState {
   // System Status
@@ -67,7 +67,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       
     } catch (error) {
-      logError(error);
+      secureLogger.error('App initialization failed', error);
       get().addError('Failed to initialize application');
       set({ isInitialized: true, isLoading: false });
     }
@@ -89,9 +89,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       errors: [...state.errors, newError]
     }));
     
-    // Log errors in development
+    // Secure logging
     if (import.meta.env.DEV) {
-      console.error(`${severity.toUpperCase()}: ${message}`);
+      secureLogger.error(`${severity.toUpperCase()}: ${message}`);
     }
   },
   

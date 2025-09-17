@@ -13,7 +13,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Transcript is required' });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
+    const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
@@ -29,7 +30,7 @@ Return only the JSON array.`;
 
     // SSRF Protection: Validate API endpoint
     const allowedHost = 'generativelanguage.googleapis.com';
-    const apiUrl = `https://${allowedHost}/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.VITE_GEMINI_API_KEY}`;
+    const apiUrl = `https://${allowedHost}/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
     
     const response = await fetch(apiUrl, {
       method: 'POST',

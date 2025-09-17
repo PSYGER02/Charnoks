@@ -1,10 +1,10 @@
 
 import React, { useState, PropsWithChildren } from 'react';
-import KPICard from '../components/ui/KPI_Card';
-import { getWorkersList } from '../services/supabaseService';
-import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
-import Spinner from '../components/ui/Spinner';
-import SuccessOverlay from '../components/ui/SuccessOverlay';
+import KPICard from '../../components/ui/KPI_Card';
+import { getWorkersList } from '../../services/supabaseService';
+import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
+import Spinner from '../../components/ui/Spinner';
+import SuccessOverlay from '../../components/ui/SuccessOverlay';
 
 // Reusable CollapsibleSection component for this page
 const CollapsibleSection: React.FC<PropsWithChildren<{ title: string; defaultOpen?: boolean }>> = ({ title, children, defaultOpen = false }) => {

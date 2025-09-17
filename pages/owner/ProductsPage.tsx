@@ -1,10 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { getProducts, addProduct, uploadProductImage } from '../services/supabaseService';
-import type { Product } from '../types';
-import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
-import { DataLoadingWrapper } from '../components/ui/LoadingWrapper';
-import { InlineLoader } from '../components/ui/LoadingScreen';
-import SuccessOverlay from '../components/ui/SuccessOverlay';
+import { getProducts, addProduct, uploadProductImage } from '../../services/supabaseService';
+import type { Product } from '../../types';
+import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
+import { DataLoadingWrapper } from '../../components/ui/LoadingWrapper';
+import { InlineLoader } from '../../components/ui/LoadingScreen';
+import SuccessOverlay from '../../components/ui/SuccessOverlay';
 
 const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ onProductAdd }) => {
     const [name, setName] = useState('');
@@ -108,7 +108,9 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
             }
         } catch (err) {
             setError('Failed to add product. Please try again.');
-            console.error(err);
+            // Import secure logger
+            const { secureLogger } = require('../../utils/securityConfig');
+            secureLogger.error('Failed to add product', err instanceof Error ? err.message : 'Unknown error');
         } finally {
             setIsLoading(false);
             setTimeout(() => setSuccess(null), 4000);
@@ -259,13 +261,19 @@ const ProductsPage: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto p-1">
                         {products.map(product => (
                             <div key={product.id} className="bg-card-bg-solid/50 rounded-xl p-4 border border-border/30 flex flex-col justify-between transition-all hover:shadow-lg hover:border-primary/50 hover:scale-105">
-                                <img src={product.imageUrl} alt={product.name} className="w-full h-32 object-cover rounded-lg mb-3" />
+                                {product.imageUrl ? (
+                                    <img src={product.imageUrl} alt={product.name} className="w-full h-32 object-cover rounded-lg mb-3" />
+                                ) : (
+                                    <div className="w-full h-32 bg-gray-600 rounded-lg mb-3 flex items-center justify-center">
+                                        <span className="text-gray-400 text-4xl">📦</span>
+                                    </div>
+                                )}
                                 <div>
                                     <p className="font-bold text-text-primary truncate">{product.name}</p>
                                     <p className="text-sm text-text-secondary capitalize">{product.category || 'Uncategorized'}</p>
                                 </div>
                                 <div className="flex justify-between items-end mt-3">
-                                    <p className="font-bold text-xl text-primary">${product.price.toFixed(2)}</p>
+                                    <p className="font-bold text-xl text-primary">₱{product.price.toFixed(2)}</p>
                                     <p className="text-sm text-text-secondary font-medium">Stock: {product.stock}</p>
                                 </div>
                             </div>

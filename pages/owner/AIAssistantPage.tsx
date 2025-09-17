@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import ChatBubble from '../components/ai/ChatBubble';
-import ChatInput from '../components/ai/ChatInput';
-import PromptSuggestions from '../components/ai/PromptSuggestions';
-import { aiService } from '../services/optimizedAIService';
+import ChatBubble from '../../components/ai/ChatBubble';
+import ChatInput from '../../components/ai/ChatInput';
+import PromptSuggestions from '../../components/ai/PromptSuggestions';
+import { aiService } from '../../services/optimizedAIService';
 
 interface Message {
     id: number;

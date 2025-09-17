@@ -155,9 +155,10 @@ export class PerformanceMonitor {
 
     this.errorCount++;
 
-    // Log to console in development
+    // Log to console in development with sanitization
     if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-      console.error('[ERROR]', errorData);
+      const { secureLogger } = require('./securityConfig');
+      secureLogger.error('Error occurred', errorData.message);
     }
 
     // In production, send to external logging service

@@ -17,6 +17,8 @@ export const WORKER_NAVIGATION_ITEMS = [
     { path: '/worker/dashboard', icon: '📊', label: 'Dashboard' },
     { path: '/worker/sales', icon: '🛒', label: 'Record Sale' },
     { path: '/worker/expenses', icon: '🧾', label: 'Record Expense' },
+    { path: '/worker/transactions', icon: '📋', label: 'My Sales' },
+    { path: '/worker/notes', icon: '📝', label: 'Add Note' },
     { path: '/worker/settings', icon: '⚙️', label: 'Settings' },
 ];
 

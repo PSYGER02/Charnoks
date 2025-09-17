@@ -1,6 +1,6 @@
 
 import React from 'react';
-import type { AnalysisMode } from '../../pages/AnalysisPage';
+import type { AnalysisMode } from '../../pages/owner/AnalysisPage';
 
 interface ModeButtonProps {
     icon: string;

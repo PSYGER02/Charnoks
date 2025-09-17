@@ -46,8 +46,8 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
             // XSS Protection: Validate speech recognition results
             if (event.results && event.results[0] && event.results[0][0]) {
                 const transcript = event.results[0][0].transcript;
-                // Sanitize transcript by removing HTML tags and dangerous characters
-                const sanitizedTranscript = transcript.replace(/[<>&"']/g, '').trim();
+                const { sanitizeForDisplay } = require('../../utils/securityUtils');
+                const sanitizedTranscript = sanitizeForDisplay(transcript);
                 if (sanitizedTranscript) {
                     setInput(sanitizedTranscript);
                     onSendMessage(sanitizedTranscript);
@@ -61,7 +61,8 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
         e.preventDefault();
         if (input.trim() && !isLoading) {
             // XSS Protection: Sanitize user input
-            const sanitizedInput = input.replace(/[<>&"']/g, '').trim();
+            const { sanitizeForDisplay } = require('../../utils/securityUtils');
+            const sanitizedInput = sanitizeForDisplay(input);
             if (sanitizedInput) {
                 onSendMessage(sanitizedInput);
                 setInput('');

@@ -1,13 +1,14 @@
 
-import React, { useState, useMemo } from 'react';
-import type { Sale } from '../types';
-import { getSales, getWorkersList } from '../services/supabaseService';
-import { useEnhancedDataLoading } from '../hooks/useEnhancedDataLoading';
-import Spinner from '../components/ui/Spinner';
+import React, { useState, useMemo, useEffect } from 'react';
+import type { Sale } from '../../types';
+import { supabase } from '../../src/supabaseConfig';
+import { getSales } from '../../services/supabaseService';
+import { getWorkers } from '../../services/workerService';
+import Spinner from '../../components/ui/Spinner';
 
 const TransactionRow: React.FC<{ sale: Sale; workers: any[] }> = ({ sale, workers }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const workerName = workers.find(w => w.id === sale.workerId)?.displayName || sale.workerName || 'Worker';
+    const workerName = workers.find(w => w.id === sale.workerId)?.name || sale.workerName || 'Worker';
 
     return (
         <>
@@ -15,7 +16,7 @@ const TransactionRow: React.FC<{ sale: Sale; workers: any[] }> = ({ sale, worker
                 <td className="p-3 whitespace-nowrap">{new Date(sale.date).toLocaleString()}</td>
                 <td className="p-3 whitespace-nowrap">{workerName}</td>
                 <td className="p-3 text-center">{sale.items.length}</td>
-                <td className="p-3 text-right font-semibold text-green-400 whitespace-nowrap">{`$${sale.total.toFixed(2)}`}</td>
+                <td className="p-3 text-right font-semibold text-green-400 whitespace-nowrap">{`₱${sale.total.toFixed(2)}`}</td>
                 <td className="p-3 text-center">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -38,7 +39,7 @@ const TransactionRow: React.FC<{ sale: Sale; workers: any[] }> = ({ sale, worker
                                  return (
                                      <div key={index} className="flex justify-between text-text-secondary text-sm ml-4">
                                          <span>{productName} &times; {item.quantity}</span>
-                                         <span>${(itemPrice * item.quantity).toFixed(2)}</span>
+                                         <span>₱{(itemPrice * item.quantity).toFixed(2)}</span>
                                      </div>
                                  );
                              })}
@@ -60,34 +61,34 @@ const TransactionsPage: React.FC = () => {
     const TRANSACTIONS_PER_PAGE = 15;
     type DateFilter = 'all' | 'today' | '7d' | '30d';
 
-    // Load data with enhanced error handling - optimized for immediate UI
-    const { loadingState: salesState } = useEnhancedDataLoading(
-        () => getSales(50), // Load fewer initially for faster response
-        {
-            cacheKey: 'transactions-sales',
-            cacheDuration: 5 * 60 * 1000, // 5 minutes
-            maxRetries: 1, // Fail faster
-            autoRefresh: false // Manual refresh only
-        }
-    );
+    // Simple data loading like ExpensesPage
+    const [sales, setSales] = useState<Sale[]>([]);
+    const [workers, setWorkers] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasLoaded, setHasLoaded] = useState(false);
 
-    const { loadingState: workersState } = useEnhancedDataLoading(
-        () => getWorkersList(),
-        {
-            cacheKey: 'transactions-workers', 
-            cacheDuration: 15 * 60 * 1000, // 15 minutes
-            maxRetries: 1,
-            autoRefresh: false
-        }
-    );
-
-    // Get data or use empty arrays
-    const sales = salesState.data || [];
-    const workers = workersState.data || [];
-    
-    // Only show loading on initial load with no data
-    const isLoading = (salesState.loading && !salesState.data && !salesState.error) || 
-                     (workersState.loading && !workersState.data && !workersState.error);
+    useEffect(() => {
+        const loadData = async () => {
+            if (hasLoaded) return;
+            setIsLoading(true);
+            setHasLoaded(true);
+            
+            try {
+                const [salesData, workersData] = await Promise.all([
+                    getSales(50),
+                    getWorkers()
+                ]);
+                setSales(salesData);
+                setWorkers(workersData);
+            } catch (error) {
+                console.warn('Transaction data not loaded:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        loadData();
+    }, [hasLoaded]);
     // const hasError = (salesState.error && !salesState.data) || (workersState.error && !workersState.data);
 
     const dateFilters: { id: DateFilter, label: string }[] = [
@@ -159,7 +160,7 @@ const TransactionsPage: React.FC = () => {
                             <label htmlFor="worker-filter" className="block text-sm font-medium text-text-secondary mb-1">Filter by Worker</label>
                             <select id="worker-filter" value={workerFilter} onChange={e => { setWorkerFilter(e.target.value); setCurrentPage(1); }} className="w-full max-w-xs bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary">
                                 <option value="all">All Workers</option>
-                                {workers.map(w => <option key={w.id} value={w.id}>{w.displayName}</option>)}
+                                {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                             </select>
                         </div>
                         <div>
@@ -179,8 +180,8 @@ const TransactionsPage: React.FC = () => {
                     </div>
                 </div>
                  <div className="overflow-auto max-h-[60vh]">
-                    {/* Show loading indicator in header instead of blocking UI */}
-                    {(salesState.loading || workersState.loading) && (
+                    {/* Show loading indicator */}
+                    {isLoading && (
                         <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-2 mb-4">
                             <div className="flex items-center text-sm">
                                 <Spinner size="sm" className="mr-2" />
@@ -228,7 +229,7 @@ const TransactionsPage: React.FC = () => {
                                     </p>
                                     {sales.length === 0 && (
                                         <button
-                                            onClick={() => window.location.href = '/sales'}
+                                            onClick={() => window.location.href = '/worker/sales'}
                                             className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg transition-colors"
                                         >
                                             Record First Sale

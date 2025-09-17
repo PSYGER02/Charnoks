@@ -96,25 +96,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(fallbackUser);
     setLoading(false);
 
-    // Try to get profile in background (non-blocking)
-    try {
-      const { data: profile } = await Promise.race([
-        supabase.from('user_profiles').select('*').eq('id', authUser.id).single(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Profile timeout')), 2000))
-      ]);
-      
-      if (profile) {
-        setUser({
-          uid: authUser.id,
-          email: authUser.email,
-          role: profile.role || 'owner',
-          displayName: profile.display_name || fallbackUser.displayName
-        });
-      }
-    } catch (error) {
-      // Keep fallback user, don't block UI
-      console.warn('Profile fetch failed, using fallback:', error);
-    }
+    // Try to get profile in background (non-blocking) - simplified
+    supabase.from('user_profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .single()
+      .then(({ data: profile, error }) => {
+        if (profile) {
+          setUser({
+            uid: authUser.id,
+            email: authUser.email,
+            role: profile.role || 'owner',
+            displayName: profile.display_name || fallbackUser.displayName
+          });
+        } else if (error?.code === 'PGRST116') {
+          // Create profile if missing
+          supabase.from('user_profiles').insert({
+            id: authUser.id,
+            email: authUser.email,
+            display_name: fallbackUser.displayName,
+            role: 'owner'
+          }).then(() => setUser(fallbackUser)).catch(() => {});
+        }
+      })
+      .catch(() => {}); // Silent fail, keep fallback user
   };
 
   const signup = async (name: string, email: string, password: string): Promise<UserData> => {
@@ -150,7 +155,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (profileError) {
-        console.warn('Profile not found, creating manually:', profileError);
+        const { safeLog } = require('../utils/securityUtils');
+        safeLog.warn('Profile not found, creating manually', profileError.message);
         // Fallback: create profile manually if trigger failed
         const { data: newProfile, error: createError } = await supabase
           .from('user_profiles')
@@ -207,7 +213,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (profileError) {
-        console.warn('Profile not found for existing user, creating it:', profileError);
+        const { safeLog } = require('../utils/securityUtils');
+        safeLog.warn('Profile not found for existing user, creating it', profileError.message);
         // Create profile for existing user (like manually created Supabase users)
         const { data: newProfile, error: createError } = await supabase
           .from('user_profiles')
@@ -301,7 +308,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
       if (profileError) {
-        console.warn('Profile creation warning:', profileError);
+        const { safeLog } = require('../utils/securityUtils');
+        safeLog.warn('Profile creation warning', profileError.message);
       }
 
       return {

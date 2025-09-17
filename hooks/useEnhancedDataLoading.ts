@@ -28,8 +28,17 @@ interface UseEnhancedDataLoadingResult<T> {
   isStale: boolean;
 }
 
-// Simple in-memory cache
-const dataCache = new Map<string, { data: any; timestamp: number; }>();
+// Simple in-memory cache with size limit
+const MAX_CACHE_SIZE = 50;
+const dataCache = new Map<string, { data: unknown; timestamp: number; }>();
+
+// Cache cleanup function
+const cleanupCache = () => {
+  if (dataCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = dataCache.keys().next().value;
+    if (firstKey) dataCache.delete(firstKey);
+  }
+};
 
 export function useEnhancedDataLoading<T>(
   loadFunction: () => Promise<T>,
@@ -85,9 +94,10 @@ export function useEnhancedDataLoading<T>(
     return isExpired ? null : cached.data;
   }, [cacheKey, cacheDuration]);
 
-  // Cache data
+  // Cache data with size management
   const setCachedData = useCallback((data: T) => {
     if (cacheKey) {
+      cleanupCache();
       dataCache.set(cacheKey, {
         data,
         timestamp: Date.now()
@@ -284,10 +294,10 @@ export function clearCache(key: string): void {
   dataCache.delete(key);
 }
 
-// Get cache statistics
-export function getCacheStats(): { size: number; keys: string[] } {
+// Get cache statistics (optimized)
+export function getCacheStats(): { size: number; keyCount: number } {
   return {
     size: dataCache.size,
-    keys: Array.from(dataCache.keys())
+    keyCount: dataCache.size
   };
 }

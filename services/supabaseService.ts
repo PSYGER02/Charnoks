@@ -1,223 +1,12 @@
 import { supabase } from '../src/supabaseConfig';
-import type { Product, Sale, Expense, Note } from '../types';
+import type { Note } from '../types';
+import { safeLog } from '../utils/securityUtils';
 
-// Products Service
-export const getProducts = async (): Promise<Product[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return data.map((product: any) => ({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      stock: product.stock,
-      category: product.category || '',
-      imageUrl: product.image_url || ''
-    }));
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    throw new Error('Failed to fetch products');
-  }
-};
-
-export const addProduct = async (productData: {
-  name: string;
-  price: number;
-  stock: number;
-  category: string;
-  imageUrl?: string;
-}): Promise<string> => {
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .insert({
-        name: productData.name,
-        price: productData.price,
-        stock: productData.stock,
-        category: productData.category,
-        image_url: productData.imageUrl,
-        is_active: true
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data.id;
-  } catch (error) {
-    console.error('Error adding product:', error);
-    throw new Error('Failed to add product');
-  }
-};
-
-// Sales Service - Optimized with timeout
-export const getSales = async (limitCount: number = 50): Promise<Sale[]> => {
-  try {
-    // Add timeout to prevent hanging
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Request timeout')), 10000)
-    );
-    
-    const dataPromise = supabase
-      .from('sales')
-      .select('id, created_at, items, total, payment, change_due, worker_id')
-      .order('created_at', { ascending: false })
-      .limit(Math.min(limitCount, 100)); // Cap at 100 for performance
-
-    const { data, error } = await Promise.race([dataPromise, timeoutPromise]) as any;
-
-    if (error) {
-      console.warn('Sales fetch error:', error);
-      return []; // Return empty array instead of throwing
-    }
-
-    return data.map((sale: any) => ({
-      id: sale.id,
-      date: sale.created_at,
-      items: sale.items || [],
-      total: sale.total,
-      payment: sale.payment,
-      change: sale.change_due,
-      workerId: sale.worker_id || '',
-      workerName: sale.worker_name || 'Unknown'
-    }));
-  } catch (error) {
-    console.error('Error fetching sales:', error);
-    throw new Error('Failed to fetch sales');
-  }
-};
-
-export const recordSale = async (saleData: {
-  items: { productId: string; quantity: number }[];
-  payment: number;
-}): Promise<string> => {
-  try {
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
-
-    // Calculate total first
-    let total = 0;
-    const saleItems: any[] = [];
-
-    // Get products for calculation
-    const productIds = saleData.items.map(item => item.productId);
-    const { data: products } = await supabase
-      .from('products')
-      .select('*')
-      .in('id', productIds);
-
-    if (!products) throw new Error('Products not found');
-
-    for (const item of saleData.items) {
-      const product = products.find((p: any) => p.id === item.productId);
-      if (!product) throw new Error(`Product ${item.productId} not found`);
-      
-      const itemTotal = product.price * item.quantity;
-      total += itemTotal;
-
-      saleItems.push({
-        productId: item.productId,
-        productName: product.name,
-        quantity: item.quantity,
-        price: product.price
-      });
-    }
-
-    // Debug and get worker name
-    console.log('User metadata:', user.user_metadata);
-    console.log('User email:', user.email);
-    
-    const workerName = user.user_metadata?.display_name || 
-                       user.user_metadata?.full_name || 
-                       user.email?.split('@')[0] || 
-                       'User';
-    
-    const { data: sale, error: saleError } = await supabase
-      .from('sales')
-      .insert({
-        items: saleItems,
-        subtotal: total,
-        total,
-        payment: saleData.payment,
-        change_due: saleData.payment - total,
-        worker_id: user.id,
-        worker_name: workerName
-      })
-      .select()
-      .single();
-
-    if (saleError) throw saleError;
-    return sale.id;
-  } catch (error) {
-    console.error('Error recording sale:', error);
-    throw new Error('Failed to record sale: ' + (error as Error).message);
-  }
-};
-
-// Expenses Service - Simplified without timeout
-export const getExpenses = async (limitCount: number = 50): Promise<Expense[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('id, created_at, description, amount, worker_id')
-      .order('created_at', { ascending: false })
-      .limit(Math.min(limitCount, 100));
-
-    if (error) {
-      console.warn('Expenses fetch error:', error);
-      return [];
-    }
-
-    return (data || []).map((expense: any) => ({
-      id: expense.id,
-      date: expense.created_at,
-      description: expense.description,
-      amount: expense.amount,
-      workerId: expense.worker_id || '',
-      workerName: expense.worker_name || 'User'
-    }));
-  } catch (error) {
-    console.error('Error fetching expenses:', error);
-    return []; // Return empty array instead of throwing
-  }
-};
-
-export const recordExpense = async (expenseData: {
-  amount: number;
-  description: string;
-}): Promise<string> => {
-  try {
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
-
-    // Simple worker name from email
-    const workerName = user.email?.split('@')[0] || 'User';
-
-    const { data, error } = await supabase
-      .from('expenses')
-      .insert({
-        description: expenseData.description,
-        amount: expenseData.amount,
-        worker_id: user.id,
-        worker_name: workerName
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data.id;
-  } catch (error) {
-    console.error('Error recording expense:', error);
-    throw new Error('Failed to record expense');
-  }
-};
+// Re-export modular services
+export { getProducts, addProduct, uploadProductImage } from './productService';
+export { getSales, recordSale } from './salesService';
+export { getExpenses, recordExpense } from './expenseService';
+export { getWorkers, getWorkerById, getWorkersByIds } from './workerService';
 
 // Dashboard Service - Optimized for new users
 export const getOwnerDashboard = async () => {
@@ -306,29 +95,7 @@ export const getOwnerDashboard = async () => {
   }
 };
 
-// File Upload Service
-export const uploadProductImage = async (file: File): Promise<string> => {
-  try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `product-images/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('product-images')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw new Error('Failed to upload image');
-  }
-};
 
 // Notes Service
 export const getNotes = async (limitCount: number = 50): Promise<Note[]> => {
@@ -399,7 +166,8 @@ export const getWorkersList = async (): Promise<any[]> => {
     const { data, error } = await Promise.race([dataPromise, timeoutPromise]) as any;
 
     if (error) {
-      console.warn('Workers fetch error:', error);
+      const { safeLog } = require('../utils/securityUtils');
+      safeLog.warn('Workers fetch error', error.message);
       return []; // Return empty array instead of throwing
     }
 
@@ -531,47 +299,82 @@ export const getAIAssistantResponse = async (message: string, history: any[] = [
   }
 };
 
-// Voice parsing service - simplified without API
+// Voice parsing with Filipino/Cebuano support
 export const parseSaleFromVoice = async (transcript: string): Promise<any> => {
   try {
+    const { getProducts } = await import('./productService');
     const products = await getProducts();
     
-    // Simple voice parsing logic
-    const words = transcript.toLowerCase().split(' ');
-    const items: any[] = [];
+    const text = transcript.toLowerCase();
+    const words = text.split(/\s+/);
     
-    // Look for product names and quantities
-    products.forEach(product => {
-      const productWords = product.name.toLowerCase().split(' ');
-      const hasProduct = productWords.some(word => words.includes(word));
-      
-      if (hasProduct) {
-        // Look for numbers before/after product name
-        let quantity = 1;
-        const numbers = words.filter(word => !isNaN(Number(word)));
-        if (numbers.length > 0) {
-          quantity = parseInt(numbers[0]) || 1;
-        }
-        
-        items.push({
-          productName: product.name,
-          quantity: Math.min(quantity, product.stock)
-        });
+    // Extract numbers (Filipino/Cebuano number words + digits)
+    const numberMap: Record<string, number> = {
+      'usa': 1, 'isa': 1, 'one': 1,
+      'duha': 2, 'dalawa': 2, 'two': 2,
+      'tulo': 3, 'tatlo': 3, 'three': 3,
+      'upat': 4, 'apat': 4, 'four': 4,
+      'lima': 5, 'five': 5,
+      'unom': 6, 'anim': 6, 'six': 6,
+      'pito': 7, 'seven': 7,
+      'walo': 8, 'eight': 8,
+      'siyam': 9, 'nine': 9,
+      'napulo': 10, 'sampu': 10, 'ten': 10,
+      'baynte': 20, 'bente': 20, 'twenty': 20,
+      'traynte': 30, 'thirty': 30,
+      'kwarenta': 40, 'forty': 40,
+      'singkwenta': 50, 'fifty': 50,
+      'sisenta': 60, 'sixty': 60,
+      'sitenta': 70, 'seventy': 70,
+      'otsenta': 80, 'eighty': 80,
+      'nobenta': 90, 'ninety': 90,
+      'gatos': 100, 'hundred': 100
+    };
+    
+    const numbers: number[] = [];
+    words.forEach(word => {
+      if (numberMap[word]) {
+        numbers.push(numberMap[word]);
+      } else if (/^\d+$/.test(word)) {
+        numbers.push(parseInt(word));
       }
     });
     
-    return { items };
+    const items: any[] = [];
+    
+    // Find products mentioned
+    for (const product of products) {
+      const productName = product.name.toLowerCase();
+      if (text.includes(productName)) {
+        const quantity = numbers.length > 0 ? numbers[0] : 1;
+        items.push({
+          productName: product.name,
+          quantity: Math.min(quantity, 10)
+        });
+        break;
+      }
+    }
+    
+    // Payment amount (last number)
+    let payment = 0;
+    if (numbers.length >= 2) {
+      payment = numbers[numbers.length - 1];
+    } else if (items.length > 0) {
+      const product = products.find(p => p.name === items[0].productName);
+      payment = product ? product.price * items[0].quantity : 0;
+    }
+    
+    return { items, payment };
   } catch (error) {
-    console.error('Error parsing voice sale:', error);
-    throw new Error('Failed to parse voice sale');
+    throw new Error('Voice parsing failed');
   }
 };
 
 // Utility functions
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-PH', {
     style: 'currency',
-    currency: 'USD'
+    currency: 'PHP'
   }).format(amount);
 };
 

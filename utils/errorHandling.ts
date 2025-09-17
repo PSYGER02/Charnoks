@@ -86,10 +86,16 @@ export function logError(error: unknown, context?: Record<string, unknown>): voi
     timestamp: new Date().toISOString(),
   };
 
+  // Import secure logger
+  const { secureLogger } = require('../utils/securityConfig');
+  
   if (import.meta.env.DEV) {
-    console.error('🚨 Error:', logData);
+    secureLogger.error('🚨 Error occurred', {
+      name: errorObject.name,
+      message: errorObject.message,
+      context: context ? JSON.stringify(context) : undefined
+    });
   } else {
-    // In production, we could send this to a logging service
-    console.error(logData);
+    secureLogger.error('Production error', errorObject.message);
   }
 }

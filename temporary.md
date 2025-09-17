@@ -1,0 +1,1 @@
+okay thats cool now lets move on. I think we need to show the image of uploaded product in Product Page also in the StockManagementPage i was thinking of synching it with Products but it will get complicated since there are too many branch and the owner cant 

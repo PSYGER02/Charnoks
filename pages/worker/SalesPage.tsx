@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import type { ParsedSale } from '../types';
-import VoiceInputButton from '../components/ui/VoiceInputButton';
-import ConfirmationModal from '../components/ui/ConfirmationModal';
-import { subscribeToProducts, recordSale } from '../services/supabaseService';
-import { parseSaleFromVoice } from '../services/supabaseService';
-import type { Product } from '../types';
+import type { ParsedSale } from '../../types';
+import VoiceInputButton from '../../components/ui/VoiceInputButton';
+import ConfirmationModal from '../../components/ui/ConfirmationModal';
+import { subscribeToProducts, recordSale } from '../../services/supabaseService';
+import { parseSaleFromVoice } from '../../services/supabaseService';
+import type { Product } from '../../types';
 
 interface CartItem {
   product: Product;
@@ -64,18 +64,21 @@ const SalesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const unsubscribe = subscribeToProducts((fetchedProducts) => {
+    const loadProducts = async () => {
+      try {
+        // Simple direct call like other working pages
+        const { getProducts } = await import('../../services/supabaseService');
+        const fetchedProducts = await getProducts();
         setProducts(fetchedProducts);
         setLoadingProducts(false);
-      });
-      
-      // Cleanup subscription on unmount
-      return () => unsubscribe();
-    } catch (err) {
-      setError('Failed to load products.');
-      setLoadingProducts(false);
-    }
+      } catch (err) {
+        console.warn('Products not loaded:', err);
+        setError('Failed to load products.');
+        setLoadingProducts(false);
+      }
+    };
+    
+    loadProducts();
   }, []);
 
   const total = useMemo(() => cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0), [cart]);
@@ -153,23 +156,36 @@ const SalesPage: React.FC = () => {
     setVoiceError(null);
     try {
       const result = await parseSaleFromVoice(transcript);
+      
+      if (!result.items || result.items.length === 0) {
+        setVoiceError(`Sulti: "[gidaghanon] [produkto] [bayad]" sama sa "usa chicken singkwenta"`);
+        return;
+      }
+      
       const saleItems: CartItem[] = [];
       let saleTotal = 0;
+      
       result.items.forEach((item: any) => {
-        const product = products.find(p => p.name.toLowerCase() === item.productName.toLowerCase());
+        const product = products.find(p => p.name === item.productName);
         if (product) {
           saleItems.push({ product, quantity: item.quantity });
           saleTotal += product.price * item.quantity;
         }
       });
+      
+      if (saleItems.length === 0) {
+        setVoiceError('Wala nakit-an ang produkto. Susiha ang ngalan.');
+        return;
+      }
+      
       setParsedSale({
         items: saleItems,
-        payment: saleTotal,
+        payment: result.payment,
         total: saleTotal,
       });
       setShowConfirmationModal(true);
     } catch (e: any) {
-      setVoiceError(e.message || "Couldn't understand. Try again.");
+      setVoiceError("Sulayi: 'usa chicken singkwenta pesos'");
     } finally {
       setIsProcessingVoice(false);
     }
@@ -214,9 +230,15 @@ const SalesPage: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
             {products.map((product) => (
               <button key={product.id} onClick={() => addToCart(product)} className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-3 text-left border border-border/50 transition-all duration-200 hover:border-primary hover:scale-105 active:scale-100">
-                <img src={product.imageUrl} alt={product.name} className="w-full h-24 md:h-32 object-cover rounded-lg" />
+                {product.imageUrl ? (
+                  <img src={product.imageUrl} alt={product.name} className="w-full h-24 md:h-32 object-cover rounded-lg" />
+                ) : (
+                  <div className="w-full h-24 md:h-32 bg-gray-600 rounded-lg flex items-center justify-center">
+                    <span className="text-gray-400 text-2xl">📦</span>
+                  </div>
+                )}
                 <h3 className="font-bold mt-2 text-text-primary truncate">{product.name}</h3>
-                <p className="text-primary font-semibold">{`$${product.price.toFixed(2)}`}</p>
+                <p className="text-primary font-semibold">{`₱${product.price.toFixed(2)}`}</p>
               </button>
             ))}
           </div>
@@ -246,17 +268,23 @@ const SalesPage: React.FC = () => {
             ) : (
                 cart.map(item => (
                 <div key={item.product.id} className="flex items-center bg-white/5 p-2 rounded-lg gap-3">
-                    <img src={item.product.imageUrl} alt={item.product.name} className="w-12 h-12 rounded-md object-cover" />
+                    {item.product.imageUrl ? (
+                      <img src={item.product.imageUrl} alt={item.product.name} className="w-12 h-12 rounded-md object-cover" />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-600 rounded-md flex items-center justify-center">
+                        <span className="text-gray-400 text-sm">📦</span>
+                      </div>
+                    )}
                     <div className="flex-grow">
                         <p className="font-semibold text-text-primary">{item.product.name}</p>
-                        <p className="text-sm text-text-secondary">{`$${item.product.price.toFixed(2)}`}</p>
+                        <p className="text-sm text-text-secondary">{`₱${item.product.price.toFixed(2)}`}</p>
                     </div>
                     <div className="flex items-center bg-white/10 rounded-md">
                       <button onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)} className="px-3 py-1 text-text-primary font-bold text-lg transition-colors hover:bg-white/20 rounded-l-md">-</button>
                       <span className="px-2 text-text-primary w-8 text-center">{item.quantity}</span>
                       <button onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)} className="px-3 py-1 text-text-primary font-bold text-lg transition-colors hover:bg-white/20 rounded-r-md">+</button>
                     </div>
-                    <p className="font-bold text-text-primary w-20 text-right">{`$${(item.product.price * item.quantity).toFixed(2)}`}</p>
+                    <p className="font-bold text-text-primary w-20 text-right">{`₱${(item.product.price * item.quantity).toFixed(2)}`}</p>
                 </div>
                 ))
             )}
@@ -265,17 +293,17 @@ const SalesPage: React.FC = () => {
           <div className="border-t border-border mt-4 pt-4 space-y-3">
             <div className="flex justify-between text-xl font-bold">
               <span className="text-text-secondary">Total</span>
-              <span className="text-primary">{`$${total.toFixed(2)}`}</span>
+              <span className="text-primary">{`₱${total.toFixed(2)}`}</span>
             </div>
              <div className="flex justify-between items-center text-xl font-bold">
                 <span className="text-text-secondary">Received</span>
                  <button onClick={() => openNumberPad('money')} className="bg-white/10 px-4 py-2 rounded-md text-accent text-2xl">
-                    {`$${moneyReceived || '0.00'}`}
+                    {`₱${moneyReceived || '0.00'}`}
                  </button>
              </div>
              <div className="flex justify-between text-2xl font-bold">
                 <span className="text-text-secondary">Change</span>
-                <span className="text-green-400">{`$${change.toFixed(2)}`}</span>
+                <span className="text-green-400">{`₱${change.toFixed(2)}`}</span>
              </div>
             <button
                 onClick={handleSaveSale}
