@@ -121,15 +121,15 @@ const OwnerHomePage: React.FC = () => {
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="trading-grid gap-6">
                 <KPICard 
                     title="Total Revenue" 
-                    value={`$${totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} 
+                    value={`₱${totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} 
                     icon="💰" 
                 />
                 <KPICard 
                     title="Net Profit" 
-                    value={`$${netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} 
+                    value={`₱${netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} 
                     icon="📈" 
                 />
                 <KPICard 
@@ -139,9 +139,10 @@ const OwnerHomePage: React.FC = () => {
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="trading-grid gap-6">
                 {/* Sales Trend Chart */}
-                <ChartContainer title="Sales Trend" className="min-h-[400px]">
+                <div className="modern-card p-6 trading-main-chart">
+                    <h3 className="text-lg font-semibold text-text-primary mb-4">Sales Trend</h3>
                     <ResponsiveContainer width="100%" height={350}>
                         <AreaChart
                             data={salesTrend}
@@ -149,28 +150,28 @@ const OwnerHomePage: React.FC = () => {
                         >
                             <defs>
                                 <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#0088FE" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="#0088FE" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="rgb(var(--primary))" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="rgb(var(--primary))" stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
+                            <XAxis dataKey="name" tick={{ fill: 'rgb(var(--text-secondary))' }} />
+                            <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} />
+                            <Tooltip contentStyle={{ backgroundColor: 'rgb(var(--card-bg-solid))', border: '1px solid rgb(var(--border))' }} />
                             <Area 
                                 type="monotone" 
                                 dataKey="sales" 
-                                stroke="#0088FE" 
+                                stroke="rgb(var(--primary))" 
                                 fillOpacity={1} 
                                 fill="url(#salesGradient)" 
                             />
                         </AreaChart>
                     </ResponsiveContainer>
-                </ChartContainer>
+                </div>
 
                 {/* Top Products Chart */}
-                <ChartContainer title="Top Products" className="min-h-[400px]">
+                <div className="modern-card p-6 trading-sidebar">
+                    <h3 className="text-lg font-semibold text-text-primary mb-4">Top Products</h3>
                     <ResponsiveContainer width="100%" height={350}>
                         <PieChart>
                             <Pie
@@ -187,16 +188,15 @@ const OwnerHomePage: React.FC = () => {
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                             </Pie>
-                            <Tooltip />
-                            <Legend />
+                            <Tooltip contentStyle={{ backgroundColor: 'rgb(var(--card-bg-solid))', border: '1px solid rgb(var(--border))' }} />
                         </PieChart>
                     </ResponsiveContainer>
-                </ChartContainer>
+                </div>
             </div>
 
             {/* Getting Started Guide for new users */}
             {totalRevenue === 0 && transactions === 0 && (
-                <div className="bg-card-bg/80 backdrop-blur-sm rounded-lg p-6 animate-bounce-in border border-border/50">
+                <div className="modern-card p-6 animate-bounce-in">
                     <h2 className="text-2xl font-bold text-text-primary mb-4">🎉 Welcome to Your Dashboard!</h2>
                     <p className="text-text-secondary mb-6">Let's get started with setting up your business metrics</p>
                     

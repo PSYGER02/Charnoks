@@ -88,7 +88,7 @@ const AIPrediction: React.FC = () => {
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                                     <XAxis dataKey="day" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-                                    <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `$${value}`} />
+                                    <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `₱${value}`} />
                                     <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
                                     <Legend wrapperStyle={{paddingTop: '20px'}}/>
                                     <Area type="monotone" dataKey="predictedSales" name="Predicted Sales" stroke="rgb(var(--accent))" fill="url(#colorForecast)" />

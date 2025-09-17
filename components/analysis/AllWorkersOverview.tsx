@@ -40,7 +40,7 @@ const AllWorkersOverview: React.FC<AllWorkersOverviewProps> = ({ sales, expenses
             <>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                 <XAxis dataKey="name" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-                <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value: number) => `$${Math.round(value/1000)}k`} />
+                <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value: number) => `₱${Math.round(value/1000)}k`} />
                 <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
                 <Legend wrapperStyle={{paddingTop: '20px'}}/>
             </>
@@ -125,9 +125,9 @@ const AllWorkersOverview: React.FC<AllWorkersOverviewProps> = ({ sales, expenses
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <KPICard title="Total Sales" value={`$${totalSales.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} icon="💰" />
-                <KPICard title="Total Expenses" value={`$${totalExpenses.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} icon="🧾" />
-                <KPICard title="Net Profit" value={`$${netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} icon={netProfit >= 0 ? '📈' : '📉'} />
+                <KPICard title="Total Sales" value={`₱${totalSales.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} icon="💰" />
+                <KPICard title="Total Expenses" value={`₱${totalExpenses.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} icon="🧾" />
+                <KPICard title="Net Profit" value={`₱${netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} icon={netProfit >= 0 ? '📈' : '📉'} />
             </div>
 
             <ChartContainer title={`Sales vs Expenses (${timeRanges.find(tr=>tr.id === timeRange)?.label})`}>

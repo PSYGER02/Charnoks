@@ -1,9 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { getProducts, addProduct, uploadProductImage } from '../../services/supabaseService';
 import type { Product } from '../../types';
-import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
-import { DataLoadingWrapper } from '../../components/ui/LoadingWrapper';
-import { InlineLoader } from '../../components/ui/LoadingScreen';
+import Spinner from '../../components/ui/Spinner';
 import SuccessOverlay from '../../components/ui/SuccessOverlay';
 
 const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ onProductAdd }) => {
@@ -170,10 +168,7 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
             <div className="flex justify-end space-x-4">
                 <button type="button" onClick={resetForm} className="px-6 py-3 rounded-lg bg-white/10 text-text-primary font-semibold transition hover:bg-white/20">Reset</button>
                 <button type="submit" disabled={isLoading} className="px-6 py-3 rounded-lg bg-primary text-text-on-primary font-bold transition hover:bg-primary/80 disabled:opacity-50 flex items-center">
-                    {isLoading && <InlineLoader message="" size="sm" />}
-                    <span className={isLoading ? 'ml-2' : ''}>
-                        {isLoading ? 'Saving...' : 'Save Product'}
-                    </span>
+                    {isLoading ? <Spinner size="sm" /> : 'Save Product'}
                 </button>
             </div>
         </form>
@@ -181,27 +176,34 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
 };
 
 const ProductsPage: React.FC = () => {
-    const { loadingState, reload, refresh } = useEnhancedDataLoading(
-        () => getProducts(),
-        {
-            cacheKey: 'products-list',
-            cacheDuration: 3 * 60 * 1000, // 3 minutes
-            autoRefresh: false, // Manual refresh for products
-            maxRetries: 2, // Reduce retries to fail faster
-            onError: (error) => {
-                console.error('Products loading error:', error);
-            }
+    const [products, setProducts] = useState<Product[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasLoaded, setHasLoaded] = useState(false);
+    
+    const loadProducts = async () => {
+        setIsLoading(true);
+        try {
+            const productsData = await getProducts();
+            setProducts(productsData);
+        } catch (error) {
+            console.warn('Products data not loaded:', error);
+        } finally {
+            setIsLoading(false);
         }
-    );
+    };
+    
+    useEffect(() => {
+        if (!hasLoaded) {
+            setHasLoaded(true);
+            loadProducts();
+        }
+    }, [hasLoaded]);
 
     const handleProductAdd = () => {
-        refresh(); // Refresh to get the latest data from server
+        loadProducts(); // Refresh products list
     };
 
-    // Get products data or use empty array for new users
-    const products = loadingState.data || [];
-    const isLoading = loadingState.loading && !loadingState.data;
-    const hasError = loadingState.error && !loadingState.data;
+    const hasError = false; // Simplified for now
 
     return (
         <div className="space-y-8">
@@ -241,7 +243,7 @@ const ProductsPage: React.FC = () => {
                     <h2 className="text-2xl font-bold">Current Products ({products.length})</h2>
                     {!isLoading && (
                         <button
-                            onClick={refresh}
+                            onClick={loadProducts}
                             className="text-text-secondary hover:text-text-primary transition-colors text-sm"
                         >
                             🔄 Refresh
@@ -249,15 +251,24 @@ const ProductsPage: React.FC = () => {
                     )}
                 </div>
                 
-                <DataLoadingWrapper
-                    loading={isLoading}
-                    error={hasError ? 'Unable to load products' : null}
-                    data={products}
-                    emptyMessage="No Products Yet"
-                    emptyIcon="📦"
-                    onRetry={reload}
-                    skeletonLines={4}
-                >
+                {isLoading && (
+                    <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-2 mb-4">
+                        <div className="flex items-center text-sm">
+                            <Spinner size="sm" className="mr-2" />
+                            <span className="text-blue-300">Loading products...</span>
+                        </div>
+                    </div>
+                )}
+                
+                {products.length === 0 && !isLoading ? (
+                    <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="text-primary text-2xl">📦</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-text-primary mb-2">No Products Yet</h3>
+                        <p className="text-text-secondary mb-4">Start adding products to your inventory using the form above.</p>
+                    </div>
+                ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto p-1">
                         {products.map(product => (
                             <div key={product.id} className="bg-card-bg-solid/50 rounded-xl p-4 border border-border/30 flex flex-col justify-between transition-all hover:shadow-lg hover:border-primary/50 hover:scale-105">
@@ -279,7 +290,7 @@ const ProductsPage: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                </DataLoadingWrapper>
+                )}
             </div>
         </div>
     );

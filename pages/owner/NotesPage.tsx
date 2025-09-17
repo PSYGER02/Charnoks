@@ -117,7 +117,7 @@ const NotesPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-text-secondary mb-1">Category</label>
-                             <select value={category} onChange={e => setCategory(e.target.value as Note['category'])} className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary">
+                             <select value={category} onChange={e => setCategory(e.target.value as Note['category'])} className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary [&>option]:bg-gray-800 [&>option]:text-white">
                                 {noteCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                             </select>
                         </div>
@@ -150,7 +150,7 @@ const NotesPage: React.FC = () => {
                     <h2 className="text-2xl font-bold">Recent Notes ({filteredNotes.length})</h2>
                     <div className="flex items-center gap-4">
                         <label className="text-sm font-medium text-text-secondary">Filter by Category:</label>
-                         <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value as NoteCategory)} className="bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary">
+                         <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value as NoteCategory)} className="bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary [&>option]:bg-gray-800 [&>option]:text-white">
                             <option value="All">All Categories</option>
                             {noteCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
@@ -208,7 +208,7 @@ const NotesPage: React.FC = () => {
                                         </td>
                                         <td className="p-3 font-medium text-text-primary">{note.title}</td>
                                         <td className="p-3 text-right font-semibold text-accent whitespace-nowrap">
-                                            {note.amount ? `$${note.amount.toFixed(2)}` : 'N/A'}
+                                            {note.amount ? `₱${note.amount.toFixed(2)}` : 'N/A'}
                                         </td>
                                         <td className="p-3 text-center">
                                             <button className="text-sm text-text-secondary hover:text-text-primary">View</button>

@@ -28,7 +28,7 @@ Return JSON array with productId, productName, and quantity:
 
 Return only the JSON array.`;
 
-    // SSRF Protection: Validate API endpoint
+    // Validate API URL to prevent SSRF
     const allowedHost = 'generativelanguage.googleapis.com';
     const apiUrl = `https://${allowedHost}/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
     

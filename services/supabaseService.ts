@@ -278,7 +278,7 @@ export const getAIAssistantResponse = async (message: string, history: any[] = [
     if (lowerMessage.includes('sales') || lowerMessage.includes('revenue')) {
       const sales = await getSales(10);
       const total = sales.reduce((sum, sale) => sum + sale.total, 0);
-      return `You have ${sales.length} recent sales with total revenue of $${total.toFixed(2)}.`;
+      return `You have ${sales.length} recent sales with total revenue of ₱${total.toFixed(2)}.`;
     }
     
     if (lowerMessage.includes('product') || lowerMessage.includes('inventory')) {
@@ -289,7 +289,7 @@ export const getAIAssistantResponse = async (message: string, history: any[] = [
     if (lowerMessage.includes('expense')) {
       const expenses = await getExpenses(10);
       const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-      return `You have ${expenses.length} recent expenses totaling $${total.toFixed(2)}.`;
+      return `You have ${expenses.length} recent expenses totaling ₱${total.toFixed(2)}.`;
     }
     
     return 'I can help you with sales, products, and expenses. What would you like to know?';

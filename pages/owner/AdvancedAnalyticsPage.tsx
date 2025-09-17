@@ -165,7 +165,7 @@ const AdvancedAnalyticsPage: React.FC = () => {
             <select
               value={groupBy}
               onChange={(e) => setGroupBy(e.target.value as 'day' | 'week' | 'month')}
-              className="w-full bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition"
+              className="w-full bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary [&>option]:bg-gray-800 [&>option]:text-white"
             >
               <option value="day">Day</option>
               <option value="week">Week</option>
@@ -177,7 +177,7 @@ const AdvancedAnalyticsPage: React.FC = () => {
             <select
               value={selectedWorker}
               onChange={(e) => setSelectedWorker(e.target.value)}
-              className="w-full bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition"
+              className="w-full bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary [&>option]:bg-gray-800 [&>option]:text-white"
             >
               {workers.map(worker => (
                 <option key={worker.id} value={worker.id}>{worker.name}</option>
@@ -211,7 +211,7 @@ const AdvancedAnalyticsPage: React.FC = () => {
             <LineChart data={salesTrendData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="period" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-              <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `$${value}`} />
+              <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `₱${value}`} />
               <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
               <Line type="monotone" dataKey="sales" stroke="rgb(var(--primary))" strokeWidth={2} />
             </LineChart>
@@ -224,7 +224,7 @@ const AdvancedAnalyticsPage: React.FC = () => {
             <BarChart data={topProductsData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="name" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-              <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `$${value}`} />
+              <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `₱${value}`} />
               <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
               <Bar dataKey="revenue" fill="rgb(var(--primary))" />
             </BarChart>
@@ -237,7 +237,7 @@ const AdvancedAnalyticsPage: React.FC = () => {
             <BarChart data={workerPerformanceData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="name" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-              <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `$${value}`} />
+              <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `₱${value}`} />
               <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
               <Bar dataKey="sales" fill="#00C49F" />
             </BarChart>

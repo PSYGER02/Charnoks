@@ -15,10 +15,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setThemeState] = useState<string>(() => {
     try {
       const savedTheme = window.localStorage.getItem('app-theme');
-      return savedTheme || 'theme-golden';
+      return savedTheme || 'theme-trading-dark';
     } catch (error) {
       console.error("Could not read theme from localStorage", error);
-      return 'theme-golden';
+      return 'theme-trading-dark';
     }
   });
 

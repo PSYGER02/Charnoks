@@ -27,20 +27,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .insert([{ type: payload.type, data: payload.data || {}, created_at: new Date().toISOString() }]);
 
       if (error) {
-        // Import secure logger
-        const { secureLogger } = require('../utils/securityConfig');
-        secureLogger.warn('Failed to insert log to Supabase', error.message || 'Unknown error');
+        console.warn('Failed to insert log to Supabase:', error.message);
         return res.status(500).json({ error: 'Failed to store log' });
       }
 
-      return res.status(200).json({ success: true, id: data[0]?.id });
+      return res.status(200).json({ success: true });
     }
 
-    // Fallback: log to serverless console
-    console.log('client-log:', JSON.stringify(payload));
+    // Fallback: log to serverless console with sanitization
+    const sanitizedPayload = {
+      type: payload.type,
+      data: typeof payload.data === 'string' ? payload.data.replace(/[\r\n\t]/g, ' ').substring(0, 500) : payload.data
+    };
+    console.log('client-log:', JSON.stringify(sanitizedPayload));
     return res.status(200).json({ success: true });
   } catch (err: any) {
-    console.error('Error in /api/log:', err);
+    const sanitizedError = (err?.message || String(err)).replace(/[\r\n\t]/g, ' ').substring(0, 200);
+    console.error('Error in /api/log:', sanitizedError);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

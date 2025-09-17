@@ -135,7 +135,7 @@ const StockManagementPage: React.FC = () => {
                         </div>
                          {productTypes.slice(0, 3).map(type => (
                              <div key={type} className="flex items-center gap-4 p-2 rounded-lg bg-black/20">
-                                 <select className="flex-1 bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary">
+                                 <select className="flex-1 bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary [&>option]:bg-gray-800 [&>option]:text-white">
                                      {productTypes.map(pt => <option key={pt}>{pt}</option>)}
                                  </select>
                                  <input type="number" placeholder="10" className="w-24 bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition" />
@@ -152,7 +152,7 @@ const StockManagementPage: React.FC = () => {
                     <form className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-text-secondary mb-1">Select Worker/Branch</label>
-                            <select className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary">
+                            <select className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary [&>option]:bg-gray-800 [&>option]:text-white">
                                 {workers.length === 0 ? (
                                     <option>No workers available - Create worker accounts first</option>
                                 ) : (
@@ -184,7 +184,7 @@ const StockManagementPage: React.FC = () => {
                 <CollapsibleSection title="4. Current Branch Stock Viewer">
                     <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">Select Worker/Branch</label>
-                        <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} className="w-full max-w-sm bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary">
+                        <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} className="w-full max-w-sm bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary [&>option]:bg-gray-800 [&>option]:text-white">
                              {workers.length === 0 ? (
                                 <option>No workers available</option>
                              ) : (

@@ -158,7 +158,7 @@ const TransactionsPage: React.FC = () => {
                     <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
                         <div>
                             <label htmlFor="worker-filter" className="block text-sm font-medium text-text-secondary mb-1">Filter by Worker</label>
-                            <select id="worker-filter" value={workerFilter} onChange={e => { setWorkerFilter(e.target.value); setCurrentPage(1); }} className="w-full max-w-xs bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary">
+                            <select id="worker-filter" value={workerFilter} onChange={e => { setWorkerFilter(e.target.value); setCurrentPage(1); }} className="w-full max-w-xs bg-transparent border-2 border-border/50 rounded-lg p-2 focus:border-primary focus:ring-0 transition text-text-primary [&>option]:bg-gray-800 [&>option]:text-white">
                                 <option value="all">All Workers</option>
                                 {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                             </select>

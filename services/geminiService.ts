@@ -35,9 +35,9 @@ const generatePromptForInsights = (sales: Sale[], expenses: Expense[]): string =
   return `
     You are an expert business consultant for a small fried chicken restaurant.
     Here is a snapshot of their recent performance:
-    - Total Sales (last 90 days): $${totalSales.toFixed(2)}
-    - Total Expenses (last 90 days): $${totalExpenses.toFixed(2)}
-    - Net Profit (last 90 days): $${(totalSales - totalExpenses).toFixed(2)}
+    - Total Sales (last 90 days): ₱${totalSales.toFixed(2)}
+    - Total Expenses (last 90 days): ₱${totalExpenses.toFixed(2)}
+    - Net Profit (last 90 days): ₱${(totalSales - totalExpenses).toFixed(2)}
 
     Based on this data, provide smart business insights.
     - "insights": Provide 2-3 general observations.

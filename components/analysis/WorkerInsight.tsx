@@ -1,10 +1,11 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Sale, Expense, Worker, Product } from '../../types';
 import { filterByTimeRange, TimeRange, combineSalesAndExpensesData } from '../../utils/analysis';
 import KPICard from '../ui/KPI_Card';
 import ChartContainer from '../charts/ChartContainer';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
+import { supabase } from '../../src/supabaseConfig';
 
 interface WorkerInsightProps {
     sales: Sale[];
@@ -13,11 +14,41 @@ interface WorkerInsightProps {
     products: Product[];
 }
 
-const WorkerInsight: React.FC<WorkerInsightProps> = ({ sales, expenses, workers, products }) => {
-    const [workerId, setWorkerId] = useState<string>(workers[0]?.id || '');
+const WorkerInsight: React.FC<WorkerInsightProps> = ({ sales, expenses, products }) => {
+    const [workers, setWorkers] = useState<any[]>([]);
+    const [hasLoaded, setHasLoaded] = useState(false);
+    
+    useEffect(() => {
+        const loadWorkers = async () => {
+            if (hasLoaded) return;
+            setHasLoaded(true);
+            try {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('id, display_name, email')
+                    .order('display_name');
+                
+                console.log('Workers loaded:', data); // Debug
+                setWorkers(data || []);
+            } catch (error) {
+                console.warn('Workers data not loaded:', error);
+                setWorkers([]);
+            }
+        };
+        loadWorkers();
+    }, [hasLoaded]);
+    
+    const [workerId, setWorkerId] = useState<string>('');
     const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
     const worker = workers.find(w => w.id === workerId);
+    
+    // Update selected worker when data loads
+    useEffect(() => {
+        if (workers.length > 0 && !workerId) {
+            setWorkerId(workers[0].id);
+        }
+    }, [workers, workerId]);
 
     const filteredData = useMemo(() => {
         const filteredSales = filterByTimeRange(sales, timeRange).filter(s => s.workerId === workerId);
@@ -65,8 +96,12 @@ const WorkerInsight: React.FC<WorkerInsightProps> = ({ sales, expenses, workers,
             <div className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-4 border border-border/50 shadow-lg flex flex-wrap items-center gap-6">
                  <div>
                     <label className="block text-sm font-medium text-text-secondary mb-1">Select Worker</label>
-                    <select value={workerId} onChange={e => setWorkerId(e.target.value)} className="bg-transparent border-2 border-border/50 rounded-lg p-2.5 focus:border-primary focus:ring-0 transition text-text-primary w-48">
-                        {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    <select value={workerId} onChange={e => setWorkerId(e.target.value)} className="bg-transparent border-2 border-border/50 rounded-lg p-2.5 focus:border-primary focus:ring-0 transition text-text-primary w-48 [&>option]:bg-gray-800 [&>option]:text-white">
+                        {workers.length === 0 ? (
+                            <option value="">Loading workers...</option>
+                        ) : (
+                            workers.map(w => <option key={w.id} value={w.id}>{w.display_name || w.name || `Worker ${w.id}`}</option>)
+                        )}
                     </select>
                 </div>
                  <div>
@@ -82,9 +117,9 @@ const WorkerInsight: React.FC<WorkerInsightProps> = ({ sales, expenses, workers,
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <KPICard title="Sales" value={`$${kpis.totalSales.toLocaleString()}`} icon="💰" />
-                <KPICard title="Expenses" value={`$${kpis.totalExpenses.toLocaleString()}`} icon="🧾" />
-                <KPICard title="Net Profit" value={`$${kpis.netProfit.toLocaleString()}`} icon={kpis.netProfit >= 0 ? '📈' : '📉'} />
+                <KPICard title="Sales" value={`₱${kpis.totalSales.toLocaleString()}`} icon="💰" />
+                <KPICard title="Expenses" value={`₱${kpis.totalExpenses.toLocaleString()}`} icon="🧾" />
+                <KPICard title="Net Profit" value={`₱${kpis.netProfit.toLocaleString()}`} icon={kpis.netProfit >= 0 ? '📈' : '📉'} />
                 <KPICard title="Transactions" value={kpis.transactions.toLocaleString()} icon="🛒" />
             </div>
 
@@ -101,7 +136,7 @@ const WorkerInsight: React.FC<WorkerInsightProps> = ({ sales, expenses, workers,
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                                 <XAxis dataKey="name" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-                                <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value: number) => `$${value}`} />
+                                <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value: number) => `₱${value}`} />
                                 <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
                                 <Area type="monotone" dataKey="sales" name="Sales" stroke="rgb(var(--primary))" fill="url(#colorSalesWorker)" />
                             </AreaChart>
@@ -141,7 +176,7 @@ const WorkerInsight: React.FC<WorkerInsightProps> = ({ sales, expenses, workers,
                                 <tr key={sale.id} className="border-b border-border/50 hover:bg-white/5">
                                     <td className="p-3 whitespace-nowrap">{new Date(sale.date).toLocaleString()}</td>
                                     <td className="p-3">{sale.items.length}</td>
-                                    <td className="p-3 text-right font-semibold text-green-400 whitespace-nowrap">{`$${sale.total.toFixed(2)}`}</td>
+                                    <td className="p-3 text-right font-semibold text-green-400 whitespace-nowrap">{`₱${sale.total.toFixed(2)}`}</td>
                                 </tr>
                             ))}
                         </tbody>

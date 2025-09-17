@@ -73,12 +73,10 @@ const ChatBubble: React.FC<ChatBubbleProps> = ({ sender, text, isTyping = false,
                     </div>
                 ) : (
                     <div className="flex items-start">
-                      <div className="prose prose-invert prose-sm min-h-[1em]" dangerouslySetInnerHTML={{ 
-                        __html: DOMPurify.sanitize(formatText(displayedText), {
-                          ALLOWED_TAGS: ['strong', 'em', 'br', 'ul', 'li'],
-                          ALLOWED_ATTR: ['class']
-                        })
-                      }} />
+                      <div 
+                        className="prose prose-invert prose-sm min-h-[1em]"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatText(displayedText)) }}
+                      />
                       {isAnimating && <TypingCursor />}
                     </div>
                 )}

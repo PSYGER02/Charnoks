@@ -1,10 +1,11 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Sale, Expense, Worker } from '../../types';
 import { filterByTimeRange, TimeRange, combineSalesAndExpensesData } from '../../utils/analysis';
 import KPICard from '../ui/KPI_Card';
 import ChartContainer from '../charts/ChartContainer';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { supabase } from '../../src/supabaseConfig';
 
 interface CompareWorkersProps {
     sales: Sale[];
@@ -12,13 +13,46 @@ interface CompareWorkersProps {
     workers: Worker[];
 }
 
-const CompareWorkers: React.FC<CompareWorkersProps> = ({ sales, expenses, workers }) => {
-    const [workerAId, setWorkerAId] = useState<string>(workers[0]?.id || '');
-    const [workerBId, setWorkerBId] = useState<string>(workers[1]?.id || '');
+const CompareWorkers: React.FC<CompareWorkersProps> = ({ sales, expenses }) => {
+    const [workers, setWorkers] = useState<any[]>([]);
+    const [hasLoaded, setHasLoaded] = useState(false);
+    
+    useEffect(() => {
+        const loadWorkers = async () => {
+            if (hasLoaded) return;
+            setHasLoaded(true);
+            try {
+                const { data, error } = await supabase
+                    .from('user_profiles')
+                    .select('id, display_name, email')
+                    .order('display_name');
+                
+                console.log('Workers loaded:', data); // Debug
+                setWorkers(data || []);
+            } catch (error) {
+                console.warn('Workers data not loaded:', error);
+                setWorkers([]);
+            }
+        };
+        loadWorkers();
+    }, [hasLoaded]);
+    
+    const [workerAId, setWorkerAId] = useState<string>('');
+    const [workerBId, setWorkerBId] = useState<string>('');
     const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
     const workerA = workers.find(w => w.id === workerAId);
     const workerB = workers.find(w => w.id === workerBId);
+    
+    // Update selected workers when data loads
+    useEffect(() => {
+        if (workers.length > 0 && !workerAId) {
+            setWorkerAId(workers[0].id);
+        }
+        if (workers.length > 1 && !workerBId) {
+            setWorkerBId(workers[1].id);
+        }
+    }, [workers, workerAId, workerBId]);
 
     const filteredData = useMemo(() => {
         const filteredSales = filterByTimeRange(sales, timeRange);
@@ -62,14 +96,22 @@ const CompareWorkers: React.FC<CompareWorkersProps> = ({ sales, expenses, worker
             <div className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-4 border border-border/50 shadow-lg flex flex-wrap items-center gap-6">
                 <div>
                     <label className="block text-sm font-medium text-text-secondary mb-1">Worker A</label>
-                    <select value={workerAId} onChange={e => setWorkerAId(e.target.value)} className="bg-transparent border-2 border-border/50 rounded-lg p-2.5 focus:border-primary focus:ring-0 transition text-text-primary w-48">
-                        {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    <select value={workerAId} onChange={e => setWorkerAId(e.target.value)} className="bg-transparent border-2 border-border/50 rounded-lg p-2.5 focus:border-primary focus:ring-0 transition text-text-primary w-48 [&>option]:bg-gray-800 [&>option]:text-white">
+                        {workers.length === 0 ? (
+                            <option value="">Loading workers...</option>
+                        ) : (
+                            workers.map(w => <option key={w.id} value={w.id}>{w.display_name || w.name || `Worker ${w.id}`}</option>)
+                        )}
                     </select>
                 </div>
                  <div>
                     <label className="block text-sm font-medium text-text-secondary mb-1">Worker B</label>
-                    <select value={workerBId} onChange={e => setWorkerBId(e.target.value)} className="bg-transparent border-2 border-border/50 rounded-lg p-2.5 focus:border-primary focus:ring-0 transition text-text-primary w-48">
-                        {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    <select value={workerBId} onChange={e => setWorkerBId(e.target.value)} className="bg-transparent border-2 border-border/50 rounded-lg p-2.5 focus:border-primary focus:ring-0 transition text-text-primary w-48 [&>option]:bg-gray-800 [&>option]:text-white">
+                        {workers.length === 0 ? (
+                            <option value="">Loading workers...</option>
+                        ) : (
+                            workers.map(w => <option key={w.id} value={w.id}>{w.display_name || w.name || `Worker ${w.id}`}</option>)
+                        )}
                     </select>
                 </div>
                 <div>
@@ -88,17 +130,17 @@ const CompareWorkers: React.FC<CompareWorkersProps> = ({ sales, expenses, worker
                 <div className="bg-card-bg/50 p-6 rounded-2xl border border-border/50">
                     <h3 className="text-2xl font-bold text-text-primary mb-4">{workerA?.name}</h3>
                     <div className="space-y-4">
-                        <KPICard title="Sales" value={`$${totals.totalSalesA.toLocaleString()}`} icon="💰" />
-                        <KPICard title="Expenses" value={`$${totals.totalExpensesA.toLocaleString()}`} icon="🧾" />
-                        <KPICard title="Net Profit" value={`$${totals.profitA.toLocaleString()}`} icon={totals.profitA >= 0 ? '📈' : '📉'} />
+                        <KPICard title="Sales" value={`₱${totals.totalSalesA.toLocaleString()}`} icon="💰" />
+                        <KPICard title="Expenses" value={`₱${totals.totalExpensesA.toLocaleString()}`} icon="🧾" />
+                        <KPICard title="Net Profit" value={`₱${totals.profitA.toLocaleString()}`} icon={totals.profitA >= 0 ? '📈' : '📉'} />
                     </div>
                 </div>
                 <div className="bg-card-bg/50 p-6 rounded-2xl border border-border/50">
                      <h3 className="text-2xl font-bold text-text-primary mb-4">{workerB?.name}</h3>
                     <div className="space-y-4">
-                        <KPICard title="Sales" value={`$${totals.totalSalesB.toLocaleString()}`} icon="💰" />
-                        <KPICard title="Expenses" value={`$${totals.totalExpensesB.toLocaleString()}`} icon="🧾" />
-                        <KPICard title="Net Profit" value={`$${totals.profitB.toLocaleString()}`} icon={totals.profitB >= 0 ? '📈' : '📉'} />
+                        <KPICard title="Sales" value={`₱${totals.totalSalesB.toLocaleString()}`} icon="💰" />
+                        <KPICard title="Expenses" value={`₱${totals.totalExpensesB.toLocaleString()}`} icon="🧾" />
+                        <KPICard title="Net Profit" value={`₱${totals.profitB.toLocaleString()}`} icon={totals.profitB >= 0 ? '📈' : '📉'} />
                     </div>
                 </div>
             </div>
@@ -108,7 +150,7 @@ const CompareWorkers: React.FC<CompareWorkersProps> = ({ sales, expenses, worker
                     <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                         <XAxis dataKey="name" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-                        <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value: number) => `$${Math.round(value/1000)}k`} />
+                        <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value: number) => `₱${Math.round(value/1000)}k`} />
                         <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
                         <Legend wrapperStyle={{paddingTop: '20px'}}/>
                         <Bar dataKey={workerA?.name || 'A'} fill="rgba(var(--primary), 0.7)" name={workerA?.name} />

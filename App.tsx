@@ -82,7 +82,11 @@ const AppContent: React.FC = () => {
       // Allow time for CSS variables to be applied before reading them
       setTimeout(() => {
         const themeColor = getComputedStyle(body).getPropertyValue('--background-start-rgb');
-        metaThemeColor.setAttribute('content', `rgb(${themeColor})`);
+        // Sanitize theme color value to prevent XSS
+        const sanitizedColor = themeColor.replace(/[^0-9,\s]/g, '').trim();
+        if (sanitizedColor) {
+          metaThemeColor.setAttribute('content', `rgb(${sanitizedColor})`);
+        }
       }, 0);
     }
   }, [theme]);

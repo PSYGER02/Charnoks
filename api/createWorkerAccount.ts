@@ -82,9 +82,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         if (createError) {
-            const sanitizedError = createError.message?.replace(/[\r\n]/g, ' ') || 'Unknown error';
-            console.error('Error creating worker:', sanitizedError);
-            res.status(400).json({ error: createError.message });
+            const sanitizedMessage = (createError.message || 'Unknown error')
+                .replace(/[\r\n\t]/g, ' ')
+                .replace(/[<>&"']/g, (match) => {
+                    const entities = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#x27;' };
+                    return entities[match] || match;
+                })
+                .substring(0, 200);
+            console.error('Error creating worker:', sanitizedMessage);
+            res.status(400).json({ error: sanitizedMessage });
             return;
         }
 
@@ -114,8 +120,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
 
             if (manualCreateError) {
-                const sanitizedError = manualCreateError.message?.replace(/[\r\n]/g, ' ') || 'Unknown error';
-                console.error('Error creating worker profile:', sanitizedError);
+                const sanitizedMessage = (manualCreateError.message || 'Unknown error')
+                    .replace(/[\r\n\t]/g, ' ')
+                    .replace(/[<>&"']/g, (match) => {
+                        const entities = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#x27;' };
+                        return entities[match] || match;
+                    })
+                    .substring(0, 200);
+                console.error('Error creating worker profile:', sanitizedMessage);
                 res.status(500).json({ error: 'Failed to create worker profile' });
                 return;
             }
@@ -127,7 +139,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             worker: {
                 id: newUser.user.id,
                 email: newUser.user.email,
-                displayName: name,
+                displayName: name.replace(/[<>&"']/g, (match) => {
+                    const entities = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#x27;' };
+                    return entities[match] || match;
+                }),
                 role: 'worker'
             }
         });

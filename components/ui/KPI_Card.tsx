@@ -9,21 +9,25 @@ interface KPICardProps {
 }
 
 const KPICard: React.FC<KPICardProps> = ({ title, value, icon, trend, trendDirection }) => {
-  const trendColor = trendDirection === 'up' ? 'text-green-400' : 'text-red-400';
+  const trendColor = trendDirection === 'up' ? 'status-positive' : 'status-negative';
 
   return (
-    <div className="bg-card-bg-solid p-6 rounded-2xl shadow-lg border border-border/50 animate-bounce-in transition-all duration-300 hover:scale-105 hover:shadow-2xl relative overflow-hidden hover-shimmer">
-      <div className="flex justify-between items-start">
-        <p className="text-lg font-semibold text-text-secondary">{title}</p>
-        <div className="text-3xl text-primary opacity-80">{icon}</div>
+    <div className="kpi-card hover-shimmer relative">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{title}</h3>
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+          <span className="text-lg">{icon}</span>
+        </div>
       </div>
-      <p className="text-4xl font-bold mt-2 text-text-primary">{value}</p>
-      {trend && (
-        <p className={`mt-2 text-sm flex items-center ${trendColor}`}>
-          {trendDirection === 'up' ? '▲' : '▼'}
-          <span className="ml-1">{trend}</span>
-        </p>
-      )}
+      <div className="space-y-2">
+        <p className="text-2xl font-bold text-text-primary leading-none">{value}</p>
+        {trend && (
+          <div className={`flex items-center text-sm font-medium ${trendColor}`}>
+            <span className="mr-1.5 text-xs">{trendDirection === 'up' ? '▲' : '▼'}</span>
+            <span>{trend}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

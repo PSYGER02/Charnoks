@@ -145,20 +145,20 @@ export class PerformanceMonitor {
    * Log an error with context
    */
   logError(error: Error, context?: Record<string, any>): void {
+    const sanitizedMessage = this.sanitizeLogInput(error.message);
     const errorData = {
-      message: error.message,
+      message: sanitizedMessage,
       stack: error.stack,
       name: error.name,
       timestamp: Date.now(),
-      context
+      context: this.sanitizeContext(context)
     };
 
     this.errorCount++;
 
     // Log to console in development with sanitization
     if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-      const { secureLogger } = require('./securityConfig');
-      secureLogger.error('Error occurred', errorData.message);
+      console.error('[ERROR] Error occurred:', sanitizedMessage);
     }
 
     // In production, send to external logging service
@@ -282,6 +282,42 @@ export class PerformanceMonitor {
   }
 
   /**
+   * Sanitize log input to prevent injection
+   */
+  private sanitizeLogInput(input: any): string {
+    if (input === null || input === undefined) return 'null';
+    return String(input)
+      .replace(/[\r\n\t]/g, ' ')
+      .replace(/[<>&"']/g, '')
+      .substring(0, 500);
+  }
+
+  /**
+   * Sanitize context object
+   */
+  private sanitizeContext(context?: Record<string, any>): Record<string, any> {
+    if (!context) return {};
+    const sanitized: Record<string, any> = {};
+    for (const [key, value] of Object.entries(context)) {
+      sanitized[key] = this.sanitizeLogInput(value);
+    }
+    return sanitized;
+  }
+
+  /**
+   * Validate and sanitize file paths
+   */
+  private validateFilePath(filePath: string): string {
+    // Remove path traversal attempts
+    const sanitized = filePath.replace(/\.\./g, '').replace(/[^a-zA-Z0-9._/-]/g, '');
+    // Ensure path stays within allowed directories
+    if (sanitized.includes('/') && !sanitized.startsWith('/logs/')) {
+      throw new Error('Invalid file path');
+    }
+    return sanitized;
+  }
+
+  /**
    * Send data to external logging service
    */
   private sendToLoggingService(type: 'metric' | 'error', data: any): void {
@@ -297,8 +333,8 @@ export class PerformanceMonitor {
       fetch('/api/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, data })
-      }).catch(err => console.warn('Failed to send log:', err));
+        body: JSON.stringify({ type, data: this.sanitizeContext(data) })
+      }).catch(err => console.warn('Failed to send log:', this.sanitizeLogInput(err)));
     }
   }
 }

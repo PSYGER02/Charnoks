@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // New analysis mode components
 import AnalysisHome from '../../components/analysis/AnalysisHome';
@@ -9,75 +9,56 @@ import WorkerInsight from '../../components/analysis/WorkerInsight';
 import AIPrediction from '../../components/analysis/AIPrediction';
 
 // Services
-import { getSales, getExpenses, getWorkersList } from '../../services/supabaseService';
-import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
+import { getSales, getExpenses } from '../../services/supabaseService';
+import { getWorkers } from '../../services/workerService';
 import Spinner from '../../components/ui/Spinner';
 
 export type AnalysisMode = 'home' | 'all-workers' | 'compare-workers' | 'worker-insight' | 'ai-prediction';
 
 const AnalysisPage: React.FC = () => {
     const [mode, setMode] = useState<AnalysisMode>('home');
-
-    // Load data only when needed (not on home mode)
-    const shouldLoadData = mode !== 'home';
-    
-    const { loadingState: salesState } = useEnhancedDataLoading(
-        () => shouldLoadData ? getSales(20) : Promise.resolve([]), // Load even less initially
-        {
-            cacheKey: `analysis-sales-${mode}`,
-            cacheDuration: 15 * 60 * 1000, // 15 minutes
-            maxRetries: 1,
-            autoRefresh: false
-        }
-    );
-
-    const { loadingState: expensesState } = useEnhancedDataLoading(
-        () => shouldLoadData ? getExpenses(50) : Promise.resolve([]),
-        {
-            cacheKey: 'analysis-expenses', 
-            cacheDuration: 10 * 60 * 1000,
-            maxRetries: 1,
-            autoRefresh: false
-        }
-    );
-
-    const { loadingState: workersState } = useEnhancedDataLoading(
-        () => shouldLoadData ? getWorkersList() : Promise.resolve([]),
-        {
-            cacheKey: 'analysis-workers',
-            cacheDuration: 15 * 60 * 1000, // 15 minutes
-            maxRetries: 1,
-            autoRefresh: false
-        }
-    );
-
-    // Get data or use empty arrays
-    const sales = salesState.data || [];
-    const expenses = expensesState.data || [];
-    const workers = workersState.data || [];
+    const [sales, setSales] = useState<any[]>([]);
+    const [expenses, setExpenses] = useState<any[]>([]);
+    const [workers, setWorkers] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasLoaded, setHasLoaded] = useState(false);
+    const [hasError, setHasError] = useState(false);
     const products = []; // Will be loaded separately if needed
 
-    // Only show loading on initial load with no data and no errors
-    const isLoading = shouldLoadData && (
-        (salesState.loading && !salesState.data && !salesState.error) || 
-        (expensesState.loading && !expensesState.data && !expensesState.error) || 
-        (workersState.loading && !workersState.data && !workersState.error)
-    );
-
-    const hasError = shouldLoadData && (
-        (salesState.error && !salesState.data) || 
-        (expensesState.error && !expensesState.data) || 
-        (workersState.error && !workersState.data)
-    );
+    // Load data when switching to analysis modes
+    useEffect(() => {
+        const loadData = async () => {
+            if (mode === 'home' || hasLoaded) return;
+            
+            setIsLoading(true);
+            setHasLoaded(true);
+            
+            try {
+                const [salesData, expensesData, workersData] = await Promise.all([
+                    getSales(50),
+                    getExpenses(50),
+                    getWorkers()
+                ]);
+                setSales(salesData);
+                setExpenses(expensesData);
+                setWorkers(workersData);
+                setHasError(false);
+            } catch (error) {
+                console.warn('Analysis data not loaded:', error);
+                setHasError(true);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        loadData();
+    }, [mode, hasLoaded]);
 
     const renderContent = () => {
-        // Show loading indicator in header instead of blocking content
-        const showLoadingIndicator = shouldLoadData && (salesState.loading || expensesState.loading || workersState.loading);
-
         return (
             <div>
                 {/* Loading indicator */}
-                {showLoadingIndicator && (
+                {isLoading && mode !== 'home' && (
                     <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
                         <div className="flex items-center text-sm">
                             <Spinner size="sm" className="mr-2" />
@@ -142,6 +123,7 @@ const AnalysisPage: React.FC = () => {
                         <h1 className="text-4xl font-bold text-text-primary">{getPageTitle()}</h1>
                         <p className="text-text-secondary mt-1">
                             {mode === 'home' ? 'Select an analysis mode to begin.' : 
+                             !hasLoaded ? 'Loading analysis data...' :
                              sales.length === 0 && expenses.length === 0 ? 'Start recording sales and expenses to see analysis.' :
                              'Dive deep into your business data.'}
                         </p>

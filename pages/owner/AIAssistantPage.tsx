@@ -27,10 +27,18 @@ How can I help you today?`
 };
 
 const AIAssistantPage: React.FC = () => {
-    const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
+    const [messages, setMessages] = useState<Message[]>(() => {
+        const saved = localStorage.getItem('ai-chat-history');
+        return saved ? JSON.parse(saved) : [INITIAL_MESSAGE];
+    });
     const [isLoading, setIsLoading] = useState(false);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const [lastMessageId, setLastMessageId] = useState<number>(INITIAL_MESSAGE.id);
+
+    // Save to localStorage whenever messages change
+    useEffect(() => {
+        localStorage.setItem('ai-chat-history', JSON.stringify(messages));
+    }, [messages]);
 
     useEffect(() => {
         // Scroll to the latest message

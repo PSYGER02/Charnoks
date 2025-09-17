@@ -63,7 +63,7 @@ const WorkerDashboard: React.FC = () => {
                 />
                 <KPICard 
                     title="Your Revenue Today" 
-                    value={loading ? "Loading..." : `$${revenueToday.toFixed(2)}`} 
+                    value={loading ? "Loading..." : `₱${revenueToday.toFixed(2)}`} 
                     icon="💰" 
                 />
             </div>

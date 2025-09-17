@@ -45,9 +45,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const prompt = `You are an AI business assistant for a Point of Sale (POS) system. Help the business owner with their query.
 
 Business Context:
-- Total Revenue: $${totalRevenue.toFixed(2)}
-- Total Expenses: $${totalExpenses.toFixed(2)}
-- Net Profit: $${netProfit.toFixed(2)}
+- Total Revenue: ₱${totalRevenue.toFixed(2)}
+- Total Expenses: ₱${totalExpenses.toFixed(2)}
+- Net Profit: ₱${netProfit.toFixed(2)}
 - Total Products: ${productsSummary.length}
 - Recent Sales: ${salesSummary.length} transactions
 
@@ -75,9 +75,9 @@ Instructions:
 
 Response:`;
 
-    // SSRF Protection: Validate API endpoint
+    // Validate API URL to prevent SSRF - using Gemini 2.0 Flash (15 RPM, 1M tokens, 200 RPD)
     const allowedHost = 'generativelanguage.googleapis.com';
-    const apiUrl = `https://${allowedHost}/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const apiUrl = `https://${allowedHost}/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
     
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -86,16 +86,22 @@ Response:`;
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { 
           temperature: 0.7, 
-          maxOutputTokens: 1024 
+          maxOutputTokens: 800 // Within 1M token limit
         }
       })
     });
 
     if (!response.ok) {
-      throw new Error('Failed to get AI response');
+      // Handle rate limiting specifically
+      if (response.status === 429) {
+        throw new Error('AI service temporarily busy - please try again in a moment');
+      }
+      throw new Error(`AI API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = await response.json().catch(() => {
+      throw new Error('Invalid AI response format');
+    });
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I apologize, but I cannot provide a response at this time.';
 
     return res.status(200).json({ response: aiResponse });
