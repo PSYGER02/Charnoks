@@ -146,6 +146,76 @@ const generatePromptForVoiceSale = (transcript: string, products: Product[]): st
   `;
 }
 
+// Part C: ChatGPT Plan - Strict JSON parsing for stock operations
+export const parseStockNote = async (noteContent: string): Promise<any> => {
+  // Fallback parsing if no AI
+  const fallbackParse = (text: string) => {
+    const result: any = {};
+    const lower = text.toLowerCase();
+    
+    // Extract purchases
+    const buyMatch = lower.match(/(bought?|buy)\s+(.+?)\s+(\d+)\s+bags?/);
+    if (buyMatch) {
+      result.purchases = [{ product: buyMatch[2], bags: parseInt(buyMatch[3]) }];
+    }
+    
+    // Extract cooking
+    const cookMatch = lower.match(/cook(ed)?\s+(\d+)\s+bags?/);
+    if (cookMatch) {
+      result.cooking = [{ bags: parseInt(cookMatch[2]), branch: "branch1" }];
+    }
+    
+    // Extract sales
+    const saleMatch = lower.match(/sold?\s+(\d+)\s+pieces?\s+at\s+(\d+)/);
+    if (saleMatch) {
+      result.sales = [{ pieces: parseInt(saleMatch[1]), price: parseInt(saleMatch[2]), branch: "branch1" }];
+    }
+    
+    // Extract transfers
+    const transferMatch = lower.match(/sent?\s+(\d+)\s+bags?\s+to\s+(\w+)/);
+    if (transferMatch) {
+      result.transfers = [{ to_branch: transferMatch[2], bags: parseInt(transferMatch[1]) }];
+    }
+    
+    return result;
+  };
+
+  // ChatGPT Plan: Strict JSON-only extraction
+  if (ai) {
+    try {
+      const prompt = `You are a strict JSON-only extractor. For every input note, output valid JSON only. The JSON must follow the schema keys: purchases[], productions[], transfers[], branch_operations[], leftovers[]. If any field is unknown, omit it. Do not add commentary.\n\nParse this note: "${noteContent}"`;
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: prompt,
+        config: { 
+          responseMimeType: "application/json", 
+          temperature: 0.1,
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              purchases: { type: Type.ARRAY, items: { type: Type.OBJECT } },
+              productions: { type: Type.ARRAY, items: { type: Type.OBJECT } },
+              transfers: { type: Type.ARRAY, items: { type: Type.OBJECT } },
+              branch_operations: { type: Type.ARRAY, items: { type: Type.OBJECT } },
+              leftovers: { type: Type.ARRAY, items: { type: Type.OBJECT } }
+            }
+          }
+        }
+      });
+
+      if (response.text()) {
+        return JSON.parse(response.text());
+      }
+    } catch (error) {
+      console.warn('AI parsing failed, using fallback:', error);
+    }
+  }
+  
+  // Always return something useful
+  return fallbackParse(noteContent);
+};
+
 export const parseSaleFromVoice = async (transcript: string, products: Product[]): Promise<ParsedSaleFromAI> => {
   if (!ai) return Promise.reject(new Error("API key not configured."));
 

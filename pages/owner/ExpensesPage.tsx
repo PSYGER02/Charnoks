@@ -5,6 +5,7 @@ import Spinner from '../../components/ui/Spinner';
 import SuccessOverlay from '../../components/ui/SuccessOverlay';
 import { getExpenses, recordExpense } from '../../services/supabaseService';
 import { getWorkers } from '../../services/workerService';
+import { offlineDB } from '../../services/offlineService';
 
 const ExpenseRow: React.FC<{ expense: Expense; workers: any[] }> = ({ expense, workers }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -149,10 +150,20 @@ const ExpensesPage: React.FC = () => {
         setIsLoading(true);
 
         try {
-            await recordExpense({
+            const expenseData = {
                 description,
-                amount: parseFloat(amount)
-            });
+                amount: parseFloat(amount),
+                category: 'general',
+                worker_id: user?.id
+            };
+
+            // Save to IndexedDB first (offline-first)
+            await offlineDB.save('expenses', expenseData);
+
+            // Try to sync if online
+            if (navigator.onLine) {
+                await recordExpense(expenseData);
+            }
 
             setShowSuccess(true);
             setTimeout(() => {

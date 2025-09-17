@@ -4,6 +4,7 @@ import VoiceInputButton from '../../components/ui/VoiceInputButton';
 import ConfirmationModal from '../../components/ui/ConfirmationModal';
 import { subscribeToProducts, recordSale } from '../../services/supabaseService';
 import { parseSaleFromVoice } from '../../services/supabaseService';
+import { offlineDB } from '../../services/offlineService';
 import type { Product } from '../../types';
 
 interface CartItem {
@@ -130,26 +131,35 @@ const SalesPage: React.FC = () => {
   const handleSaveSale = useCallback(async () => {
     if(cart.length === 0) return;
     try {
-      const saleId = await recordSale({
+      const saleData = {
         items: cart.map(item => ({ 
           productId: item.product.id, 
           quantity: item.quantity 
         })),
-        payment: parseFloat(moneyReceived)
-      });
+        payment: parseFloat(moneyReceived),
+        total,
+        subtotal: total,
+        change_due: change
+      };
+
+      // Save to IndexedDB first (offline-first)
+      await offlineDB.save('sales', saleData);
       
-      if (saleId) {
-        setShowSuccess(true);
-        setTimeout(() => {
-          setCart([]);
-          setMoneyReceived('');
-          setShowSuccess(false);
-        }, 1500);
+      // Try to sync if online
+      if (navigator.onLine) {
+        await recordSale(saleData);
       }
+      
+      setShowSuccess(true);
+      setTimeout(() => {
+        setCart([]);
+        setMoneyReceived('');
+        setShowSuccess(false);
+      }, 1500);
     } catch (err: any) {
       setError(err.message || 'Failed to save sale.');
     }
-  }, [cart, moneyReceived]);
+  }, [cart, moneyReceived, total, change]);
 
   const handleTranscript = async (transcript: string) => {
     setIsProcessingVoice(true);

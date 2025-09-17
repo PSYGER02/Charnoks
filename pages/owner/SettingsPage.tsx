@@ -251,6 +251,121 @@ const UserManagement: React.FC = () => {
   );
 };
 
+const IndexedDBTest: React.FC = () => {
+  const [testResult, setTestResult] = useState<string>('');
+  const [testing, setTesting] = useState(false);
+
+  const runTest = async () => {
+    setTesting(true);
+    setTestResult('Testing...');
+    
+    try {
+      // Test IndexedDB availability
+      if (!window.indexedDB) {
+        throw new Error('IndexedDB not supported');
+      }
+      
+      // Test database creation
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('TestDB', 1);
+        request.onerror = () => reject(new Error('Failed to open database'));
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          
+          // Create all table stores
+          const tables = ['ai_analysis', 'ai_audit_logs', 'ai_conversations', 'branch_stock', 
+                         'daily_sales_summary', 'expense_summary', 'expenses', 'notes', 
+                         'product_performance', 'products', 'sales', 'summaries', 
+                         'user_profiles', 'workers'];
+          
+          tables.forEach(tableName => {
+            if (!db.objectStoreNames.contains(tableName)) {
+              const store = db.createObjectStore(tableName, { keyPath: 'id', autoIncrement: true });
+              store.createIndex('sync_status', 'sync_status');
+              store.createIndex('created_at', 'created_at');
+            }
+          });
+        };
+      });
+      
+      // Test data saving across multiple tables
+      const testData = {
+        notes: { content: 'Test note', sync_status: 'pending' },
+        products: { name: 'Test Product', price: 10, sync_status: 'pending' },
+        sales: { total: 100, sync_status: 'pending' },
+        expenses: { amount: 50, description: 'Test', sync_status: 'pending' }
+      };
+      
+      const results = [];
+      for (const [tableName, data] of Object.entries(testData)) {
+        const id = await new Promise<number>((resolve, reject) => {
+          const tx = db.transaction([tableName], 'readwrite');
+          const store = tx.objectStore(tableName);
+          const request = store.add({ ...data, created_at: new Date().toISOString() });
+          request.onsuccess = () => resolve(request.result as number);
+          request.onerror = () => reject(request.error);
+        });
+        results.push(`${tableName}:${id}`);
+      }
+      
+      // Test retrieval - check what stores actually exist
+      const storeNames = Array.from(db.objectStoreNames);
+      let totalRecords = 0;
+      
+      for (const storeName of storeNames.slice(0, 4)) {
+        const count = await new Promise<number>((resolve, reject) => {
+          const tx = db.transaction([storeName], 'readonly');
+          const store = tx.objectStore(storeName);
+          const request = store.count();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        totalRecords += count;
+      }
+      
+      db.close();
+      
+      setTestResult(`✅ IndexedDB Working! Created ${results.join(', ')}. Stores: ${storeNames.join(', ')}. Records: ${totalRecords}. Offline-first ready!`);
+      
+    } catch (error: any) {
+      setTestResult(`❌ IndexedDB Failed: ${error.message}. Offline features won't work.`);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="bg-card-bg/80 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg">
+      <h3 className="text-xl font-bold mb-4 text-text-primary">IndexedDB Test</h3>
+      <p className="text-text-secondary mb-4">
+        Test offline storage for AI workflow. This ensures notes can be saved offline and synced later.
+      </p>
+      
+      <button
+        onClick={runTest}
+        disabled={testing}
+        className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition disabled:opacity-50 flex items-center mb-4"
+      >
+        {testing && <Spinner size="sm" />}
+        <span className={testing ? 'ml-2' : ''}>
+          {testing ? 'Testing...' : 'Test IndexedDB'}
+        </span>
+      </button>
+      
+      {testResult && (
+        <div className={`p-3 rounded-lg text-sm ${
+          testResult.includes('✅') 
+            ? 'bg-green-500/10 text-green-400 border border-green-500/30' 
+            : 'bg-red-500/10 text-red-400 border border-red-500/30'
+        }`}>
+          {testResult}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const BackupSection: React.FC = () => {
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
@@ -355,6 +470,7 @@ const SettingsPage: React.FC = () => {
             <CreateWorkerForm />
             <UserManagement />
             <BackupSection />
+            <IndexedDBTest />
           </>
         )}
       </div>

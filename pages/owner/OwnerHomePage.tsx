@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useState } from 'react';
 import KPICard from '../../components/ui/KPI_Card';
 import ChartContainer from '../../components/charts/ChartContainer';
@@ -7,6 +7,8 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, Car
 import CreateWorkerForm from '../../components/CreateWorkerForm';
 import Spinner from '../../components/ui/Spinner';
 import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
+import { syncService } from '../../services/syncService';
+import { offlineDB } from '../../services/offlineService';
 
 interface CustomizedLabelProps {
     cx: number;
@@ -41,6 +43,19 @@ const OwnerHomePage: React.FC = () => {
     const [dashboardData, setDashboardData] = React.useState(getEmptyDashboardData());
     const [isLoading, setIsLoading] = React.useState(false);
     const [hasLoaded, setHasLoaded] = React.useState(false);
+
+    // Initialize offline sync
+    useEffect(() => {
+        const initSync = async () => {
+            try {
+                await offlineDB.init();
+                await syncService.start();
+            } catch (error) {
+                console.warn('Offline sync init failed:', error);
+            }
+        };
+        initSync();
+    }, []);
 
     // Load data in background after component mounts
     React.useEffect(() => {

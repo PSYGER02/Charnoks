@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Note } from '../../types';
 import Spinner from '../../components/ui/Spinner';
 import SuccessOverlay from '../../components/ui/SuccessOverlay';
 import { getNotes, addNote } from '../../services/supabaseService';
 import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
+import { syncService } from '../../services/syncService';
+import { offlineDB } from '../../services/offlineService';
 
 type NoteCategory = Note['category'] | 'All';
 
@@ -36,17 +38,38 @@ const NotesPage: React.FC = () => {
 
     const showAmountField = useMemo(() => category === 'Supply Cost' || category === 'Internal Expense', [category]);
 
+    useEffect(() => {
+        initOfflineSync();
+    }, []);
+
+    const initOfflineSync = async () => {
+        try {
+            await offlineDB.init();
+            await syncService.start();
+        } catch (error) {
+            console.warn('Offline sync initialization failed:', error);
+        }
+    };
+
     const handleAddNote = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
         try {
-            await addNote({
+            const noteData = {
                 title,
                 description,
                 category,
                 amount: amount ? parseFloat(amount) : undefined
-            });
+            };
+
+            // Save to IndexedDB first (offline-first)
+            await offlineDB.save('notes', noteData);
+
+            // Try to sync if online
+            if (navigator.onLine) {
+                await addNote(noteData);
+            }
 
             setShowSuccess(true);
             setTimeout(() => {

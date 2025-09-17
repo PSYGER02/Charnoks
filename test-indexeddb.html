@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IndexedDB Test</title>
+</head>
+<body>
+    <h1>IndexedDB Test</h1>
+    <button onclick="testOfflineDB()">Test IndexedDB</button>
+    <div id="result"></div>
+
+    <script>
+        // Copy of offlineService.ts logic
+        class OfflineDB {
+            constructor() {
+                this.db = null;
+            }
+
+            async init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('CharnoksDB', 1);
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => {
+                        this.db = request.result;
+                        resolve();
+                    };
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains('notes')) {
+                            const store = db.createObjectStore('notes', { keyPath: 'id', autoIncrement: true });
+                            store.createIndex('sync_status', 'sync_status');
+                        }
+                        if (!db.objectStoreNames.contains('operations')) {
+                            db.createObjectStore('operations', { keyPath: 'local_uuid' });
+                        }
+                    };
+                });
+            }
+
+            async saveNote(content, userRole) {
+                const note = {
+                    content,
+                    user_role: userRole,
+                    sync_status: 'pending',
+                    created_at: new Date().toISOString()
+                };
+                
+                const tx = this.db.transaction(['notes'], 'readwrite');
+                const store = tx.objectStore('notes');
+                return new Promise((resolve, reject) => {
+                    const request = store.add(note);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async getPendingNotes() {
+                const tx = this.db.transaction(['notes'], 'readonly');
+                const store = tx.objectStore('notes');
+                const index = store.index('sync_status');
+                return new Promise((resolve) => {
+                    const request = index.getAll('pending');
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+        }
+
+        async function testOfflineDB() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Testing...';
+            
+            try {
+                const offlineDB = new OfflineDB();
+                await offlineDB.init();
+                result.innerHTML += '<br>✅ IndexedDB initialized';
+                
+                const noteId = await offlineDB.saveNote('Test note content', 'owner');
+                result.innerHTML += '<br>✅ Note saved with ID: ' + noteId;
+                
+                const pending = await offlineDB.getPendingNotes();
+                result.innerHTML += '<br>✅ Pending notes: ' + pending.length;
+                result.innerHTML += '<br>📝 Note content: ' + pending[0]?.content;
+                
+                result.innerHTML += '<br><br>🎉 IndexedDB working perfectly!';
+            } catch (error) {
+                result.innerHTML += '<br>❌ Error: ' + error.message;
+                console.error('IndexedDB test failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>

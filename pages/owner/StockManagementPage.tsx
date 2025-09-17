@@ -1,10 +1,15 @@
 
-import React, { useState, PropsWithChildren } from 'react';
+import React, { useState, PropsWithChildren, useEffect } from 'react';
 import KPICard from '../../components/ui/KPI_Card';
 import { getWorkersList } from '../../services/supabaseService';
 import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
 import Spinner from '../../components/ui/Spinner';
 import SuccessOverlay from '../../components/ui/SuccessOverlay';
+import NoteInput from '../../components/NoteInput';
+import NotesViewer from '../../components/NotesViewer';
+import { useAuth } from '../../hooks/useSupabaseAuth';
+import { syncService } from '../../services/syncService';
+import { offlineDB } from '../../services/offlineService';
 
 // Reusable CollapsibleSection component for this page
 const CollapsibleSection: React.FC<PropsWithChildren<{ title: string; defaultOpen?: boolean }>> = ({ title, children, defaultOpen = false }) => {
@@ -37,6 +42,7 @@ const CollapsibleSection: React.FC<PropsWithChildren<{ title: string; defaultOpe
 const productTypes = ['Drumstick', 'Thigh', 'Breast', 'Wing', 'Neck', 'Other'];
 
 const StockManagementPage: React.FC = () => {
+    const { user } = useAuth();
     // For new users, show zero values
     const [stockReceivedToday] = useState(0);
     const [stockSentToday] = useState(0);
@@ -57,6 +63,19 @@ const StockManagementPage: React.FC = () => {
     const workers = workersState.data || [];
     const isLoading = workersState.loading && !workersState.data;
     const hasError = workersState.error && !workersState.data;
+
+    // Initialize offline sync
+    useEffect(() => {
+        const initSync = async () => {
+            try {
+                await offlineDB.init();
+                await syncService.start();
+            } catch (error) {
+                console.warn('Offline sync init failed:', error);
+            }
+        };
+        initSync();
+    }, []);
 
     // Set default selected branch when workers load
     React.useEffect(() => {
@@ -97,6 +116,15 @@ const StockManagementPage: React.FC = () => {
                 <KPICard title="Stock Received Today" value={`${stockReceivedToday} kg`} icon="📦" />
                 <KPICard title="Stock Sent to Branches" value={`${stockSentToday} kg`} icon="🚚" />
                 <KPICard title="Remaining in Storage" value={`${remainingStock} kg`} icon="🏠" />
+            </div>
+
+            {/* Part A: Simple Note Input - Start Here */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <NoteInput 
+                    userRole={user?.role || 'owner'} 
+                    onNoteSaved={() => setShowSuccess(true)}
+                />
+                <NotesViewer />
             </div>
 
             <div className="space-y-6">
@@ -181,7 +209,38 @@ const StockManagementPage: React.FC = () => {
                     </form>
                 </CollapsibleSection>
 
-                <CollapsibleSection title="4. Current Branch Stock Viewer">
+                <CollapsibleSection title="4. Quick Note Entry (AI Parsing)">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-text-secondary mb-1">Enter Stock Note</label>
+                            <textarea 
+                                placeholder="e.g. Bought 20 bags chicken. Cooked 5 bags. Sold 100 pieces at 35 pesos each."
+                                rows={3} 
+                                className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition"
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <button 
+                                type="button" 
+                                onClick={() => { setShowSuccess(true); setTimeout(() => setShowSuccess(false), 1500); }}
+                                className="px-6 py-3 rounded-lg bg-accent text-text-on-primary font-bold transition hover:bg-accent/80"
+                            >
+                                Parse with AI
+                            </button>
+                            <button 
+                                type="button" 
+                                className="px-6 py-3 rounded-lg bg-white/10 text-text-primary font-semibold transition hover:bg-white/20"
+                            >
+                                Save as Note
+                            </button>
+                        </div>
+                        <div className="text-xs text-text-secondary">
+                            💡 AI will parse your note into structured operations (purchases, cooking, sales, transfers)
+                        </div>
+                    </div>
+                </CollapsibleSection>
+
+                <CollapsibleSection title="5. Current Branch Stock Viewer">
                     <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">Select Worker/Branch</label>
                         <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} className="w-full max-w-sm bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition text-text-primary [&>option]:bg-gray-800 [&>option]:text-white">
