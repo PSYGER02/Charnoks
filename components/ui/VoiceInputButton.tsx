@@ -65,7 +65,8 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({ onTranscript, isPro
             if (event.error === 'not-allowed') {
                 setStatus('denied');
             }
-            console.error('Speech recognition error:', event.error);
+            const { sanitizeForLog } = require('../../utils/securityUtils');
+            console.error('Speech recognition error:', sanitizeForLog(event.error));
         };
         recognition.onresult = (event: SpeechRecognitionEvent) => {
             const transcript = event.results[0][0].transcript;

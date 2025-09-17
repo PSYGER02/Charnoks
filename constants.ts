@@ -23,13 +23,13 @@ export const WORKER_NAVIGATION_ITEMS = [
 ];
 
 export const THEMES: Theme[] = [
-    { name: 'Trading Dark', id: 'theme-trading-dark', category: 'Professional' },
-    { name: 'Trading Light', id: 'theme-trading-light', category: 'Professional' },
-    { name: 'Professional', id: 'theme-professional', category: 'Professional' },
+    { name: 'Professional Dark', id: 'theme-trading-dark', category: 'Professional' },
+    { name: 'Professional Light', id: 'theme-trading-light', category: 'Professional' },
+    { name: 'Business Pro', id: 'theme-professional', category: 'Professional' },
     { name: 'Clean Light', id: 'theme-light', category: 'Professional' },
-    { name: 'Charnoks Classic', id: 'theme-charnoks', category: 'Core' },
     { name: 'Ocean Blue', id: 'theme-ocean', category: 'Core' },
     { name: 'Forest Green', id: 'theme-forest', category: 'Core' },
+    { name: 'Charnoks Classic', id: 'theme-charnoks', category: 'Core' },
     { name: 'Minimal Gray', id: 'theme-gray', category: 'Core' },
     { name: 'Ruby Red', id: 'theme-ruby', category: 'Artistic' },
     { name: 'Cosmic Lilac', id: 'theme-cosmic', category: 'Artistic' },

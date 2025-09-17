@@ -155,8 +155,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (profileError) {
-        const sanitizedMessage = (profileError.message || 'Unknown error').replace(/[\r\n\t]/g, ' ').substring(0, 200);
-        console.warn('Profile not found, creating manually:', sanitizedMessage);
+        const { sanitizeForLog } = require('../utils/securityUtils');
+        console.warn('Profile not found, creating manually:', sanitizeForLog(profileError.message || 'Unknown error'));
         // Fallback: create profile manually if trigger failed
         const { data: newProfile, error: createError } = await supabase
           .from('user_profiles')
@@ -213,8 +213,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (profileError) {
-        const sanitizedMessage = (profileError.message || 'Unknown error').replace(/[\r\n\t]/g, ' ').substring(0, 200);
-        console.warn('Profile not found for existing user, creating it:', sanitizedMessage);
+        const { sanitizeForLog } = require('../utils/securityUtils');
+        console.warn('Profile not found for existing user, creating it:', sanitizeForLog(profileError.message || 'Unknown error'));
         // Create profile for existing user (like manually created Supabase users)
         const { data: newProfile, error: createError } = await supabase
           .from('user_profiles')
@@ -308,8 +308,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
       if (profileError) {
-        const sanitizedMessage = (profileError.message || 'Unknown error').replace(/[\r\n\t]/g, ' ').substring(0, 200);
-        console.warn('Profile creation warning:', sanitizedMessage);
+        const { sanitizeForLog } = require('../utils/securityUtils');
+        console.warn('Profile creation warning:', sanitizeForLog(profileError.message || 'Unknown error'));
       }
 
       return {
@@ -319,10 +319,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         displayName: name
       };
     } catch (error: any) {
-      const sanitizedError = typeof error === 'string' ? error.replace(/[\r\n\t]/g, ' ').substring(0, 200) : 'Unknown error';
-      console.error('Create worker error:', sanitizedError);
-      const sanitizedMessage = (error?.message || 'Failed to create worker account').replace(/[\r\n\t]/g, ' ').substring(0, 200);
-      throw new Error(sanitizedMessage);
+      const { sanitizeForLog, sanitizeForDisplay } = require('../utils/securityUtils');
+      console.error('Create worker error:', sanitizeForLog(error));
+      throw new Error(sanitizeForDisplay(error?.message || 'Failed to create worker account'));
     }
   };
 

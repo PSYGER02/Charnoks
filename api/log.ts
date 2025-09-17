@@ -34,16 +34,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: true });
     }
 
-    // Fallback: log to serverless console with sanitization
+    // Fallback: log to serverless console with proper sanitization
+    const { sanitizeForLog } = require('../utils/securityUtils');
     const sanitizedPayload = {
-      type: payload.type,
-      data: typeof payload.data === 'string' ? payload.data.replace(/[\r\n\t]/g, ' ').substring(0, 500) : payload.data
+      type: sanitizeForLog(payload.type),
+      data: sanitizeForLog(payload.data)
     };
     console.log('client-log:', JSON.stringify(sanitizedPayload));
     return res.status(200).json({ success: true });
   } catch (err: any) {
-    const sanitizedError = (err?.message || String(err)).replace(/[\r\n\t]/g, ' ').substring(0, 200);
-    console.error('Error in /api/log:', sanitizedError);
+    const { sanitizeForLog } = require('../utils/securityUtils');
+    console.error('Error in /api/log:', sanitizeForLog(err?.message || String(err)));
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

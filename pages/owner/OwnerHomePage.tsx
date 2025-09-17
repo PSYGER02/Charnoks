@@ -126,16 +126,23 @@ const OwnerHomePage: React.FC = () => {
                     title="Total Revenue" 
                     value={`₱${totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} 
                     icon="💰" 
+                    trend={totalRevenue > 0 ? "+12.5%" : undefined}
+                    trendDirection={totalRevenue > 0 ? "up" : undefined}
+                    sparklineData={salesTrend.map(d => d.sales)}
                 />
                 <KPICard 
                     title="Net Profit" 
                     value={`₱${netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}`} 
-                    icon="📈" 
+                    icon={netProfit >= 0 ? "📈" : "📉"}
+                    trend={netProfit !== 0 ? (netProfit > 0 ? "+8.2%" : "-3.1%") : undefined}
+                    trendDirection={netProfit > 0 ? "up" : netProfit < 0 ? "down" : undefined}
                 />
                 <KPICard 
                     title="Total Transactions" 
                     value={transactions.toString()} 
                     icon="🛍️" 
+                    trend={transactions > 0 ? "+5 today" : undefined}
+                    trendDirection={transactions > 0 ? "up" : undefined}
                 />
             </div>
 

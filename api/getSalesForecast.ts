@@ -48,9 +48,17 @@ Format:
 
 Return only the JSON object.`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
+    // Validate API URL to prevent SSRF - only allow Google's Gemini API
+    const allowedHost = 'generativelanguage.googleapis.com';
+    const apiUrl = new URL(`https://${allowedHost}/v1beta/models/gemini-2.0-flash-exp:generateContent`);
+    apiUrl.searchParams.set('key', process.env.GEMINI_API_KEY);
+    
+    // Ensure we're only calling the trusted API
+    if (apiUrl.hostname !== allowedHost) {
+      throw new Error('Invalid API endpoint');
+    }
+    
+    const response = await fetch(apiUrl.toString(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

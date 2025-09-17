@@ -19,17 +19,31 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
     const [showSuccess, setShowSuccess] = useState(false);
 
     const handleFileChange = (file: File | null) => {
-        if (file && file.type.startsWith('image/')) {
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-            setError(null);
-        } else {
-            setError('Please select a valid image file.');
+        if (!file) {
+            setError('Please select a file.');
+            return;
         }
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            setError('Please select a valid image file.');
+            return;
+        }
+        
+        // Validate file size (10MB limit)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > maxSize) {
+            setError('File size must be under 10MB.');
+            return;
+        }
+        
+        setImageFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        setError(null);
     };
     
     const handleDragEnter = (e: React.DragEvent<HTMLLabelElement>) => {

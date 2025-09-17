@@ -133,16 +133,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }
 
-        // Return success
+        // Return success with sanitized output
+        const { sanitizeForDisplay } = require('../utils/securityUtils');
         res.status(200).json({
             success: true,
             worker: {
                 id: newUser.user.id,
-                email: newUser.user.email,
-                displayName: name.replace(/[<>&"']/g, (match) => {
-                    const entities = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#x27;' };
-                    return entities[match] || match;
-                }),
+                email: sanitizeForDisplay(newUser.user.email || ''),
+                displayName: sanitizeForDisplay(name),
                 role: 'worker'
             }
         });

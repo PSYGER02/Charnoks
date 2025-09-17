@@ -308,11 +308,11 @@ export class PerformanceMonitor {
    * Validate and sanitize file paths
    */
   private validateFilePath(filePath: string): string {
-    // Remove path traversal attempts
-    const sanitized = filePath.replace(/\.\./g, '').replace(/[^a-zA-Z0-9._/-]/g, '');
-    // Ensure path stays within allowed directories
-    if (sanitized.includes('/') && !sanitized.startsWith('/logs/')) {
-      throw new Error('Invalid file path');
+    // Remove path traversal attempts and dangerous characters
+    const sanitized = filePath.replace(/\.\./g, '').replace(/[^a-zA-Z0-9._-]/g, '');
+    // Ensure path stays within allowed directories - no slashes allowed
+    if (sanitized.includes('/') || sanitized.includes('\\')) {
+      throw new Error('Invalid file path - directory traversal not allowed');
     }
     return sanitized;
   }
