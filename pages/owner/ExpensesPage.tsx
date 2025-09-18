@@ -3,13 +3,26 @@ import type { Expense } from '../../types';
 import { useAuth } from '../../hooks/useSupabaseAuth';
 import Spinner from '../../components/ui/Spinner';
 import SuccessOverlay from '../../components/ui/SuccessOverlay';
-import { getExpenses, recordExpense } from '../../services/supabaseService';
+import { getExpensesUnified } from '../../services/unifiedDataService';
+import { unifiedDataService } from '../../services/unifiedDataService';
 import { getWorkers } from '../../services/workerService';
-import { offlineDB } from '../../services/offlineService';
+import ConnectionStatus from '../../components/ui/ConnectionStatus';
 
 const ExpenseRow: React.FC<{ expense: Expense; workers: any[] }> = ({ expense, workers }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const workerName = workers.find(w => w.id === expense.workerId)?.name || expense.workerName || 'Unknown';
+    
+    // Improved worker name lookup with debugging
+    const worker = workers.find(w => w.id === expense.workerId);
+    const workerName = worker?.name || expense.workerName || 'Unknown Worker';
+    
+    // Debug log for troubleshooting
+    if (!worker && expense.workerId) {
+        console.log('Worker not found for expense:', {
+            expenseId: expense.id,
+            workerId: expense.workerId,
+            availableWorkers: workers.map(w => ({ id: w.id, name: w.name }))
+        });
+    }
 
     return (
         <>
@@ -76,11 +89,16 @@ const ExpensesPage: React.FC = () => {
             
             try {
                 const [expensesData, workersData] = await Promise.all([
-                    getExpenses(50),
-                    getWorkers()
+                    unifiedDataService.getExpenses(50),
+                    getWorkers() // Get actual workers data
                 ]);
                 setExpenses(expensesData);
                 setWorkers(workersData);
+                
+                // Debug logging
+                console.log('Loaded expenses:', expensesData.length);
+                console.log('Loaded workers:', workersData);
+                console.log('Sample expense worker IDs:', expensesData.slice(0, 3).map(e => ({ id: e.id, workerId: e.workerId, workerName: e.workerName })));
             } catch (err) {
                 console.warn('Expenses data not loaded:', err);
             } finally {
@@ -157,12 +175,11 @@ const ExpensesPage: React.FC = () => {
                 worker_id: user?.id
             };
 
-            // Save to IndexedDB first (offline-first)
-            await offlineDB.save('expenses', expenseData);
-
-            // Try to sync if online
-            if (navigator.onLine) {
-                await recordExpense(expenseData);
+            // Use unified service for saving expenses
+            const result = await unifiedDataService.saveExpense(expenseData);
+            
+            if (!result.success) {
+                throw new Error('Failed to save expense');
             }
 
             setShowSuccess(true);
@@ -173,7 +190,7 @@ const ExpensesPage: React.FC = () => {
             }, 1500);
 
             try {
-                const updatedExpenses = await getExpenses(50);
+                const updatedExpenses = await unifiedDataService.getExpenses(50);
                 setExpenses(updatedExpenses);
             } catch (refreshErr) {
                 console.warn('Could not refresh expenses list:', refreshErr);
@@ -188,6 +205,7 @@ const ExpensesPage: React.FC = () => {
 
     return (
         <div className="space-y-8">
+            <ConnectionStatus />
             {showSuccess && <SuccessOverlay />}
             
             <header className="animate-bounce-in">

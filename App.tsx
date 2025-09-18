@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ui/ErrorBoundary';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import ResponsiveLayout from './components/layout/ResponsiveLayout';
 import { WorkerLayout } from './components/layout/WorkerLayout';
+import { offlineDataInitService } from './services/offlineDataInitService';
 
 
 import OwnerHomePage from './pages/owner/OwnerHomePage';
@@ -76,6 +77,9 @@ const AppContent: React.FC = () => {
     if (!body.classList.contains('text-white')) {
       body.classList.add('text-white', 'antialiased');
     }
+
+    // Initialize offline data for better offline experience
+    offlineDataInitService.initializeOfflineData().catch(console.warn);
 
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {

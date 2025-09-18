@@ -1,0 +1,322 @@
+Plan summary (one line)
+
+Treat IndexedDB as the app’s authoritative local cache + pending queue, and Supabase as the global authoritative store; use UUIDs, updated_at timestamps, tombstones (deleted), and a sync loop that: initial pull → incremental pull → push local pending → reconcile conflicts → repeat.
+
+1) Schema requirements (Supabase & IndexedDB parity)
+
+Ensure every table you want to sync has these columns (add with migrations if missing):
+
+-- run in Supabase SQL editor
+ALTER TABLE public.<table>
+  ADD COLUMN IF NOT EXISTS local_uuid text,        -- preserve client id if inserted from client
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS deleted boolean DEFAULT false;
+
+
+Notes:
+
+local_uuid is the UUID generated on the client for any client-originated row (so the client and server share the same id).
+
+updated_at must be set by DB on insert/update (use triggers or default now() and update via app).
+
+deleted = soft-delete / tombstone flag so deletions sync reliably.
+
+If you prefer separate primary keys, you can keep server id and client local_uuid, but using local_uuid as unique key simplifies dedupe/upsert.
+
+2) IndexedDB schema (stores to mirror)
+
+Use idb (nice promise API) or raw IndexedDB; stores to create:
+
+meta — store last_remote_sync_ts (ISO string), db_version
+
+For each table X you sync: store X object store keyed by local_uuid or id
+
+pending — queue of pending changes: { local_uuid, table, op: 'insert'|'update'|'delete', payload, attempts, last_error, created_at }
+
+audit — optional for logs
+
+Example JS store creation using idb:
+
+import { openDB } from 'idb';
+
+const db = await openDB('charnoks-db', 2, {
+  upgrade(db) {
+    db.createObjectStore('meta');
+    db.createObjectStore('notes', { keyPath: 'local_uuid' });
+    db.createObjectStore('operations', { keyPath: 'local_uuid' });
+    db.createObjectStore('branch_stock', { keyPath: 'local_uuid' });
+    db.createObjectStore('pending', { keyPath: 'id', autoIncrement: true });
+    db.createObjectStore('audit', { keyPath: 'id', autoIncrement: true });
+  }
+});
+
+3) Initial sync (one-time, on install / major upgrade)
+
+When user opens the app first time (online):
+
+Fetch last_modified or updated_at rows from Supabase for each table.
+
+Replace (or upsert) IndexedDB store with those rows.
+
+Save meta.last_remote_sync_ts = now().
+
+Pseudo-code (client):
+
+async function initialPull() {
+  const tables = ['notes','operations','branch_stock','products'];
+  for (const t of tables) {
+    const { data, error } = await supabase
+      .from(t)
+      .select('*')
+      .order('updated_at', { ascending: true }); // or no order
+    if (error) throw error;
+    const tx = db.transaction([t], 'readwrite');
+    const store = tx.objectStore(t);
+    await store.clear();
+    for (const row of data) {
+      await store.put(row); // ensure server row has local_uuid
+    }
+    await tx.done;
+  }
+  await db.put('meta', new Date().toISOString(), 'last_remote_sync_ts');
+}
+
+
+Important: do this once or after a DB version change. For large data sets, sync in pages.
+
+4) Incremental pull (periodic)
+
+Every sync loop, fetch only rows changed since meta.last_remote_sync_ts:
+
+SQL via Supabase-js:
+
+const since = await db.get('meta','last_remote_sync_ts'); // ISO string
+const { data } = await supabase.from('notes').select('*').gt('updated_at', since);
+
+
+Apply remote changes to IndexedDB:
+
+For each remote row:
+
+If local has pending change with same local_uuid → handle conflict (see below).
+
+Else upsert into local store.
+
+After processing all tables update meta.last_remote_sync_ts = now().
+
+5) Push local pending queue → Supabase (/sync pattern)
+
+When online, process pending store in small batches (e.g., 10 items):
+
+Algorithm:
+
+Read next N pending items (FIFO).
+
+For each item prepare upsert payload:
+
+If op === 'insert' || op === 'update': send object with local_uuid, ...payload, updated_at (client can send)
+
+If op === 'delete': set deleted = true and updated_at.
+
+Use a server RPC or bulk upsert endpoint to perform idempotent upsert based on local_uuid. (See SQL below)
+
+On success: mark pending item removed and update local record synced flag and updated_at with server returned value.
+
+On conflict / error: increase attempts, exponential backoff, keep in queue, log.
+
+Why RPC? Because multi-row atomic upsert and dedupe is easier server-side.
+
+Example client trigger:
+
+async function processPendingBatch() {
+  const tx = db.transaction(['pending'],'readonly');
+  const items = await tx.objectStore('pending').getAll(); // limit slicing
+  // build batch payload
+  const payload = items.slice(0,20).map(i => ({table:i.table, local_uuid:i.local_uuid, op:i.op, payload:i.payload}));
+  // POST to Edge Function /sync
+  const res = await fetch('/.netlify/functions/sync', { method:'POST', body: JSON.stringify({items:payload, clientId}) });
+  const json = await res.json();
+  // update local pending based on response
+}
+
+6) Server-side upsert RPC (Postgres function)
+
+Create a Postgres function that upserts by local_uuid and returns inserted/updated rows. Example for notes and operations can be generalized.
+
+CREATE OR REPLACE FUNCTION public.upsert_notes_batch(items jsonb)
+RETURNS TABLE(local_uuid text, id uuid, status text, updated_at timestamptz) AS $$
+DECLARE
+  it jsonb;
+  res record;
+BEGIN
+  FOR it IN SELECT * FROM jsonb_array_elements(items)
+  LOOP
+    -- ensure fields exist
+    INSERT INTO public.notes (local_uuid, author_id, branch_id, content, parsed, status, updated_at)
+    VALUES (
+      it->>'local_uuid',
+      (it->>'author_id')::uuid,
+      (it->>'branch_id')::uuid,
+      it->>'content',
+      (it->'parsed')::jsonb,
+      it->>'status',
+      now()
+    )
+    ON CONFLICT (local_uuid) DO UPDATE
+      SET content = EXCLUDED.content,
+          parsed = EXCLUDED.parsed,
+          status = EXCLUDED.status,
+          updated_at = now()
+    RETURNING local_uuid, id, 'ok'::text as status, updated_at INTO res;
+    RETURN NEXT res;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+Edge function or supabase-js can call rpc('upsert_notes_batch', { items: JSON.stringify(payload) }).
+
+7) Conflict handling strategies
+
+You’ll encounter conflicts—choose the simplest robust policy first:
+
+A) Last-writer-wins (LWW)
+
+Compare updated_at. Keep the row with later updated_at.
+
+Advantage: simple. Disadvantage: can lose changes.
+
+B) Local-wins for pending
+
+While pending, prefer local changes until confirmed server timestamp. Use local_version counter. Good when clients can’t be overwritten easily.
+
+C) Manual merge (flag conflicts)
+
+If both local pending and remote modifications exist (changed since last sync), mark item as conflict in UI and show diff; let human resolve.
+
+Recommended default: LWW with conflict flagging for important tables (notes or operations). Implement:
+
+When processing pending item, fetch remote row by local_uuid.
+
+If remote updated_at > pending created_at → create conflict entry in audit or pending with status conflict, notify user.
+
+8) Deletions & tombstones
+
+Never hard-delete client rows immediately. Instead:
+
+Client creates pending {op:'delete', payload:{local_uuid}}.
+
+Server sets deleted = true and updated_at.
+
+Clients treat deleted=true as hidden; garbage-collect older tombstones after N days (server-side cleanup).
+
+This avoids re-creating deleted rows when remote changes arrive.
+
+9) Sync schedule & triggers
+
+Sync triggers:
+
+On app focus / reconnect event.
+
+On successful log-in.
+
+Periodic background sync (every 30s–5min depending on needs).
+
+On user action (e.g., “Sync now”).
+
+Use a single leader/lock if multi-tab: only one tab should run sync to avoid contention (use BroadcastChannel or localStorage lock).
+
+Example pseudo:
+
+window.addEventListener('online', syncAll);
+window.addEventListener('focus', syncAll);
+setInterval(syncAll, 60_000); // every minute
+
+10) UI cues & developer/debugging
+
+Show sync status: Pending count, last synced time, last error.
+
+Provide debug page: list IndexedDB pending items and allow "force sync", "export", "clear".
+
+Keep audit logs for failures and LLM parsing issues.
+
+11) Example code snippets: mark local insert and queue
+
+Create new operation locally:
+
+async function addOperationLocal(op) {
+  // op must include local_uuid = crypto.randomUUID()
+  op.local_uuid = op.local_uuid || crypto.randomUUID();
+  op.created_at = new Date().toISOString();
+  op.updated_at = op.created_at;
+  op.synced = false;
+  const tx = db.transaction(['operations','pending'],'readwrite');
+  await tx.objectStore('operations').put(op); // local copy
+  await tx.objectStore('pending').add({
+    table: 'operations',
+    local_uuid: op.local_uuid,
+    op: 'upsert', // upsert covers insert/update
+    payload: op,
+    attempts: 0,
+    created_at: op.created_at
+  });
+  await tx.done;
+}
+
+12) Batch size, retries & backoff
+
+Batch size: 5–50 items per request (adjust for payload size).
+
+Retries: exponential backoff (attempts++, wait = min(2^attempts * base, max)).
+
+If item fails 5 times, flag as failed and surface to user.
+
+13) Debugging checklist when duplicates appear
+
+If duplicates still appear, check:
+
+Are clients using unique local_uuid? (Generate on client at create time.)
+
+When syncing, does server upsert by local_uuid or create new server id each time? Use ON CONFLICT (local_uuid) DO UPDATE or RPC.
+
+Are there multiple sync workers running simultaneously writing same pending items? Use single leader.
+
+Are you handling server responses and marking pending items removed? (Ensure results processed.)
+
+Are updated_at values being set consistently (server vs client)? Prefer server-side now() if possible.
+
+14) Optional improvements
+
+Use server-side updated_at triggers so clients don’t set timestamps incorrectly:
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach to tables
+CREATE TRIGGER t_set_updated_at BEFORE INSERT OR UPDATE ON public.notes FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+
+Add version integer column for optimistic concurrency control: increment on each server write.
+
+15) Quick action checklist you can run now
+
+Add local_uuid, updated_at, deleted columns to all sync tables.
+
+Create IndexedDB stores matching Supabase tables and a pending queue.
+
+Implement addOperationLocal() and addNoteLocal() to write to both table store and pending.
+
+Implement initialPull() to populate local store from Supabase.
+
+Implement processPendingBatch() calling /sync (Edge Fn or RPC upsert_*_batch), update local based on response.
+
+Implement incrementalPull() using updated_at > last_sync_ts.
+
+Implement conflict detection (compare remote.updated_at vs local.created_at).
+
+Add UI: pending count, last sync, manual sync button, conflict resolver.

@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, Car
 import CreateWorkerForm from '../../components/CreateWorkerForm';
 import Spinner from '../../components/ui/Spinner';
 import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
-import { syncService } from '../../services/syncService';
+import { smartSyncService } from '../../services/smartSyncService';
 import { offlineDB } from '../../services/offlineService';
 
 interface CustomizedLabelProps {
@@ -44,18 +44,19 @@ const OwnerHomePage: React.FC = () => {
     const [isLoading, setIsLoading] = React.useState(false);
     const [hasLoaded, setHasLoaded] = React.useState(false);
 
-    // Initialize offline sync
+        // Initialize smart sync service (only syncs when connection is stable)
     useEffect(() => {
         const initSync = async () => {
             try {
-                await offlineDB.init();
-                await syncService.start();
+                smartSyncService.start();
+                console.log('Smart sync service started - syncs only when connection is stable');
             } catch (error) {
-                console.warn('Offline sync init failed:', error);
+                console.warn('Smart sync init failed:', error);
             }
         };
+
         initSync();
-    }, []);
+    }, []);  // Added missing closing bracket and dependency array
 
     // Load data in background after component mounts
     React.useEffect(() => {

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { getProducts, addProduct, uploadProductImage } from '../../services/supabaseService';
+import { getProductsOfflineFirst } from '../../services/offlineFirstDataService';
+import { addProduct, uploadProductImage } from '../../services/supabaseService';
 import type { Product } from '../../types';
 import Spinner from '../../components/ui/Spinner';
 import SuccessOverlay from '../../components/ui/SuccessOverlay';
@@ -110,7 +111,7 @@ const ProductForm: React.FC<{ onProductAdd: (product: Product) => void }> = ({ o
             
             // Refresh the product list in background
             try {
-                const products = await getProducts();
+                const products = await getProductsOfflineFirst();
                 const newProduct = products.find(p => p.id === productId);
                 if (newProduct) {
                     onProductAdd(newProduct);
@@ -197,7 +198,7 @@ const ProductsPage: React.FC = () => {
     const loadProducts = async () => {
         setIsLoading(true);
         try {
-            const productsData = await getProducts();
+            const productsData = await getProductsOfflineFirst();
             setProducts(productsData);
         } catch (error) {
             console.warn('Products data not loaded:', error);

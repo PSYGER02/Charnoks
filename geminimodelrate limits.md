@@ -5,11 +5,6 @@ Gemini 2.5 Flash	10	250,000	250
 Gemini 2.5 Flash-Lite	15	250,000	1,000
 Gemini 2.0 Flash	15	1,000,000	200
 Gemini 2.0 Flash-Lite	30	1,000,000	200
-Live API
-Gemini 2.5 Flash Live	3 sessions	1,000,000	*
-Gemini 2.5 Flash Preview Native Audio Dialog	1 session	25,000	5
-Gemini 2.5 Flash Experimental Native Audio Thinking Dialog	1 session	10,000	5
-Gemini 2.0 Flash Live	3 sessions	1,000,000	*
 Multi-modal generation models
 Gemini 2.5 Flash Preview TTS	3	10,000	15
 Gemini 2.0 Flash Preview Image Generation	10	200,000	100

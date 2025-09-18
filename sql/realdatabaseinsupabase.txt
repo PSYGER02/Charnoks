@@ -1,0 +1,501 @@
+**user_profiles Table**
+create table public.user_profiles (
+  id uuid not null,
+  email text not null,
+  display_name text null,
+  role text null default 'worker'::text,
+  is_active boolean null default true,
+  created_by uuid null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  local_uuid text null,
+  deleted boolean null default false,
+  constraint user_profiles_pkey primary key (id),
+  constraint user_profiles_email_key unique (email),
+  constraint user_profiles_local_uuid_key unique (local_uuid),
+  constraint user_profiles_created_by_fkey foreign KEY (created_by) references auth.users (id),
+  constraint user_profiles_id_fkey foreign KEY (id) references auth.users (id) on delete CASCADE,
+  constraint user_profiles_role_check check (
+    (role = any (array['owner'::text, 'worker'::text]))
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_user_profiles_role on public.user_profiles using btree (role) TABLESPACE pg_default;
+
+create index IF not exists idx_user_profiles_email on public.user_profiles using btree (email) TABLESPACE pg_default;
+
+create index IF not exists idx_user_profiles_active on public.user_profiles using btree (is_active) TABLESPACE pg_default;
+
+create index IF not exists idx_user_profiles_local_uuid on public.user_profiles using btree (local_uuid) TABLESPACE pg_default;
+
+create index IF not exists idx_user_profiles_updated_at on public.user_profiles using btree (updated_at) TABLESPACE pg_default;
+
+create index IF not exists idx_user_profiles_deleted on public.user_profiles using btree (deleted) TABLESPACE pg_default;
+
+create trigger handle_updated_at_user_profiles BEFORE
+update on user_profiles for EACH row
+execute FUNCTION handle_updated_at ();
+
+create trigger sync_workers_on_profile_change
+after INSERT
+or
+update on user_profiles for EACH row
+execute FUNCTION sync_worker_data ();
+
+**workers Table**
+create table public.workers (
+  id uuid not null,
+  name text not null,
+  email text null,
+  role text null default 'worker'::text,
+  is_active boolean null default true,
+  created_at timestamp with time zone null default now(),
+  constraint workers_pkey primary key (id)
+) TABLESPACE pg_default;
+
+**sales Table**
+create table public.sales (
+  id uuid not null default gen_random_uuid (),
+  sale_number serial not null,
+  items jsonb not null,
+  subtotal numeric(10, 2) not null,
+  tax numeric(10, 2) null default 0,
+  total numeric(10, 2) not null,
+  payment numeric(10, 2) not null,
+  change_due numeric(10, 2) not null default 0,
+  payment_method text null default 'cash'::text,
+  worker_id uuid null,
+  created_at timestamp with time zone null default now(),
+  worker_name text null,
+  local_uuid text null,
+  updated_at timestamp with time zone null default now(),
+  deleted boolean null default false,
+  constraint sales_pkey primary key (id),
+  constraint sales_local_uuid_key unique (local_uuid),
+  constraint sales_worker_id_fkey foreign KEY (worker_id) references auth.users (id),
+  constraint sales_total_check check ((total >= (0)::numeric)),
+  constraint sales_payment_check check ((payment >= (0)::numeric)),
+  constraint sales_change_due_check check ((change_due >= (0)::numeric)),
+  constraint sales_change_check check ((change_due >= (0)::numeric))
+) TABLESPACE pg_default;
+
+create index IF not exists idx_sales_worker_id_date on public.sales using btree (worker_id, created_at desc) TABLESPACE pg_default;
+
+create index IF not exists idx_sales_worker_id on public.sales using btree (worker_id) TABLESPACE pg_default;
+
+create index IF not exists idx_sales_created_at on public.sales using btree (created_at) TABLESPACE pg_default;
+
+create index IF not exists idx_sales_local_uuid on public.sales using btree (local_uuid) TABLESPACE pg_default;
+
+create index IF not exists idx_sales_updated_at on public.sales using btree (updated_at) TABLESPACE pg_default;
+
+create index IF not exists idx_sales_deleted on public.sales using btree (deleted) TABLESPACE pg_default;
+
+create trigger after_sale_on_stock
+after INSERT on sales for EACH row
+execute FUNCTION update_product_stock ();
+
+create trigger handle_updated_at_sales BEFORE
+update on sales for EACH row
+execute FUNCTION handle_updated_at ();
+
+create trigger update_sales_worker_name BEFORE INSERT
+or
+update on sales for EACH row
+execute FUNCTION update_worker_name ();
+
+**expenses Table**
+create table public.expenses (
+  id uuid not null default gen_random_uuid (),
+  description text not null,
+  amount numeric(10, 2) not null,
+  category text not null default 'general'::text,
+  receipt_url text null,
+  worker_id uuid null,
+  created_at timestamp with time zone null default now(),
+  worker_name text null,
+  local_uuid text null,
+  updated_at timestamp with time zone null default now(),
+  deleted boolean null default false,
+  constraint expenses_pkey primary key (id),
+  constraint expenses_local_uuid_key unique (local_uuid),
+  constraint expenses_worker_id_fkey foreign KEY (worker_id) references auth.users (id),
+  constraint expenses_amount_check check ((amount >= (0)::numeric))
+) TABLESPACE pg_default;
+
+create index IF not exists idx_expenses_worker_id_date on public.expenses using btree (worker_id, created_at desc) TABLESPACE pg_default;
+
+create index IF not exists idx_expenses_worker_id on public.expenses using btree (worker_id) TABLESPACE pg_default;
+
+create index IF not exists idx_expenses_created_at on public.expenses using btree (created_at) TABLESPACE pg_default;
+
+create index IF not exists idx_expenses_category on public.expenses using btree (category) TABLESPACE pg_default;
+
+create index IF not exists idx_expenses_local_uuid on public.expenses using btree (local_uuid) TABLESPACE pg_default;
+
+create index IF not exists idx_expenses_updated_at on public.expenses using btree (updated_at) TABLESPACE pg_default;
+
+create index IF not exists idx_expenses_deleted on public.expenses using btree (deleted) TABLESPACE pg_default;
+
+create trigger handle_updated_at_expenses BEFORE
+update on expenses for EACH row
+execute FUNCTION handle_updated_at ();
+
+create trigger update_expenses_worker_name BEFORE INSERT
+or
+update on expenses for EACH row
+execute FUNCTION update_worker_name ();
+
+**product _categories Table**
+create table public.products (
+  id uuid not null default gen_random_uuid (),
+  name text not null,
+  description text null,
+  price numeric(10, 2) not null,
+  cost numeric(10, 2) null,
+  stock integer not null default 0,
+  category text null,
+  image_url text null,
+  is_active boolean null default true,
+  created_by uuid null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  local_uuid text null,
+  deleted boolean null default false,
+  constraint products_pkey primary key (id),
+  constraint products_local_uuid_key unique (local_uuid),
+  constraint products_created_by_fkey foreign KEY (created_by) references auth.users (id),
+  constraint products_cost_check check (
+    (
+      (cost >= (0)::numeric)
+      or (cost is null)
+    )
+  ),
+  constraint products_price_check check ((price >= (0)::numeric)),
+  constraint products_stock_check check ((stock >= 0))
+) TABLESPACE pg_default;
+
+create index IF not exists idx_products_name on public.products using btree (name) TABLESPACE pg_default;
+
+create index IF not exists idx_products_category on public.products using btree (category) TABLESPACE pg_default;
+
+create index IF not exists idx_products_active on public.products using btree (is_active) TABLESPACE pg_default;
+
+create index IF not exists idx_products_local_uuid on public.products using btree (local_uuid) TABLESPACE pg_default;
+
+create index IF not exists idx_products_updated_at on public.products using btree (updated_at) TABLESPACE pg_default;
+
+create index IF not exists idx_products_deleted on public.products using btree (deleted) TABLESPACE pg_default;
+
+create trigger handle_updated_at_products BEFORE
+update on products for EACH row
+execute FUNCTION handle_updated_at ();
+
+**notes Table**
+create table public.notes (
+  id uuid not null default gen_random_uuid (),
+  title text not null,
+  content text null,
+  category text null,
+  priority text null default 'medium'::text,
+  created_by uuid null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  local_uuid text null,
+  deleted boolean null default false,
+  constraint notes_pkey primary key (id),
+  constraint notes_local_uuid_key unique (local_uuid),
+  constraint notes_created_by_fkey foreign KEY (created_by) references auth.users (id),
+  constraint notes_priority_check check (
+    (
+      priority = any (array['low'::text, 'medium'::text, 'high'::text])
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_notes_created_by on public.notes using btree (created_by) TABLESPACE pg_default;
+
+create index IF not exists idx_notes_priority on public.notes using btree (priority) TABLESPACE pg_default;
+
+create index IF not exists idx_notes_local_uuid on public.notes using btree (local_uuid) TABLESPACE pg_default;
+
+create index IF not exists idx_notes_updated_at on public.notes using btree (updated_at) TABLESPACE pg_default;
+
+create index IF not exists idx_notes_deleted on public.notes using btree (deleted) TABLESPACE pg_default;
+
+create trigger handle_updated_at_notes BEFORE
+update on notes for EACH row
+execute FUNCTION handle_updated_at ();
+
+**owner table**
+create table public.owners (
+  id uuid not null default gen_random_uuid (),
+  name text not null,
+  created_at timestamp with time zone null default now(),
+  local_uuid text null,
+  deleted boolean null default false,
+  constraint owners_pkey primary key (id),
+  constraint owners_local_uuid_key unique (local_uuid)
+) TABLESPACE pg_default;
+
+create trigger handle_updated_at_owners BEFORE
+update on owners for EACH row
+execute FUNCTION handle_updated_at ();
+
+**product_performance Table**
+create view public.product_performance as
+select
+  p.id,
+  p.name,
+  p.category,
+  count(s.id) as times_sold,
+  COALESCE(
+    sum((item.value ->> 'quantity'::text)::integer),
+    0::bigint
+  ) as total_quantity_sold,
+  COALESCE(
+    sum(
+      ((item.value ->> 'quantity'::text)::numeric) * ((item.value ->> 'price'::text)::numeric)
+    ),
+    0::numeric
+  ) as total_revenue
+from
+  products p
+  left join sales s on true
+  left join lateral jsonb_array_elements(s.items) item (value) on ((item.value ->> 'product_id'::text)::uuid) = p.id
+group by
+  p.id,
+  p.name,
+  p.category;
+
+  **summaries Table**
+  create table public.summaries (
+  id uuid not null default gen_random_uuid (),
+  branch_id uuid null,
+  date date not null,
+  summary jsonb not null,
+  created_at timestamp with time zone null default now(),
+  local_uuid text null,
+  updated_at timestamp with time zone null default now(),
+  deleted boolean null default false,
+  constraint summaries_pkey primary key (id),
+  constraint summaries_local_uuid_key unique (local_uuid)
+) TABLESPACE pg_default;
+
+create trigger handle_updated_at_summaries BEFORE
+update on summaries for EACH row
+execute FUNCTION handle_updated_at ();
+
+**operations table**
+create table public.operations (
+  id uuid not null default gen_random_uuid (),
+  local_uuid text not null,
+  lot_id uuid null,
+  branch_id uuid null,
+  worker_id uuid null,
+  op_type text not null,
+  quantity_parts integer null,
+  quantity_bags integer null,
+  metadata jsonb null,
+  created_at timestamp with time zone null default now(),
+  synced boolean null default false,
+  updated_at timestamp with time zone null default now(),
+  deleted boolean null default false,
+  constraint operations_pkey primary key (id),
+  constraint operations_local_uuid_key unique (local_uuid),
+  constraint operations_branch_id_fkey foreign KEY (branch_id) references branches (id),
+  constraint operations_worker_id_fkey foreign KEY (worker_id) references user_profiles (id),
+  constraint operations_op_type_check check (
+    (
+      op_type = any (
+        array[
+          'purchase'::text,
+          'receive'::text,
+          'package'::text,
+          'transfer_out'::text,
+          'transfer_in'::text,
+          'cook'::text,
+          'sale'::text,
+          'waste'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_operations_type on public.operations using btree (op_type) TABLESPACE pg_default;
+
+create index IF not exists idx_operations_branch on public.operations using btree (branch_id) TABLESPACE pg_default;
+
+create trigger handle_updated_at_operations BEFORE
+update on operations for EACH row
+execute FUNCTION handle_updated_at ();
+
+**note_embedding Table**
+create table public.note_embeddings (
+  id uuid not null default gen_random_uuid (),
+  note_id uuid null,
+  embedding public.vector null,
+  created_at timestamp with time zone null default now(),
+  constraint note_embeddings_pkey primary key (id),
+  constraint note_embeddings_note_id_fkey foreign KEY (note_id) references notes (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_note_embeddings_note on public.note_embeddings using btree (note_id) TABLESPACE pg_default;
+
+**lots Table**
+create table public.lots (
+  id uuid not null default gen_random_uuid (),
+  product_id uuid null,
+  origin_branch_id uuid null,
+  created_at timestamp with time zone null default now(),
+  bag_count integer null,
+  parts_per_bag integer null,
+  lot_tag text null,
+  local_uuid text null,
+  updated_at timestamp with time zone null default now(),
+  deleted boolean null default false,
+  constraint lots_pkey primary key (id),
+  constraint lots_local_uuid_key unique (local_uuid),
+  constraint lots_origin_branch_id_fkey foreign KEY (origin_branch_id) references branches (id),
+  constraint lots_product_id_fkey foreign KEY (product_id) references products (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_lots_product on public.lots using btree (product_id) TABLESPACE pg_default;
+
+create trigger handle_updated_at_lots BEFORE
+update on lots for EACH row
+execute FUNCTION handle_updated_at ();
+
+**expense_summaries Table**
+create view public.expense_summary as
+select
+  category,
+  count(*) as transaction_count,
+  sum(amount) as total_amount,
+  avg(amount) as average_amount
+from
+  expenses
+group by
+  category
+order by
+  (sum(amount)) desc;
+
+**daily_sales_summary Table**
+create view public.daily_sales_summary as
+select
+  date (created_at) as sale_date,
+  count(*) as total_transactions,
+  sum(total) as total_revenue,
+  avg(total) as average_sale
+from
+  sales
+group by
+  (date (created_at))
+order by
+  (date (created_at)) desc;
+
+**branch Table**
+create table public.branches (
+  id uuid not null default gen_random_uuid (),
+  owner_id uuid null,
+  name text not null,
+  location text null,
+  created_at timestamp with time zone null default now(),
+  local_uuid text null,
+  deleted boolean null default false,
+  constraint branches_pkey primary key (id),
+  constraint branches_local_uuid_key unique (local_uuid),
+  constraint branches_owner_id_fkey foreign KEY (owner_id) references owners (id)
+) TABLESPACE pg_default;
+
+create trigger handle_updated_at_branches BEFORE
+update on branches for EACH row
+execute FUNCTION handle_updated_at ();
+
+**branch_stock Table**
+create table public.branch_stock (
+  id uuid not null default gen_random_uuid (),
+  branch_id uuid not null,
+  product_name text not null,
+  allocated numeric not null default 0,
+  used numeric not null default 0,
+  leftover numeric not null default 0,
+  created_at timestamp with time zone null default now(),
+  local_uuid text null,
+  updated_at timestamp with time zone null default now(),
+  deleted boolean null default false,
+  constraint branch_stock_pkey primary key (id),
+  constraint branch_stock_local_uuid_key unique (local_uuid)
+) TABLESPACE pg_default;
+
+create trigger handle_updated_at_branch_stock BEFORE
+update on branch_stock for EACH row
+execute FUNCTION handle_updated_at ();
+
+**ai_converasations Table**
+create table public.ai_conversations (
+  id uuid not null default gen_random_uuid (),
+  user_id uuid null,
+  session_id text null,
+  message text not null,
+  response text not null,
+  context jsonb null,
+  created_at timestamp with time zone null default now(),
+  local_uuid text null,
+  updated_at timestamp with time zone null default now(),
+  deleted boolean null default false,
+  constraint ai_conversations_pkey primary key (id),
+  constraint ai_conversations_local_uuid_key unique (local_uuid),
+  constraint ai_conversations_user_id_fkey foreign KEY (user_id) references auth.users (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_ai_conversations_user_id on public.ai_conversations using btree (user_id) TABLESPACE pg_default;
+
+create trigger handle_updated_at_ai_conversations BEFORE
+update on ai_conversations for EACH row
+execute FUNCTION handle_updated_at ();
+
+**ai_audit_logs Table**
+create table public.ai_conversations (
+  id uuid not null default gen_random_uuid (),
+  user_id uuid null,
+  session_id text null,
+  message text not null,
+  response text not null,
+  context jsonb null,
+  created_at timestamp with time zone null default now(),
+  local_uuid text null,
+  updated_at timestamp with time zone null default now(),
+  deleted boolean null default false,
+  constraint ai_conversations_pkey primary key (id),
+  constraint ai_conversations_local_uuid_key unique (local_uuid),
+  constraint ai_conversations_user_id_fkey foreign KEY (user_id) references auth.users (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_ai_conversations_user_id on public.ai_conversations using btree (user_id) TABLESPACE pg_default;
+
+create trigger handle_updated_at_ai_conversations BEFORE
+update on ai_conversations for EACH row
+execute FUNCTION handle_updated_at ();
+
+**ai_analysis Table**
+create table public.ai_analysis (
+  id uuid not null default gen_random_uuid (),
+  analysis_type text not null,
+  content jsonb not null,
+  created_by uuid null,
+  created_at timestamp with time zone null default now(),
+  local_uuid text null,
+  updated_at timestamp with time zone null default now(),
+  deleted boolean null default false,
+  constraint ai_analysis_pkey primary key (id),
+  constraint ai_analysis_local_uuid_key unique (local_uuid),
+  constraint ai_analysis_created_by_fkey foreign KEY (created_by) references auth.users (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_ai_analysis_created_by on public.ai_analysis using btree (created_by) TABLESPACE pg_default;
+
+create trigger handle_updated_at_ai_analysis BEFORE
+update on ai_analysis for EACH row
+execute FUNCTION handle_updated_at ();

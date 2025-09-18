@@ -1,0 +1,307 @@
+1 — Goal (1 sentence)
+
+Run a small, secure MCP service in production that (A) mediates AI requests (Gemini) to your data, (B) exposes safe structured capabilities to the model, and (C) orchestrates IndexedDB ↔ Supabase syncing (via EdgeFns or RPC) without leaking secrets.
+
+2 — High-level architecture (what runs where)
+
+Frontend (browser PWA) — IndexedDB + UI; authenticates users with Supabase Auth; posts pending items or parse-requests.
+
+Supabase — Postgres DB + auth + (optional) Edge Functions for /sync and lightweight endpoints.
+
+MCP Server (your backend) — Node/TypeScript (or Deno) microservice that:
+
+verifies client tokens,
+
+runs safe SQL/selects via Supabase Service Role Key,
+
+calls Gemini (embedding & text),
+
+executes RAG retrieval (via Supabase pgvector),
+
+returns concise structured responses to client or LLM.
+
+Optional: Supabase Edge Functions — for extremely cheap, low-latency endpoints (/sync) if you prefer to keep some logic close to DB.
+
+Hosting choices (pick one or mix):
+
+Quick: Supabase Edge Functions (free tier friendly) for /sync and parseNote.
+
+MCP (AI orchestration): Railway/Render/Fly.io (easy deploy, free tier for hobby). Vercel serverless also works.
+
+Vector & DB = Supabase (pgvector extension).
+
+3 — Which parts should run in MCP vs Edge Functions
+
+MCP server (recommended):
+
+Orchestration with Gemini: prompt building, embedding calls, explainability, expensive logic, caching, rate-limit handling, advanced RAG queries.
+
+Aggregations and business logic that may combine Supabase + cached embeddings + external services.
+
+Edge Function(s) (recommended minimal set):
+
+/sync — batch ingestion endpoint (client -> DB). Quick validation & DB write (use service key but limited logic).
+
+/parseNote — optional lightweight parse (could be MCP if you want AI calls centralized).
+
+You can start with Edge Functions for /sync and /parseNote and add MCP for advanced AI orchestration later. But for production AI calls (Gemini) you’ll likely want MCP to host API keys and do retry/backoff.
+
+4 — Secure auth pattern (how MCP validates requests)
+
+Frontend: authenticates via Supabase Auth (session JWT).
+
+Requests to /sync or MCP: include Authorization: Bearer <access_token>.
+
+MCP: verifies token by calling Supabase auth.getUser() (server-side) or use Supabase Admin/Service Role to validate token and get user.id. Example: supabase-js auth.getUser() or getUserByCookie on server. If invalid -> 401.
+
+This keeps DB keys secret (stored as env vars in MCP).
+
+Internal calls from MCP -> Supabase use the SUPABASE_SERVICE_ROLE_KEY (env secret). Only MCP and Edge Functions get that key; never expose it to client.
+
+Security notes:
+
+Do not put service role keys in the browser.
+
+Rate-limit endpoints per user and per IP.
+
+Log usage in ai_audit_logs with minimal content (no sensitive PII).
+
+5 — MCP API spec (recommended endpoints)
+Public / client-facing
+
+POST /mcp/parse-note
+
+Body: { local_uuid, branch_id, author_id, content }
+
+Auth: Bearer <supabase_token>
+
+Action: Create notes row (status=pending), call Gemini Embedding + Flash-Lite to parse and produce parsed JSON + embedding, store note_embeddings, return { note_id, parsed, embedding_id } for client approval.
+
+Response example:
+
+{ "note_id":"uuid", "parsed": { "purchases": [... ] }, "status":"parsed" }
+
+
+POST /mcp/sync (or this can be EdgeFn /sync)
+
+Body: { client_id, items: [ {kind:'note'|'operation', local_uuid, payload } ] }
+
+Auth: Bearer <supabase_token> or X-Client-Key
+
+Action: Validate, call DB upsert (RPC) by local_uuid, return per-item result { local_uuid, status, id }.
+
+GET /mcp/stock?branch=<id>&date=YYYY-MM-DD
+
+Auth
+
+Returns aggregated stock view computed by server (combines operations, lots, branch_stock, and RAG if asked).
+
+POST /mcp/summarize — owner-triggered
+
+Body: { branch_id, date_from, date_to, type:'daily'|'weekly' }
+
+Action: MCP runs RAG: pulls most relevant notes via match_notes (pgvector), calls Gemini Pro for summary, stores in summaries table.
+
+Admin / internal endpoints
+
+POST /mcp/embeddings/batch — scheduleable batch embed endpoint
+
+GET /mcp/health — returns service health (DB connectivity, last embedding time)
+
+6 — Data flow for a note (concrete)
+
+Worker types note in UI -> saved to IndexedDB (local) with local_uuid.
+
+UI calls POST /mcp/parse-note with token. MCP:
+
+verifies token,
+
+inserts notes with local_uuid (status pending),
+
+calls Gemini embedding -> saves to note_embeddings,
+
+calls Gemini Flash-Lite (strict JSON prompt) -> parse -> saves parsed and updates notes.status='parsed',
+
+returns parsed JSON to client for Confirm/Edit.
+
+Client confirms -> adds created operations objects to IndexedDB pending queue and optionally calls /mcp/sync to push them now. If offline, they stay pending.
+
+7 — Implementation details (code-level guidance, minimal examples)
+Verify Supabase token server-side (Node + supabase-js)
+import { createClient } from '@supabase/supabase-js';
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+async function verifyUser(access_token){
+  // supabase-js server method
+  const { data, error } = await supabase.auth.getUser(access_token);
+  if (error || !data.user) throw new Error('unauthorized');
+  return data.user; // { id, email, ... }
+}
+
+Example /parse-note flow (pseudo)
+
+Insert note with local_uuid -> returns note_id.
+
+call embed = await callEmbedding(note.content).
+
+insert note_embeddings (note_id, embed).
+
+call parsed = await callLLMParse(note.content) (Flash-Lite).
+
+update notes parsed and status.
+
+return parsed.
+
+(We provided earlier Deno examples you can reuse.)
+
+8 — Deployment roadmap (detailed steps)
+Phase A — Dev & local testing
+
+Create Supabase project (if not already). Run 00-consolidated-minimal.sql.
+
+Implement Edge Function /sync in Supabase (Deno TS). Test locally via supabase functions serve.
+
+Implement MCP locally (Node/Express or Deno) with endpoints /mcp/parse-note and /mcp/summarize.
+
+Wire Gemini keys into MCP local env — call sandbox/test models.
+
+Test full flow in local Codespace / browser with your PWA:
+
+Insert note offline -> parse -> confirm -> sync -> Supabase row exists.
+
+Add unit tests for parse logic (LLM output validator), upsert RPC.
+
+Phase B — Staging deploy
+
+Deploy Edge Function /sync to Supabase (production project or staging).
+
+Deploy MCP to Railway/Render/Fly.io (set env vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_KEY).
+
+Configure CORS to allow your frontend domain.
+
+Run integration tests: create sample note -> parse -> embedding stored -> confirm -> sync.
+
+Load test with small batch to measure latency and concurrency.
+
+Phase C — Production
+
+Deploy frontend to Vercel/Netlify.
+
+Point clients to production MCP endpoint and /sync Edge Function.
+
+Turn on monitoring & logging (see next).
+
+Start with low concurrency and watch quotas for Gemini (RPM/TPM/RPD) and Supabase Edge invocations.
+
+9 — Monitoring, logging & observability
+
+MCP logs: capture request id, user id (hashed), endpoint, response time, errors (no PII). Store in external logs (Papertrail, Logflare, or host provider logs).
+
+Supabase dashboard: monitor Edge Function invocations and DB egress.
+
+AI usage: log embeddings and LLM calls in ai_audit_logs (prompt text truncated or hashed), store model_used and token counts if available.
+
+Alerts: set alerts for:
+
+Edge function invocation spikes,
+
+MCP errors > 5% of requests,
+
+Gemini rate limit rejections.
+
+Metrics: requests/sec, avg latency, DB roundtrip time, tokens consumed per day.
+
+10 — Cost & rate-limit strategy
+
+Gemini: Use embeddings heavily (high RPM), Flash-Lite for parsing, Pro sparingly for heavy reports. Batch embeddings nightly where possible.
+
+Supabase Edge Functions: free tier generous; watch invocations and set alert threshold.
+
+MCP: choose a host with a free tier (Railway/Render have free credits). If heavy, migrate to a small paid plan.
+
+Throttling:
+
+MCP must implement per-user throttling on parse calls (e.g., 30 parse calls / hour).
+
+Batch writes from client (/sync) at intervals or on explicit user action.
+
+11 — Rollout strategy & rollback
+
+Launch MCP behind a feature flag (only specific users).
+
+Monitor behavior for 48–72 hours.
+
+If errors or cost problems: toggle feature flag to route AI calls back to a non-AI flow (e.g., raw notes stored, manual parsing).
+
+For DB migration rollback: maintain SQL migrations with versioning (pg_migrate). Test 00-consolidated-minimal.sql on staging first.
+
+12 — Backup & data retention
+
+Regular DB backups (Supabase provides snapshots). Retain at least 30 days for audit.
+
+Keep archival of old embeddings (cold store) if you want to prune pgvector and reduce DB size.
+
+Add ai_audit_logs retention policy (eg keep 90 days).
+
+13 — Example daily jobs to run (cron)
+
+Nightly: batch-embed new notes (if you prefer batch).
+
+Nightly: compute daily summaries per branch via MCP: fetch latest notes & operations, run RAG summary using embeddings, store in summaries.
+
+Hourly: reconcile branch_stock expected vs actual and create alerts.
+
+These can be run from MCP (cron scheduler) or Supabase scheduled tasks.
+
+14 — Testing checklist (before “go live”)
+
+ Token validation flow (MCP rejects invalid tokens).
+
+ Notes parse -> produce deterministic JSON in most cases; fallback to manual confirmation.
+
+ local_uuid dedupe: create note offline, sync multiple times — ensure only one DB row.
+
+ Conflict: edit same record on two devices — observe conflict handling/logging.
+
+ Load test: simulate N parse calls/min to ensure Gemini quotas handled.
+
+ Embedding RAG: run match_notes() queries and check relevancy.
+
+15 — Quick start recommended stack (if you want to copy-paste)
+
+MCP: Node + Express or Deno + Oak, deploy to Railway or Fly.io.
+
+Edge Functions (for /sync): Supabase Edge Functions (Deno).
+
+DB & Vector: Supabase Postgres + pgvector extension (vector(1536) if Gemini embedding).
+
+Auth: Supabase Auth (use access token to validate client).
+
+AI: Gemini Embedding + Gemini Flash-Lite / Flash / Pro (as needed).
+
+Client: PWA using idb wrapper for IndexedDB + supabase-js for optional direct reads.
+
+16 — Example minimal MCP folder layout
+/mcp
+  /src
+    server.ts        <-- Express/Deno server
+    routes/
+      parseNote.ts
+      summarize.ts
+      stock.ts
+    lib/
+      supabaseClient.ts
+      geminiClient.ts
+      auth.ts
+    jobs/
+      batchEmbed.ts
+  package.json
+  Dockerfile
+
+17 — Final safety & UX notes
+
+Always show parsed JSON to the user before applying to stock. Human-in-the-loop reduces garbage data.
+
+Avoid storing raw sensitive user data in AI logs. Truncate prompts or hash sensitive fields.
+
+Keep a debug UI to inspect IndexedDB pending queue and force re-sync for helpdesk.

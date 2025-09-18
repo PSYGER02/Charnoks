@@ -1,0 +1,185 @@
+# SUPABASE EDGE FUNCTIONS IMPLEMENTATION PLAN
+
+## PRICING & LIMITS
+
+**Free Tier:**
+- 500,000 invocations/month included
+- $2 per 1M extra invocations
+- Runtime limits: ~150s wall-clock, 256MB memory, CPU time limited
+- Perfect for prototyping and hobby production apps
+
+**Usage Guidelines:**
+- Use for lightweight validation, DB writes, calling external models, small parsing
+- Don't run heavy CPU/GPU jobs - use external APIs instead
+- Keep batches small (≤50 items) to stay within limits
+
+## IMPLEMENTATION 1: /sync EDGE FUNCTION
+
+**Purpose:** Accept batched operations & notes from offline clients
+
+**Key Features:**
+- Batch processing (up to 50 items per request)
+- Idempotency via local_uuid deduplication
+- Transaction safety (all or none per batch)
+- Per-item status responses (ok/duplicate/error)
+
+**Input Contract:**
+```json
+{
+  "client_id": "branch1-device-a",
+  "items": [
+    {
+      "kind": "note",
+      "local_uuid": "uuid-1",
+      "content": "Bought 20 bags...",
+      "meta": {...}
+    },
+    {
+      "kind": "operation",
+      "local_uuid": "uuid-2", 
+      "op_type": "cook",
+      "branch_id": "...",
+      "quantity_parts": 40,
+      "lot_id": "..."
+    }
+  ]
+}
+```
+
+**Output Contract:**
+```json
+{
+  "results": [
+    {"local_uuid": "uuid-1", "status": "inserted", "id": "<db-id>"},
+    {"local_uuid": "uuid-2", "status": "duplicate", "existing_id": "..."},
+    {"local_uuid": "uuid-3", "status": "error", "error": "validation failed"}
+  ]
+}
+```
+
+**Implementation Steps:**
+1. Create `/api/sync.ts` Edge Function
+2. Set environment variables: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SYNC_CLIENT_KEY
+3. Validate client authentication via X-CLIENT-KEY header
+4. Check existing local_uuids to prevent duplicates
+5. Validate operation types against allowed set
+6. Insert notes and operations in separate transactions
+7. Return per-item status for client sync tracking
+
+## IMPLEMENTATION 2: /parseNote EDGE FUNCTION
+
+**Purpose:** Convert raw notes to structured JSON + embeddings
+
+**Workflow:**
+1. Client posts raw note text
+2. Generate embedding via Gemini API
+3. Store note + embedding in database
+4. Parse note to structured JSON via LLM
+5. Return parsed JSON for human confirmation
+6. Client confirms → posts to /sync endpoint
+
+**Key Features:**
+- Human-in-the-loop validation
+- Rate limiting (60 calls/hour per client)
+- Embedding storage for RAG
+- Strict JSON schema validation
+- Fallback for invalid LLM responses
+
+**Input Contract:**
+```json
+{
+  "text": "Bought 20 bags chicken, cooked 5 bags",
+  "local_uuid": "uuid-1",
+  "author_id": "user-id",
+  "branch_id": "branch-1"
+}
+```
+
+**Output Contract:**
+```json
+{
+  "note_id": "db-note-id",
+  "parsed": {
+    "purchases": [{"product": "chicken", "bags": 20}],
+    "productions": [{"bags": 5, "branch": "branch-1"}],
+    "transfers": [],
+    "branch_operations": [],
+    "leftovers": []
+  }
+}
+```
+
+**Implementation Steps:**
+1. Create `/api/parseNote.ts` Edge Function
+2. Set environment variables: GEMINI_API_URL, GEMINI_API_KEY
+3. Implement embedding generation via Gemini API
+4. Store note + embedding in database
+5. Build strict JSON extraction prompt
+6. Call Gemini Flash-Lite for parsing
+7. Validate returned JSON schema
+8. Update note with parsed data
+9. Return structured JSON to client
+
+## SECURITY & COST CONTROL
+
+**Authentication:**
+- Store service role keys only in Edge Function secrets
+- Use per-device client keys or signed JWTs
+- Log client IDs + IP addresses for audit
+
+**Rate Limiting:**
+- 60 parse calls per hour per client
+- Return 429 status when exceeded
+- Implement exponential backoff for model API errors
+
+**Cost Optimization:**
+- Batch operations when possible
+- Use Flash-Lite for routine parsing, Pro for complex analysis
+- Cache repeated prompts/responses
+- Monitor invocation count via Supabase dashboard
+
+**Error Handling:**
+- Validate LLM output and fallback to human review
+- Store raw LLM outputs in ai_audit_logs for debugging
+- Retry transient errors with backoff
+
+## DEPLOYMENT CHECKLIST
+
+**Environment Setup:**
+- [ ] SUPABASE_URL configured
+- [ ] SUPABASE_SERVICE_ROLE_KEY configured  
+- [ ] SYNC_CLIENT_KEY configured
+- [ ] GEMINI_API_URL configured
+- [ ] GEMINI_API_KEY configured
+
+**Database Setup:**
+- [ ] notes table with local_uuid column
+- [ ] operations table with local_uuid column
+- [ ] note_embeddings table for RAG
+- [ ] ai_audit_logs table for debugging
+
+**Testing:**
+- [ ] Test /sync with valid batch
+- [ ] Test /sync with duplicates
+- [ ] Test /parseNote with sample notes
+- [ ] Test rate limiting
+- [ ] Test authentication
+
+**Monitoring:**
+- [ ] Set up invocation alerts
+- [ ] Monitor error rates
+- [ ] Track API costs
+- [ ] Log client usage patterns
+
+## ALTERNATIVE FOR HEAVY JOBS
+
+**When Edge Functions aren't suitable:**
+- Use Supabase Cron for scheduled jobs (nightly embeddings, reconciliation)
+- Use external worker (cheap VM) for CPU-bound processing
+- Use external APIs for ML/NLP compute instead of local processing
+
+**Examples:**
+- Nightly embedding generation for all notes
+- Large similarity indexing jobs
+- Bulk data reconciliation
+- Custom model hosting for offline inference

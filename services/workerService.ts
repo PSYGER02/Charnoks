@@ -8,14 +8,16 @@ export interface Worker {
   isActive: boolean;
 }
 
-// Fast worker lookup - single table query
+// Fast worker lookup - query user_profiles directly (FIXED)
 export const getWorkers = async (): Promise<Worker[]> => {
   try {
+    // Query user_profiles instead of workers table (which might be empty)
     const { data, error } = await supabase
-      .from('workers')
-      .select('id, name, email, is_active')
+      .from('user_profiles')
+      .select('id, display_name, email, is_active, role')
+      .eq('role', 'worker')
       .eq('is_active', true)
-      .order('name');
+      .order('display_name');
 
     if (error) {
       safeLog.warn('Workers fetch error', error.message);
@@ -24,7 +26,7 @@ export const getWorkers = async (): Promise<Worker[]> => {
 
     return (data || []).map(w => ({
       id: w.id,
-      name: w.name,
+      name: w.display_name || w.email?.split('@')[0] || 'Worker',
       email: w.email,
       isActive: w.is_active
     }));

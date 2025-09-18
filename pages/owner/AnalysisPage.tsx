@@ -9,8 +9,7 @@ import WorkerInsight from '../../components/analysis/WorkerInsight';
 import AIPrediction from '../../components/analysis/AIPrediction';
 
 // Services
-import { getSales, getExpenses } from '../../services/supabaseService';
-import { getWorkers } from '../../services/workerService';
+import { getSalesOfflineFirst, getExpensesOfflineFirst, getWorkersOfflineFirst } from '../../services/offlineFirstDataService';
 import Spinner from '../../components/ui/Spinner';
 
 export type AnalysisMode = 'home' | 'all-workers' | 'compare-workers' | 'worker-insight' | 'ai-prediction';
@@ -35,9 +34,9 @@ const AnalysisPage: React.FC = () => {
             
             try {
                 const [salesData, expensesData, workersData] = await Promise.all([
-                    getSales(50),
-                    getExpenses(50),
-                    getWorkers()
+                    getSalesOfflineFirst(50),
+                    getExpensesOfflineFirst(50),
+                    getWorkersOfflineFirst()
                 ]);
                 setSales(salesData);
                 setExpenses(expensesData);

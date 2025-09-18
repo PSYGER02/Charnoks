@@ -4,7 +4,8 @@ import VoiceInputButton from '../../components/ui/VoiceInputButton';
 import ConfirmationModal from '../../components/ui/ConfirmationModal';
 import { subscribeToProducts, recordSale } from '../../services/supabaseService';
 import { parseSaleFromVoice } from '../../services/supabaseService';
-import { offlineDB } from '../../services/offlineService';
+import { smartSaveService } from '../../services/smartSaveService';
+import ConnectionStatus from '../../components/ui/ConnectionStatus';
 import type { Product } from '../../types';
 
 interface CartItem {
@@ -142,12 +143,11 @@ const SalesPage: React.FC = () => {
         change_due: change
       };
 
-      // Save to IndexedDB first (offline-first)
-      await offlineDB.save('sales', saleData);
+      // Smart save - auto-detects online/offline
+      const result = await smartSaveService.saveSale(saleData);
       
-      // Try to sync if online
-      if (navigator.onLine) {
-        await recordSale(saleData);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save sale');
       }
       
       setShowSuccess(true);
@@ -218,6 +218,7 @@ const SalesPage: React.FC = () => {
 
   return (
     <div className="h-full max-h-[calc(100vh-100px)] lg:max-h-screen lg:h-screen lg:overflow-hidden p-0 -m-4 sm:-m-6 lg:-m-8">
+      <ConnectionStatus />
       <ConfirmationModal 
         isOpen={showConfirmationModal}
         parsedSale={parsedSale}

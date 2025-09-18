@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useSupabaseAuth';
 import Spinner from '../../components/ui/Spinner';
 import SuccessOverlay from '../../components/ui/SuccessOverlay';
-import { recordExpense } from '../../services/supabaseService';
+import { smartSaveService } from '../../services/smartSaveService';
+import ConnectionStatus from '../../components/ui/ConnectionStatus';
 
 const WorkerExpensePage: React.FC = () => {
     const { user } = useAuth();
@@ -22,10 +23,14 @@ const WorkerExpensePage: React.FC = () => {
         setIsLoading(true);
 
         try {
-            await recordExpense({
+            const result = await smartSaveService.saveExpense({
                 description,
                 amount: parseFloat(amount)
             });
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to save expense');
+            }
 
             setShowSuccess(true);
             setTimeout(() => {
@@ -42,6 +47,7 @@ const WorkerExpensePage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-4 py-8 relative">
+            <ConnectionStatus />
             {showSuccess && <SuccessOverlay />}
             <h1 className="text-2xl font-bold mb-6">Record Expense</h1>
             

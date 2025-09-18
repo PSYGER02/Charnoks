@@ -1,69 +1,118 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../src/supabaseConfig';
-import { sanitizeForLog } from '../utils/securityUtils';
+// Supabase Edge Function: /sync
+// Batch sync for offline operations & notes
+import { serve } from "https://deno.land/std@0.201.0/http/server.ts";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-interface SyncOperation {
-  local_uuid: string;
-  type: 'purchase' | 'production' | 'transfer' | 'cook' | 'sale';
-  data: any;
-  timestamp: string;
-}
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+const ALLOWED_OPS = new Set(['purchase','receive','package','transfer_out','transfer_in','cook','sale','waste']);
 
+serve(async (req) => {
   try {
-    const { operations } = req.body;
+    if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
 
-    if (!Array.isArray(operations)) {
-      return res.status(400).json({ error: 'Operations must be an array' });
+    // Auth check
+    const apiKey = req.headers.get('x-client-key') || '';
+    if (apiKey !== Deno.env.get('SYNC_CLIENT_KEY')) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 });
     }
 
+    const body = await req.json();
+    const items = Array.isArray(body.items) ? body.items.slice(0,50) : []; // Max 50 per batch
+    if (!items.length) return new Response(JSON.stringify({ results: [] }), { status: 200 });
+
+    // Validate local_uuids
+    const localUuids = items.map(i => i.local_uuid).filter(Boolean);
+    if (localUuids.length !== items.length) {
+      return new Response(JSON.stringify({ error: "each item must include local_uuid" }), { status: 400 });
+    }
+
+    // Check existing operations
+    const { data: existing, error } = await supabase
+      .from('operations')
+      .select('id, local_uuid')
+      .in('local_uuid', localUuids)
+      .limit(100);
+
+    if (error) throw error;
+
+    const existingMap = new Map(existing?.map((r: any) => [r.local_uuid, r.id]));
     const results = [];
+    const toInsertOps = [];
+    const toInsertNotes = [];
 
-    for (const op of operations) {
-      try {
-        // Check if operation already exists (dedupe by local_uuid)
-        const { data: existing } = await supabase
-          .from('operations')
-          .select('id')
-          .eq('local_uuid', op.local_uuid)
-          .single();
+    // Process items
+    for (const item of items) {
+      if (existingMap.has(item.local_uuid)) {
+        results.push({ 
+          local_uuid: item.local_uuid, 
+          status: 'duplicate', 
+          existing_id: existingMap.get(item.local_uuid) 
+        });
+        continue;
+      }
 
-        if (existing) {
-          results.push({ local_uuid: op.local_uuid, status: 'duplicate' });
+      if (item.kind === 'operation') {
+        if (!ALLOWED_OPS.has(item.op_type)) {
+          results.push({ local_uuid: item.local_uuid, status: 'error', error: 'invalid op_type' });
           continue;
         }
-
-        // Insert new operation
-        const { data, error } = await supabase
-          .from('operations')
-          .insert({
-            local_uuid: op.local_uuid,
-            type: op.type,
-            data: op.data,
-            timestamp: op.timestamp,
-            synced_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        results.push({ local_uuid: op.local_uuid, status: 'synced', id: data.id });
-
-      } catch (error) {
-        console.error('Sync operation failed:', sanitizeForLog(error));
-        results.push({ local_uuid: op.local_uuid, status: 'failed' });
+        toInsertOps.push({
+          local_uuid: item.local_uuid,
+          lot_id: item.lot_id ?? null,
+          branch_id: item.branch_id ?? null,
+          worker_id: item.worker_id ?? null,
+          op_type: item.op_type,
+          quantity_parts: item.quantity_parts ?? 0,
+          quantity_bags: item.quantity_bags ?? 0,
+          metadata: item.metadata ?? {},
+        });
+      } else if (item.kind === 'note') {
+        toInsertNotes.push({
+          content: item.content ?? '',
+          user_role: item.user_role ?? null,
+          parsed_data: item.parsed_data ?? null,
+          status: item.status ?? 'pending'
+        });
+      } else {
+        results.push({ local_uuid: item.local_uuid, status: 'error', error: 'unknown kind' });
       }
     }
 
-    return res.status(200).json({ results });
+    // Insert notes
+    if (toInsertNotes.length) {
+      const r = await supabase.from('notes').insert(toInsertNotes).select('id');
+      if (r.error) {
+        for (const n of toInsertNotes) {
+          results.push({ local_uuid: n.local_uuid, status: 'error', error: r.error.message });
+        }
+      } else {
+        r.data.forEach((row, i) => {
+          results.push({ local_uuid: toInsertNotes[i].local_uuid, status: 'inserted', id: row.id });
+        });
+      }
+    }
 
-  } catch (error) {
-    console.error('Sync error:', sanitizeForLog(error));
-    return res.status(500).json({ error: 'Sync failed' });
+    // Insert operations
+    if (toInsertOps.length) {
+      const r2 = await supabase.from('operations').insert(toInsertOps).select('id, local_uuid');
+      if (r2.error) {
+        for (const op of toInsertOps) {
+          results.push({ local_uuid: op.local_uuid, status: 'error', error: r2.error.message });
+        }
+      } else {
+        for (const row of r2.data) {
+          results.push({ local_uuid: row.local_uuid, status: 'inserted', id: row.id });
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({ results }), { status: 200 });
+
+  } catch (err) {
+    console.error(err);
+    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
   }
-}
+});

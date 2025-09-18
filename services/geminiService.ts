@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import type { Sale, ForecastDataPoint, AIInsights, Expense, Product, ParsedSaleFromAI } from '../types';
+import { rateLimitService } from './rateLimitService';
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
 
@@ -52,7 +53,8 @@ export const getSalesForecast = async (sales: Sale[]): Promise<ForecastDataPoint
 
   const prompt = generatePromptForForecast(sales);
   try {
-    const response: GenerateContentResponse = await ai.models.generateContent({
+    const response: GenerateContentResponse = await rateLimitService.execute(() =>
+      ai.models.generateContent({
         model: "gemini-2.0-flash",
         contents: prompt,
         config: {
@@ -70,7 +72,8 @@ export const getSalesForecast = async (sales: Sale[]): Promise<ForecastDataPoint
           },
           temperature: 0.5,
         }
-    });
+      })
+    );
     
     if (!response.text()) {
         throw new Error("AI response was empty.");
@@ -185,24 +188,26 @@ export const parseStockNote = async (noteContent: string): Promise<any> => {
     try {
       const prompt = `You are a strict JSON-only extractor. For every input note, output valid JSON only. The JSON must follow the schema keys: purchases[], productions[], transfers[], branch_operations[], leftovers[]. If any field is unknown, omit it. Do not add commentary.\n\nParse this note: "${noteContent}"`;
       
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: prompt,
-        config: { 
-          responseMimeType: "application/json", 
-          temperature: 0.1,
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              purchases: { type: Type.ARRAY, items: { type: Type.OBJECT } },
-              productions: { type: Type.ARRAY, items: { type: Type.OBJECT } },
-              transfers: { type: Type.ARRAY, items: { type: Type.OBJECT } },
-              branch_operations: { type: Type.ARRAY, items: { type: Type.OBJECT } },
-              leftovers: { type: Type.ARRAY, items: { type: Type.OBJECT } }
+      const response = await rateLimitService.execute(() =>
+        ai.models.generateContent({
+          model: "gemini-2.0-flash",
+          contents: prompt,
+          config: { 
+            responseMimeType: "application/json", 
+            temperature: 0.1,
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                purchases: { type: Type.ARRAY, items: { type: Type.OBJECT } },
+                productions: { type: Type.ARRAY, items: { type: Type.OBJECT } },
+                transfers: { type: Type.ARRAY, items: { type: Type.OBJECT } },
+                branch_operations: { type: Type.ARRAY, items: { type: Type.OBJECT } },
+                leftovers: { type: Type.ARRAY, items: { type: Type.OBJECT } }
+              }
             }
           }
-        }
-      });
+        })
+      );
 
       if (response.text()) {
         return JSON.parse(response.text());

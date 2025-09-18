@@ -2,8 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Sale } from '../../types';
 import { supabase } from '../../src/supabaseConfig';
-import { getSales } from '../../services/supabaseService';
-import { getWorkers } from '../../services/workerService';
+import { getSalesOfflineFirst, getWorkersOfflineFirst } from '../../services/offlineFirstDataService';
 import Spinner from '../../components/ui/Spinner';
 
 const TransactionRow: React.FC<{ sale: Sale; workers: any[] }> = ({ sale, workers }) => {
@@ -75,8 +74,8 @@ const TransactionsPage: React.FC = () => {
             
             try {
                 const [salesData, workersData] = await Promise.all([
-                    getSales(50),
-                    getWorkers()
+                    getSalesOfflineFirst(50),
+                    getWorkersOfflineFirst()
                 ]);
                 setSales(salesData);
                 setWorkers(workersData);
