@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useSupabaseAuth';
-import { getSales } from '../../services/supabaseService';
+import { getSalesOfflineFirst } from '../../services/offlineFirstDataService';
 import type { Sale } from '../../types';
 import Spinner from '../../components/ui/Spinner';
 
@@ -15,10 +15,12 @@ const WorkerTransactionsPage: React.FC = () => {
             setIsLoading(true);
             
             try {
-                const allSales = await getSales(100);
+                // Use offline-first data loading
+                const allSales = await getSalesOfflineFirst(100);
                 // Filter to show only current worker's sales
                 const workerSales = allSales.filter(sale => sale.workerId === user.uid);
                 setSales(workerSales);
+                console.log(`✅ Loaded ${workerSales.length} sales for worker (offline-first)`);
             } catch (error) {
                 console.warn('Could not load sales:', error);
             } finally {

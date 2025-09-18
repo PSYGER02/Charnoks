@@ -2,10 +2,11 @@ import React, { useEffect } from 'react';
 import { useState } from 'react';
 import KPICard from '../../components/ui/KPI_Card';
 import ChartContainer from '../../components/charts/ChartContainer';
-import { getOwnerDashboard } from '../../services/supabaseService';
+import { getDashboardDataOfflineFirst } from '../../services/offlineFirstDataService';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
 import CreateWorkerForm from '../../components/CreateWorkerForm';
 import Spinner from '../../components/ui/Spinner';
+import OfflineDataStatus from '../../components/ui/OfflineDataStatus';
 import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
 import { smartSyncService } from '../../services/smartSyncService';
 import { offlineDB } from '../../services/offlineService';
@@ -67,8 +68,10 @@ const OwnerHomePage: React.FC = () => {
             setHasLoaded(true);
             
             try {
-                const data = await getOwnerDashboard();
+                // Use offline-first data loading
+                const data = await getDashboardDataOfflineFirst();
                 setDashboardData(data);
+                console.log('✅ Dashboard data loaded (offline-first):', data);
             } catch (error) {
                 console.warn('Dashboard data not loaded:', error);
                 // Keep empty data, don't show error to new users
@@ -84,8 +87,10 @@ const OwnerHomePage: React.FC = () => {
     const refresh = async () => {
         setIsLoading(true);
         try {
-            const data = await getOwnerDashboard();
+            // Use offline-first data loading for refresh too
+            const data = await getDashboardDataOfflineFirst();
             setDashboardData(data);
+            console.log('✅ Dashboard data refreshed (offline-first):', data);
         } catch (error) {
             console.warn('Dashboard refresh failed:', error);
         } finally {
@@ -239,6 +244,9 @@ const OwnerHomePage: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Offline Data Status and Management */}
+            <OfflineDataStatus />
         </div>
     );
 };
