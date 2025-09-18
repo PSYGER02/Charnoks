@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline Data Loading Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .test-section {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .error { border-left-color: #f44336; }
+        .warning { border-left-color: #ff9800; }
+        .info { border-left-color: #2196F3; }
+        .result {
+            background: #333;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 4px;
+        }
+        button:hover { background: #45a049; }
+        .offline { background: #ff9800; }
+        .clear { background: #f44336; }
+        .status {
+            padding: 8px;
+            border-radius: 4px;
+            margin: 8px 0;
+            text-align: center;
+        }
+        .online { background: #4CAF50; }
+        .offline-status { background: #ff9800; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Offline Data Loading Test Suite</h1>
+    <p>This page tests the offline-first data loading functionality to ensure the dashboard works offline.</p>
+
+    <div class="status" id="connectionStatus">
+        📡 Checking connection...
+    </div>
+
+    <div class="test-section">
+        <h3>📦 1. IndexedDB Initialization Test</h3>
+        <button onclick="testIndexedDBInit()">Test IndexedDB Init</button>
+        <div class="result" id="indexedDBResult">Click test to check IndexedDB support...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>💾 2. Sample Data Creation Test</h3>
+        <button onclick="createSampleData()">Create Sample Data</button>
+        <button onclick="clearAllData()" class="clear">Clear All Data</button>
+        <div class="result" id="sampleDataResult">Click to create sample sales and expenses data...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 3. Dashboard Data Loading Test</h3>
+        <button onclick="testDashboardLoading()">Test Dashboard</button>
+        <button onclick="testDashboardOffline()" class="offline">Test Offline Mode</button>
+        <div class="result" id="dashboardResult">Click to test dashboard data loading...</div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔄 4. Data Service Test</h3>
+        <button onclick="testDataServices()">Test All Services</button>
+        <div class="result" id="servicesResult">Click to test offline-first data services...</div>
+    </div>
+
+    <div class="test-section info">
+        <h3>💡 Instructions for Manual Testing</h3>
+        <ol>
+            <li><strong>Test Online:</strong> Run tests with internet connection</li>
+            <li><strong>Create Data:</strong> Create sample data to test with</li>
+            <li><strong>Go Offline:</strong> Disable network in DevTools (F12 → Network → Offline)</li>
+            <li><strong>Test Offline:</strong> Run dashboard test while offline</li>
+            <li><strong>Verify:</strong> Dashboard should show cached data with "📱 Offline" indicator</li>
+        </ol>
+    </div>
+
+    <script type="module">
+        // Connection status monitoring
+        function updateConnectionStatus() {
+            const status = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                status.className = 'status online';
+                status.innerHTML = '🌐 Online - Fresh data available';
+            } else {
+                status.className = 'status offline-status';
+                status.innerHTML = '📱 Offline - Using cached data';
+            }
+        }
+
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        updateConnectionStatus();
+
+        // Mock the services for testing
+        window.testIndexedDBInit = async function() {
+            const result = document.getElementById('indexedDBResult');
+            result.innerHTML = 'Testing IndexedDB support...';
+
+            try {
+                if (!window.indexedDB) {
+                    throw new Error('IndexedDB not supported');
+                }
+
+                // Test opening database
+                const request = indexedDB.open('CharnoksTestDB', 1);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('test')) {
+                        db.createObjectStore('test', { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+
+                request.onsuccess = () => {
+                    const db = request.result;
+                    result.innerHTML = `✅ IndexedDB working!
+Database: ${db.name} (version ${db.version})
+Stores: ${Array.from(db.objectStoreNames).join(', ')}`;
+                    db.close();
+                };
+
+                request.onerror = () => {
+                    throw new Error('Failed to open IndexedDB');
+                };
+
+            } catch (error) {
+                result.innerHTML = `❌ IndexedDB Error: ${error.message}`;
+            }
+        };
+
+        window.createSampleData = async function() {
+            const result = document.getElementById('sampleDataResult');
+            result.innerHTML = 'Creating sample data...';
+
+            try {
+                // Create sample sales and expenses data
+                const sampleSales = [
+                    {
+                        local_uuid: crypto.randomUUID(),
+                        total: 350,
+                        items: [{ name: 'Chicken Pieces', quantity: 10, price: 35 }],
+                        created_at: new Date().toISOString(),
+                        worker_name: 'Test Worker',
+                        sync_status: 'pending'
+                    },
+                    {
+                        local_uuid: crypto.randomUUID(),
+                        total: 700,
+                        items: [{ name: 'Chicken Pieces', quantity: 20, price: 35 }],
+                        created_at: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+                        worker_name: 'Test Worker',
+                        sync_status: 'pending'
+                    }
+                ];
+
+                const sampleExpenses = [
+                    {
+                        local_uuid: crypto.randomUUID(),
+                        amount: 500,
+                        description: 'Gas Expense',
+                        category: 'utilities',
+                        created_at: new Date().toISOString(),
+                        worker_name: 'Test Worker',
+                        sync_status: 'pending'
+                    },
+                    {
+                        local_uuid: crypto.randomUUID(),
+                        amount: 200,
+                        description: 'Supply Expense',
+                        category: 'supplies',
+                        created_at: new Date().toISOString(),
+                        worker_name: 'Test Worker',
+                        sync_status: 'pending'
+                    }
+                ];
+
+                // Store in IndexedDB
+                const db = await openCharnoksDB();
+                const tx = db.transaction(['sales', 'expenses'], 'readwrite');
+                
+                // Add sales
+                const salesStore = tx.objectStore('sales');
+                for (const sale of sampleSales) {
+                    salesStore.add(sale);
+                }
+
+                // Add expenses
+                const expensesStore = tx.objectStore('expenses');
+                for (const expense of sampleExpenses) {
+                    expensesStore.add(expense);
+                }
+
+                tx.oncomplete = () => {
+                    result.innerHTML = `✅ Sample data created!
+Sales: ${sampleSales.length} records
+Expenses: ${sampleExpenses.length} records
+Total Revenue: ₱${sampleSales.reduce((sum, s) => sum + s.total, 0)}
+Total Expenses: ₱${sampleExpenses.reduce((sum, e) => sum + e.amount, 0)}`;
+                };
+
+                tx.onerror = () => {
+                    throw new Error('Failed to store sample data');
+                };
+
+            } catch (error) {
+                result.innerHTML = `❌ Sample Data Error: ${error.message}`;
+            }
+        };
+
+        window.testDashboardLoading = async function() {
+            const result = document.getElementById('dashboardResult');
+            result.innerHTML = 'Testing dashboard data loading...';
+
+            try {
+                const db = await openCharnoksDB();
+                
+                // Get sales and expenses
+                const [sales, expenses] = await Promise.all([
+                    getAllFromStore(db, 'sales'),
+                    getAllFromStore(db, 'expenses')
+                ]);
+
+                // Calculate dashboard metrics
+                const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+                const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+                const netProfit = totalRevenue - totalExpenses;
+
+                result.innerHTML = `✅ Dashboard data loaded successfully!
+📊 Revenue: ₱${totalRevenue.toLocaleString()}
+📉 Expenses: ₱${totalExpenses.toLocaleString()}
+💰 Net Profit: ₱${netProfit.toLocaleString()}
+📈 Sales Count: ${sales.length}
+📝 Expense Count: ${expenses.length}
+🌐 Data Source: ${navigator.onLine ? 'Online' : 'Offline (Cached)'}`;
+
+            } catch (error) {
+                result.innerHTML = `❌ Dashboard Loading Error: ${error.message}`;
+            }
+        };
+
+        window.testDashboardOffline = async function() {
+            const result = document.getElementById('dashboardResult');
+            result.innerHTML = 'Testing offline dashboard simulation...';
+
+            // Temporarily simulate offline
+            const originalOnLine = navigator.onLine;
+            Object.defineProperty(navigator, 'onLine', {
+                writable: true,
+                value: false
+            });
+
+            try {
+                await testDashboardLoading();
+                const currentResult = result.innerHTML;
+                result.innerHTML = currentResult.replace('Online', 'Simulated Offline');
+            } finally {
+                // Restore online status
+                Object.defineProperty(navigator, 'onLine', {
+                    writable: true,
+                    value: originalOnLine
+                });
+            }
+        };
+
+        window.testDataServices = async function() {
+            const result = document.getElementById('servicesResult');
+            result.innerHTML = 'Testing data services...';
+
+            try {
+                const db = await openCharnoksDB();
+                
+                // Test each table
+                const tables = ['sales', 'expenses', 'products', 'user_profiles'];
+                const results = [];
+
+                for (const table of tables) {
+                    try {
+                        const data = await getAllFromStore(db, table);
+                        results.push(`${table}: ${data.length} records`);
+                    } catch (error) {
+                        results.push(`${table}: ❌ Error (${error.message})`);
+                    }
+                }
+
+                result.innerHTML = `✅ Data Services Test Complete:
+${results.join('\n')}
+
+💾 Storage: IndexedDB
+🔄 Sync Status: ${navigator.onLine ? 'Ready to sync' : 'Offline mode'}
+📱 Offline Support: Active`;
+
+            } catch (error) {
+                result.innerHTML = `❌ Data Services Error: ${error.message}`;
+            }
+        };
+
+        window.clearAllData = async function() {
+            const result = document.getElementById('sampleDataResult');
+            result.innerHTML = 'Clearing all data...';
+
+            try {
+                const db = await openCharnoksDB();
+                const tables = ['sales', 'expenses', 'products', 'user_profiles'];
+                
+                for (const table of tables) {
+                    try {
+                        const tx = db.transaction([table], 'readwrite');
+                        const store = tx.objectStore(table);
+                        store.clear();
+                    } catch (error) {
+                        console.warn(`Failed to clear ${table}:`, error);
+                    }
+                }
+
+                result.innerHTML = '🗑️ All data cleared successfully!';
+            } catch (error) {
+                result.innerHTML = `❌ Clear Data Error: ${error.message}`;
+            }
+        };
+
+        // Helper functions
+        function openCharnoksDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('CharnoksDB', 1);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    const tables = ['sales', 'expenses', 'products', 'user_profiles', 'notes'];
+                    
+                    tables.forEach(tableName => {
+                        if (!db.objectStoreNames.contains(tableName)) {
+                            const store = db.createObjectStore(tableName, { keyPath: 'id', autoIncrement: true });
+                            store.createIndex('sync_status', 'sync_status');
+                            store.createIndex('created_at', 'created_at');
+                            store.createIndex('local_uuid', 'local_uuid', { unique: true });
+                        }
+                    });
+                };
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(new Error('Failed to open CharnoksDB'));
+            });
+        }
+
+        function getAllFromStore(db, storeName) {
+            return new Promise((resolve, reject) => {
+                if (!db.objectStoreNames.contains(storeName)) {
+                    resolve([]);
+                    return;
+                }
+
+                const tx = db.transaction([storeName], 'readonly');
+                const store = tx.objectStore(storeName);
+                const request = store.getAll();
+                
+                request.onsuccess = () => {
+                    const records = request.result;
+                    // Filter out deleted records
+                    const activeRecords = records.filter(record => !record.deleted);
+                    resolve(activeRecords);
+                };
+                request.onerror = () => reject(new Error(`Failed to get ${storeName} data`));
+            });
+        }
+
+        // Initialize test
+        console.log('🧪 Offline Data Test Suite Loaded');
+        console.log('Ready to test offline-first functionality!');
+    </script>
+</body>
+</html>

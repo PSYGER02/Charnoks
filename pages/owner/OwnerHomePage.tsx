@@ -3,6 +3,7 @@ import { useState } from 'react';
 import KPICard from '../../components/ui/KPI_Card';
 import ChartContainer from '../../components/charts/ChartContainer';
 import { getOwnerDashboard } from '../../services/supabaseService';
+import { getOwnerDashboardOfflineFirst } from '../../services/offlineFirstService';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
 import CreateWorkerForm from '../../components/CreateWorkerForm';
 import Spinner from '../../components/ui/Spinner';
@@ -43,11 +44,13 @@ const OwnerHomePage: React.FC = () => {
     const [dashboardData, setDashboardData] = React.useState(getEmptyDashboardData());
     const [isLoading, setIsLoading] = React.useState(false);
     const [hasLoaded, setHasLoaded] = React.useState(false);
+    const [dataSource, setDataSource] = React.useState<'offline' | 'online' | 'empty'>('empty');
 
         // Initialize smart sync service (only syncs when connection is stable)
     useEffect(() => {
         const initSync = async () => {
             try {
+                await offlineDB.init();
                 smartSyncService.start();
                 console.log('Smart sync service started - syncs only when connection is stable');
             } catch (error) {
@@ -67,11 +70,19 @@ const OwnerHomePage: React.FC = () => {
             setHasLoaded(true);
             
             try {
-                const data = await getOwnerDashboard();
+                // Use offline-first service instead of direct Supabase call
+                const data = await getOwnerDashboardOfflineFirst();
                 setDashboardData(data);
+                setDataSource(data._dataSource || 'online');
+                console.log('📊 Dashboard loaded:', {
+                    source: data._dataSource,
+                    revenue: data.totalRevenue,
+                    transactions: data.transactions
+                });
             } catch (error) {
                 console.warn('Dashboard data not loaded:', error);
                 // Keep empty data, don't show error to new users
+                setDataSource('empty');
             } finally {
                 setIsLoading(false);
             }
@@ -84,8 +95,10 @@ const OwnerHomePage: React.FC = () => {
     const refresh = async () => {
         setIsLoading(true);
         try {
-            const data = await getOwnerDashboard();
+            // Use offline-first service for refresh too
+            const data = await getOwnerDashboardOfflineFirst();
             setDashboardData(data);
+            setDataSource(data._dataSource || 'online');
         } catch (error) {
             console.warn('Dashboard refresh failed:', error);
         } finally {
@@ -118,7 +131,19 @@ const OwnerHomePage: React.FC = () => {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-4xl font-bold text-text-primary">Dashboard Overview</h1>
-                        <p className="text-text-secondary mt-1">Monitor your business performance</p>
+                        <p className="text-text-secondary mt-1">
+                            Monitor your business performance
+                            {dataSource === 'offline' && (
+                                <span className="ml-2 text-xs bg-yellow-600 text-yellow-100 px-2 py-1 rounded">
+                                    📱 Offline Data
+                                </span>
+                            )}
+                            {dataSource === 'online' && (
+                                <span className="ml-2 text-xs bg-green-600 text-green-100 px-2 py-1 rounded">
+                                    🌐 Live Data
+                                </span>
+                            )}
+                        </p>
                     </div>
                     {isLoading && (
                         <div className="flex items-center text-sm text-text-secondary">
