@@ -15,11 +15,12 @@
     "lint": "echo 'Linting will be added in future updates'"
   },
   "dependencies": {
-    "@google/genai": "^1.9.0",
+    "@google/genai": "^1.20.0",
     "@google/generative-ai": "^0.1.1",
     "@supabase/supabase-js": "^2.54.0",
     "@types/dompurify": "^3.2.0",
     "dompurify": "^3.2.6",
+    "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^6.28.0",

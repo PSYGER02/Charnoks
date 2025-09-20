@@ -1,4 +1,4 @@
-// Connection detection service (YouTube-style)
+// Connection detection service
 class ConnectionService {
   private isOnline = navigator.onLine;
   private listeners: ((online: boolean) => void)[] = [];
@@ -28,7 +28,7 @@ class ConnectionService {
     // Check every 30 seconds (like YouTube)
     this.checkInterval = setInterval(() => {
       this.checkConnection();
-    }, 1000);
+    }, 30000); // Check every 30 seconds instead of 1 second
   }
 
   private async checkConnection(): Promise<boolean> {

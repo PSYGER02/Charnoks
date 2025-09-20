@@ -126,7 +126,10 @@ class OfflineDataInitService {
           });
         } catch (recordError) {
           // Skip individual record errors to continue with bulk operation
-          console.warn(`Failed to store ${tableName} record:`, recordError);
+          // Only log non-duplicate errors to reduce noise
+          if (!(recordError instanceof Error && recordError.message.includes('Key already exists'))) {
+            console.warn(`Failed to store ${tableName} record:`, recordError);
+          }
         }
       }
     } catch (error) {

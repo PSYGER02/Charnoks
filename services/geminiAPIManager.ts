@@ -1,8 +1,10 @@
 /**
- * Smart Gemini API Manager
- * Handles model selection, rate limiting, and optimal usage based on task complexity
- * Based on Gemini API rate limits and usage patterns
+ * Enhanced Gemini API Manager
+ * Integrates @google/genai library with smart model selection, rate limiting, and optimal usage
+ * Patterns inspired by advanced MCP server implementations
  */
+
+import { GoogleGenAI } from '@google/genai';
 
 interface GeminiModel {
   id: string;
@@ -13,6 +15,7 @@ interface GeminiModel {
   costTier: 'free' | 'low' | 'medium' | 'high';
   useCase: string[];
   maxTokens?: number;
+  supportedFeatures?: string[];
 }
 
 interface TaskRequest {
@@ -32,10 +35,10 @@ interface UsageTracker {
 }
 
 /**
- * Gemini Models Configuration based on the rate limits table
+ * Enhanced Gemini Models Configuration with advanced features
  */
 const GEMINI_MODELS: Record<string, GeminiModel> = {
-  // Text-only models
+  // Latest 2.5 series models for enhanced reasoning
   'gemini-2.5-pro': {
     id: 'gemini-2.5-pro',
     name: 'Gemini 2.5 Pro',
@@ -43,7 +46,8 @@ const GEMINI_MODELS: Record<string, GeminiModel> = {
     tpm: 250000,
     rpc: 100,
     costTier: 'high',
-    useCase: ['complex-analysis', 'business-insights', 'detailed-reports']
+    useCase: ['complex-analysis', 'business-insights', 'detailed-reports', 'strategic-planning'],
+    supportedFeatures: ['advanced-reasoning', 'long-context', 'structured-output']
   },
   
   'gemini-2.5-flash': {
@@ -53,7 +57,8 @@ const GEMINI_MODELS: Record<string, GeminiModel> = {
     tpm: 250000,
     rpc: 1000,
     costTier: 'medium',
-    useCase: ['structured-parsing', 'note-analysis', 'pattern-recognition']
+    useCase: ['structured-parsing', 'note-analysis', 'pattern-recognition', 'chicken-business-ops'],
+    supportedFeatures: ['fast-response', 'structured-output', 'json-mode']
   },
   
   'gemini-2.0-flash-lite': {
@@ -143,12 +148,20 @@ const GEMINI_MODELS: Record<string, GeminiModel> = {
 class GeminiAPIManager {
   private usageTrackers: Map<string, UsageTracker> = new Map();
   private apiKey: string;
+  private googleGenAI: GoogleGenAI | null = null;
   private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
   
   constructor(apiKey?: string) {
     this.apiKey = apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
     if (!this.apiKey) {
-      console.warn('⚠️ Gemini API key not configured. AI features will be limited.');
+      console.warn('⚠️ No Gemini API key provided');
+    } else {
+      try {
+        this.googleGenAI = new GoogleGenAI(this.apiKey);
+        console.log('✅ GoogleGenAI client initialized with @google/genai library');
+      } catch (error) {
+        console.warn('⚠️ Failed to initialize @google/genai client, falling back to fetch:', error);
+      }
     }
   }
   
@@ -262,7 +275,51 @@ class GeminiAPIManager {
   }
   
   /**
-   * Specialized method for chicken business note parsing
+   * Enhanced parsing using @google/genai library for better performance
+   */
+  async parseChickenNoteEnhanced(noteText: string, complexity: 'simple' | 'medium' | 'complex' = 'medium'): Promise<any> {
+    if (this.googleGenAI) {
+      try {
+        // Use 2.5 series models for enhanced reasoning
+        const modelId = complexity === 'complex' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+        const model = this.googleGenAI.getGenerativeModel({ model: modelId });
+        
+        const prompt = this.buildChickenNotePrompt(noteText);
+        
+        const result = await model.generateContent({
+          contents: [{
+            role: 'user',
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 1000,
+            responseMimeType: "application/json"
+          }
+        });
+        
+        const response = await result.response;
+        console.log('✅ Enhanced parsing successful with', modelId);
+        
+        return {
+          text: response.text(),
+          metadata: {
+            model: modelId,
+            library: '@google/genai',
+            performance: 'enhanced'
+          }
+        };
+      } catch (error) {
+        console.warn('⚠️ Enhanced parsing failed, falling back to standard method:', error);
+      }
+    }
+    
+    // Fallback to original method
+    return this.parseChickenNote(noteText, complexity);
+  }
+
+  /**
+   * Legacy parsing method (keeping for compatibility)
    */
   async parseChickenNote(noteText: string, complexity: 'simple' | 'medium' | 'complex' = 'medium'): Promise<any> {
     const task: TaskRequest = {
