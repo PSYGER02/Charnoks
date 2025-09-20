@@ -7,145 +7,12 @@
 import { supabase } from '../src/supabaseConfig';
 import { offlineDB } from './offlineService';
 import { connectionService } from './connectionService';
-import { workerBranchSyncService } from './workerBranchSyncService';
 import { smartStockIntegration, type StockIntegrationResult } from './smartStockIntegration';
-import { geminiAPIManager } from './geminiAPIManager';
+import { unifiedAI } from './unifiedAI';
 import { chickenMemoryService } from './chickenMemoryService';
 
-/**
- * Enhanced ChickenBusinessAI class with advanced Gemini integration
- */
-export class ChickenBusinessAI {
-
-  /**
-   * Ensure memory service is connected
-   */
-  private async ensureMemoryConnection(): Promise<void> {
-    if (!chickenMemoryService.isConnected) {
-      console.log('🔌 Connecting to memory service...');
-      await chickenMemoryService.initialize();
-    }
-  }
-
-  /**
-   * Enhanced parsing with memory context using advanced Gemini models
-   */
-  private async parseWithGeminiAndMemory(noteText: string, memoryContext: string): Promise<ChickenBusinessPattern> {
-    try {
-      console.log('🤖 Parsing with memory-enhanced Gemini 2.5 model...');
-      
-      // Enhanced prompt with memory context
-      const enhancedPrompt = `
-You are a chicken business AI assistant with access to business memory and context.
-
-MEMORY CONTEXT:
-${memoryContext}
-
-Current Note: "${noteText}"
-
-Use the memory context to make more intelligent parsing decisions. For example:
-- If "magnolia" is mentioned and memory shows typical pricing/schedule, include that context
-- If a worker is mentioned and memory shows their specialties, factor that in
-- If patterns suggest typical quantities/ratios, use those for validation
-
-Parse this note into structured data about chicken business operations.
-
-Extract information and classify as one of these business types:
-- purchase: Buying whole chickens from suppliers
-- processing: Chopping whole chickens into parts and necks  
-- distribution: Sending chicken parts/necks to branches
-- cooking: Cooking chicken parts/necks at branches
-- sales: Selling cooked chicken, including leftovers with prices
-
-Return ONLY valid JSON in this exact format:
-{
-  "business_type": "purchase|processing|distribution|cooking|sales|general",
-  "confidence_score": 0.0-1.0,
-  "learned_patterns": {
-    // For purchase: supplier, product, bags, units_per_bag, total_units, cost_per_bag
-    // For processing: input_bags, output_parts_bags, output_necks_bags, parts_per_bag, necks_per_bag, yield_ratio
-    // For distribution: branch, distributed_bags, distributed_necks
-    // For cooking: cooked_bags, cooked_necks, cooking_method
-    // For sales: leftover_parts, price_per_part, leftover_necks, price_per_neck, total_sales
-    // Always include: worker_mentioned, branch_mentioned if found
-  }
-}`;
-
-      // Use the enhanced API manager with 2.5 series models
-      const response = await geminiAPIManager.parseChickenNoteEnhanced(enhancedPrompt, 'medium');
-      
-      const parsed = JSON.parse(response.text);
-      
-      console.log('✅ Memory-enhanced parsing successful:', {
-        model: response.metadata?.model,
-        library: response.metadata?.library,
-        confidence: parsed.confidence_score,
-        type: parsed.business_type,
-        memoryUsed: memoryContext.length > 0
-      });
-      
-      return parsed;
-    } catch (error) {
-      console.warn('🔄 Memory-enhanced parsing failed, trying fallback...');
-      return this.parseWithGemini(noteText);
-    }
-  }
-
-  /**
-   * Generate intelligent suggestions using memory insights
-   */
-  private async generateIntelligentSuggestedActions(pattern: ChickenBusinessPattern): Promise<string[]> {
-    const suggestions = this.generateSuggestedActions(pattern);
-    
-    try {
-      // Add memory-based intelligent suggestions
-      const memoryInsights = await this.getMemoryInsights(pattern);
-      suggestions.push(...memoryInsights);
-      
-    } catch (error) {
-      console.warn('⚠️ Failed to get memory insights for suggestions:', error);
-    }
-    
-    return suggestions;
-  }
-
-  /**
-   * Get insights from memory for intelligent suggestions
-   */
-  private async getMemoryInsights(pattern: ChickenBusinessPattern): Promise<string[]> {
-    const insights: string[] = [];
-    
-    // Get supplier insights
-    if (pattern.learned_patterns.supplier) {
-      const supplierContext = await chickenMemoryService.searchBusinessContext(
-        `${pattern.learned_patterns.supplier}_Supplier`
-      );
-      
-      if (supplierContext.length > 0) {
-        insights.push(`💡 ${pattern.learned_patterns.supplier} supplier context available for optimization`);
-      }
-    }
-    
-    // Get worker insights
-    if (pattern.learned_patterns.worker_mentioned) {
-      const workerContext = await chickenMemoryService.searchBusinessContext(
-        `Worker_${pattern.learned_patterns.worker_mentioned}`
-      );
-      
-      if (workerContext.length > 0) {
-        insights.push(`👨‍💼 Worker ${pattern.learned_patterns.worker_mentioned} has recorded performance data`);
-      }
-    }
-    
-    // Business pattern insights
-    const businessContext = await chickenMemoryService.searchBusinessContext('Business_Operations');
-    if (businessContext.length > 0) {
-      insights.push('📈 Historical patterns suggest optimization opportunities');
-    }
-    
-    return insights;
-  }
-}API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+// Constants
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
 
 export interface ChickenBusinessPattern {
@@ -201,8 +68,152 @@ interface AIProcessingResult {
   error?: string;
 }
 
+/**
+ * Enhanced ChickenBusinessAI class with advanced Gemini integration
+ */
 export class ChickenBusinessAI {
-  
+
+  /**
+   * Ensure memory service is connected
+   */
+  private async ensureMemoryConnection(): Promise<void> {
+    try {
+      console.log('🔌 Connecting to memory service...');
+      await chickenMemoryService.initialize();
+    } catch (error) {
+      console.warn('⚠️ Memory service connection failed:', error);
+    }
+  }
+
+  /**
+   * Enhanced parsing with memory context using advanced Gemini models
+   */
+  private async parseWithGeminiAndMemory(noteText: string, memoryContext: string, userRole: 'owner' | 'worker' = 'worker'): Promise<ChickenBusinessPattern> {
+    try {
+      console.log('🤖 Parsing with memory-enhanced Gemini 2.5 model...');
+      
+      // Enhanced prompt with memory context
+      const enhancedPrompt = `
+You are a chicken business AI assistant with access to business memory and context.
+
+MEMORY CONTEXT:
+${memoryContext}
+
+Current Note: "${noteText}"
+
+Use the memory context to make more intelligent parsing decisions. For example:
+- If "magnolia" is mentioned and memory shows typical pricing/schedule, include that context
+- If a worker is mentioned and memory shows their specialties, factor that in
+- If patterns suggest typical quantities/ratios, use those for validation
+
+Parse this note into structured data about chicken business operations.
+
+Extract information and classify as one of these business types:
+- purchase: Buying whole chickens from suppliers
+- processing: Chopping whole chickens into parts and necks  
+- distribution: Sending chicken parts/necks to branches
+- cooking: Cooking chicken parts/necks at branches
+- sales: Selling cooked chicken, including leftovers with prices
+
+Return ONLY valid JSON in this exact format:
+{
+  "business_type": "purchase|processing|distribution|cooking|sales|general",
+  "confidence_score": 0.0-1.0,
+  "learned_patterns": {
+    // For purchase: supplier, product, bags, units_per_bag, total_units, cost_per_bag
+    // For processing: input_bags, output_parts_bags, output_necks_bags, parts_per_bag, necks_per_bag, yield_ratio
+    // For distribution: branch, distributed_bags, distributed_necks
+    // For cooking: cooked_bags, cooked_necks, cooking_method
+    // For sales: leftover_parts, price_per_part, leftover_necks, price_per_neck, total_sales
+    // Always include: worker_mentioned, branch_mentioned if found
+  }
+}`;
+
+      // Use the unified AI service with MCP routing
+      const response = await unifiedAI.parseChickenNote(enhancedPrompt, userRole);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to parse note');
+      }
+      
+      const parsed = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+      
+      console.log('✅ Memory-enhanced parsing successful:', {
+        source: response.source,
+        success: response.success,
+        confidence: parsed.confidence_score,
+        type: parsed.business_type,
+        memoryUsed: memoryContext.length > 0
+      });
+      
+      return parsed;
+    } catch (error) {
+      console.warn('🔄 Memory-enhanced parsing failed, trying fallback...');
+      return this.parseWithGemini(noteText, userRole);
+    }
+  }
+
+  /**
+   * Generate intelligent suggestions using memory insights
+   */
+  private async generateIntelligentSuggestedActions(pattern: ChickenBusinessPattern): Promise<string[]> {
+    const suggestions = this.generateSuggestedActions(pattern);
+    
+    try {
+      // Add memory-based intelligent suggestions
+      const memoryInsights = await this.getMemoryInsights(pattern);
+      suggestions.push(...memoryInsights);
+      
+    } catch (error) {
+      console.warn('⚠️ Failed to get memory insights for suggestions:', error);
+    }
+    
+    return suggestions;
+  }
+
+  /**
+   * Get insights from memory for intelligent suggestions
+   */
+  private async getMemoryInsights(pattern: ChickenBusinessPattern): Promise<string[]> {
+    const insights: string[] = [];
+    
+    // Get supplier insights
+    if (pattern.learned_patterns.supplier) {
+      // TODO: Fix memory service integration
+      // const supplierContext = await chickenMemoryService.searchBusinessContext(
+      //   `${pattern.learned_patterns.supplier}_Supplier`
+      // );
+      const supplierContext: any[] = []; // Temporary fallback
+      
+      if (supplierContext.length > 0) {
+        insights.push(`💡 ${pattern.learned_patterns.supplier} supplier context available for optimization`);
+      }
+    }
+    
+    // Get worker insights
+    if (pattern.learned_patterns.worker_mentioned) {
+      // TODO: Fix memory service integration
+      // const workerContext = await chickenMemoryService.searchBusinessContext(
+      //   `Worker_${pattern.learned_patterns.worker_mentioned}`
+      // );
+      const workerContext: any[] = []; // Temporary fallback
+      
+      if (workerContext.length > 0) {
+        insights.push(`👨‍💼 Worker ${pattern.learned_patterns.worker_mentioned} has recorded performance data`);
+      }
+    }
+    
+    // Business pattern insights
+    // TODO: Fix memory service integration
+    // const businessContext = await chickenMemoryService.searchBusinessContext('Business_Operations');
+    const businessContext: any[] = []; // Temporary fallback
+    if (businessContext.length > 0) {
+      insights.push('📈 Historical patterns suggest optimization opportunities');
+    }
+    
+    return insights;
+  }
+
   /**
    * Main entry point: Process a chicken business note with memory-enhanced AI
    * Your vision: "Owner: Buy magnolia whole chicken 20 bags (10 chickens per bag)"
@@ -218,12 +229,13 @@ export class ChickenBusinessAI {
       // Step 0: Initialize memory service if needed
       await this.ensureMemoryConnection();
       
-      // Step 1: Get intelligent context from memory
-      const memoryContext = await chickenMemoryService.getContextForNote(noteText);
-      console.log('🔍 Memory context:', memoryContext);
+      // TODO: Fix memory service integration
+      // const memoryContext = await chickenMemoryService.getContextForNote(noteText);
+      const memoryContext = '';
+      console.log('🔍 Memory context (temporarily disabled):', memoryContext);
       
       // Step 2: Parse note with Gemini AI (enhanced with memory context)
-      const pattern = await this.parseWithGeminiAndMemory(noteText, memoryContext);
+      const pattern = await this.parseWithGeminiAndMemory(noteText, memoryContext, userRole);
       
       // Step 3: Validate and enhance pattern
       const enhancedPattern = await this.enhancePattern(pattern, userRole, branchId);
@@ -233,7 +245,9 @@ export class ChickenBusinessAI {
       
       // Step 5: Learn from this pattern (update both historical knowledge AND memory)
       await this.learnFromPattern(enhancedPattern);
-      await chickenMemoryService.learnFromPattern(enhancedPattern);
+      // TODO: Fix memory service integration
+      // await chickenMemoryService.learnFromPattern(enhancedPattern);
+      console.log('📚 Memory pattern learning (temporarily disabled):', enhancedPattern.business_type);
       
       // Step 6: Generate intelligent suggested actions using memory
       const suggestedActions = await this.generateIntelligentSuggestedActions(enhancedPattern);
@@ -322,17 +336,21 @@ export class ChickenBusinessAI {
   /**
    * Parse note using Gemini AI with chicken business context
    */
-  private async parseWithGemini(noteText: string): Promise<ChickenBusinessPattern> {
+  private async parseWithGemini(noteText: string, userRole: 'owner' | 'worker' = 'worker'): Promise<ChickenBusinessPattern> {
     try {
-      console.log('🤖 Parsing with smart Gemini model selection...');
+      console.log('🤖 Parsing with unified AI service...');
       
-      // Use the smart API manager for optimal model selection
-      const response = await geminiAPIManager.parseChickenNote(noteText, 'medium');
+      // Use the unified AI service for routing
+      const response = await unifiedAI.parseChickenNote(noteText, userRole);
       
-      const parsed = JSON.parse(response.text);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to parse note');
+      }
       
-      console.log('✅ Smart Gemini parsing successful:', {
-        model: response.metadata?.model,
+      const parsed = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+      
+      console.log('✅ Unified AI parsing successful:', {
+        source: response.source,
         confidence: parsed.confidence_score,
         type: parsed.business_type
       });
@@ -710,7 +728,7 @@ Examples:
       
       if (error) throw error;
       
-      return data.map(item => ({
+      return data.map((item: any) => ({
         business_type: item.business_type,
         confidence_score: item.confidence_score,
         learned_patterns: item.learned_patterns

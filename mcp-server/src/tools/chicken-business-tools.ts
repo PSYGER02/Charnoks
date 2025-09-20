@@ -5,7 +5,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { GeminiProxyManager, TaskRequest } from '../gemini-proxy.js';
+import AdvancedGeminiProxy, { GeminiConfig, GeminiResponse } from '../advanced-gemini-proxy.js';
 
 export interface ChickenBusinessPattern {
   business_type: 'purchase' | 'processing' | 'distribution' | 'cooking' | 'sales' | 'general';
@@ -24,9 +24,9 @@ export interface BusinessAdvice {
 
 export class ChickenBusinessTools {
   private supabase;
-  private geminiProxy: GeminiProxyManager;
+  private geminiProxy: AdvancedGeminiProxy;
 
-  constructor(geminiProxy: GeminiProxyManager) {
+  constructor(geminiProxy: AdvancedGeminiProxy) {
     this.geminiProxy = geminiProxy;
     this.supabase = createClient(
       process.env.SUPABASE_URL!,
@@ -120,14 +120,18 @@ export class ChickenBusinessTools {
       const prompt = this.buildBusinessAdvicePrompt(question, userRole, businessContext, context);
       
       // Get AI response using reliable API
-      const response = await this.geminiProxy.makeReliableRequest(
+      const response = await this.geminiProxy.generateText(
+        prompt,
         { 
-          type: 'text', 
-          complexity: 'complex', 
-          priority: 'high',
-          requiresStructuredOutput: false 
-        },
-        prompt
+          model: 'gemini-2.0-flash',
+          temperature: 0.7,
+          maxOutputTokens: 2000,
+          taskType: {
+            complexity: 'complex',
+            type: 'reasoning',
+            priority: 'high'
+          }
+        }
       );
       
       // Generate contextual recommendations
@@ -399,14 +403,18 @@ Return ONLY valid JSON in this exact format:
   }
 }`;
 
-    const response = await this.geminiProxy.makeReliableRequest(
+    const response = await this.geminiProxy.generateText(
+      prompt,
       { 
-        type: 'text', 
-        complexity: 'medium', 
-        priority: 'normal',
-        requiresStructuredOutput: true 
-      },
-      prompt
+        model: 'gemini-2.0-flash-lite',
+        temperature: 0.3,
+        maxOutputTokens: 1000,
+        taskType: {
+          complexity: 'medium',
+          type: 'analysis',
+          priority: 'medium'
+        }
+      }
     );
 
     try {

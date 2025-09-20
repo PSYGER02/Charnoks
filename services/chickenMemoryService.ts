@@ -1,12 +1,13 @@
 /**
  * Memory Integration Service for Chicken Business AI
- * Bridges the Memory MCP server with chicken business knowledge
+ * Browser-compatible version with local storage backing
  * Enables persistent learning and intelligent context for your AI system
  */
 
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { spawn } from 'child_process';
+// Remove Node.js dependencies for browser compatibility
+// import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+// import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+// import { spawn } from 'child_process';
 import type { ChickenBusinessPattern } from './chickenBusinessAI';
 
 interface BusinessEntity {
@@ -31,47 +32,58 @@ interface BusinessObservation {
 }
 
 export class ChickenBusinessMemoryService {
-  private memoryClient: Client | null = null;
-  private memoryTransport: StdioClientTransport | null = null;
-  private isConnected = false;
+  private storageKey = 'chicken_business_memory';
+  private isInitialized = false;
 
   /**
-   * Initialize connection to Memory MCP server
+   * Initialize browser-compatible memory service using localStorage
    */
   async initialize(): Promise<boolean> {
     try {
-      console.log('🧠 Initializing Chicken Business Memory Service...');
-
-      // Start the Memory MCP server
-      const memoryServerProcess = spawn('node', ['dist/index.js'], {
-        cwd: '/workspaces/Charnoksv3/servers/src/memory',
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-
-      // Create transport and client
-      this.memoryTransport = new StdioClientTransport({
-        stdin: memoryServerProcess.stdin!,
-        stdout: memoryServerProcess.stdout!
-      });
-
-      this.memoryClient = new Client({
-        name: 'chicken-business-memory-client',
-        version: '1.0.0'
-      }, {
-        capabilities: {}
-      });
-
-      // Connect to memory server
-      await this.memoryClient.connect(this.memoryTransport);
-      this.isConnected = true;
-
-      console.log('✅ Memory service connected successfully');
+      console.log('🧠 Initializing Chicken Business Memory Service (Browser Mode)...');
+      
+      // Initialize localStorage structure if it doesn't exist
+      if (!localStorage.getItem(this.storageKey)) {
+        localStorage.setItem(this.storageKey, JSON.stringify({
+          entities: [],
+          relations: [],
+          patterns: [],
+          contexts: {}
+        }));
+      }
+      
+      this.isInitialized = true;
+      console.log('✅ Memory service initialized successfully');
       return true;
 
     } catch (error) {
       console.error('❌ Failed to initialize memory service:', error);
-      this.isConnected = false;
+      this.isInitialized = false;
       return false;
+    }
+  }
+
+  /**
+   * Get memory data from localStorage
+   */
+  private getMemoryData(): any {
+    try {
+      const data = localStorage.getItem(this.storageKey);
+      return data ? JSON.parse(data) : { entities: [], relations: [], patterns: [], contexts: {} };
+    } catch (error) {
+      console.warn('Failed to parse memory data:', error);
+      return { entities: [], relations: [], patterns: [], contexts: {} };
+    }
+  }
+
+  /**
+   * Save memory data to localStorage
+   */
+  private saveMemoryData(data: any): void {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(data));
+    } catch (error) {
+      console.warn('Failed to save memory data:', error);
     }
   }
 
@@ -79,24 +91,43 @@ export class ChickenBusinessMemoryService {
    * Store business entities in memory (suppliers, customers, workers, etc.)
    */
   async storeBusinessEntity(entity: BusinessEntity): Promise<boolean> {
-    if (!this.isConnected || !this.memoryClient) {
-      console.warn('Memory service not connected');
+    if (!this.isInitialized) {
+      console.warn('Memory service not initialized');
       return false;
     }
 
     try {
-      await this.memoryClient.request({
-        method: 'tools/call',
-        params: {
-          name: 'create_entities',
-          arguments: {
-            entities: [{
-              name: entity.name,
-              entityType: entity.entityType,
-              observations: entity.attributes ? Object.entries(entity.attributes).map(
-                ([key, value]) => `${key}: ${String(value)}`
-              ) : []
-            }]
+      const memoryData = this.getMemoryData();
+      
+      // Check if entity already exists
+      const existingIndex = memoryData.entities.findIndex((e: any) => 
+        e.name === entity.name && e.entityType === entity.entityType
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing entity
+        memoryData.entities[existingIndex] = {
+          ...memoryData.entities[existingIndex],
+          ...entity,
+          lastUpdated: new Date().toISOString()
+        };
+      } else {
+        // Add new entity
+        memoryData.entities.push({
+          ...entity,
+          created: new Date().toISOString(),
+          lastUpdated: new Date().toISOString()
+        });
+      }
+      
+      this.saveMemoryData(memoryData);
+      return true;
+
+    } catch (error) {
+      console.error('Failed to store business entity:', error);
+      return false;
+    }
+  }
           }
         }
       });
