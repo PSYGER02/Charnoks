@@ -46,9 +46,11 @@ export default defineConfig(({ command, mode }) => {
             host: '0.0.0.0',
             open: false,
             strictPort: false,
-            // Try multiple ports if 5173 is occupied
+            // Fix WebSocket issues in GitHub Codespaces
             hmr: {
-                port: 24678
+                port: 24678,
+                clientPort: 24678,
+                host: 'localhost'
             },
             // Proxy API calls in development
             proxy: command === 'serve' ? {

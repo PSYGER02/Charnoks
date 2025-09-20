@@ -8,12 +8,14 @@ import { supabase } from '../src/supabaseConfig';
 import { offlineDB } from './offlineService';
 import { connectionService } from './connectionService';
 import { workerBranchSyncService } from './workerBranchSyncService';
+import { smartStockIntegration, type StockIntegrationResult } from './smartStockIntegration';
+import { geminiAPIManager } from './geminiAPIManager';
 
-// Gemini API integration (assuming you have this)
+// Legacy fallback - geminiAPIManager handles this better now
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
 
-interface ChickenBusinessPattern {
+export interface ChickenBusinessPattern {
   business_type: 'purchase' | 'processing' | 'distribution' | 'cooking' | 'sales' | 'general';
   confidence_score: number;
   learned_patterns: {
@@ -107,7 +109,71 @@ export class ChickenBusinessAI {
       console.error('❌ ChickenBusinessAI failed:', error);
       return {
         success: false,
-        error: error.message
+        error: String(error)
+      };
+    }
+  }
+
+  /**
+   * Apply AI pattern to actual stock/sales/expenses
+   * Phase 2 integration - connects patterns to real business data
+   */
+  async applyPatternToStock(
+    noteId: string,
+    userRole: 'owner' | 'worker',
+    branchId?: string
+  ): Promise<{ success: boolean; results?: StockIntegrationResult; error?: string }> {
+    try {
+      console.log('📊 Applying pattern to stock for note:', noteId);
+
+      // 1. Get the note with AI pattern
+      const { data: note, error: noteError } = await supabase
+        .from('notes')
+        .select('business_type, learned_patterns, confidence_score')
+        .eq('id', noteId)
+        .single();
+
+      if (noteError) throw noteError;
+
+      if (!note.business_type || !note.learned_patterns) {
+        throw new Error('Note has no AI pattern to apply');
+      }
+
+      // 2. Check if already applied
+      const status = await smartStockIntegration.getIntegrationStatus(noteId);
+      if (status.applied) {
+        return {
+          success: true,
+          results: status.results,
+          error: 'Pattern already applied to stock'
+        };
+      }
+
+      // 3. Apply pattern to stock
+      const pattern: ChickenBusinessPattern = {
+        business_type: note.business_type,
+        confidence_score: note.confidence_score,
+        learned_patterns: note.learned_patterns
+      };
+
+      const results = await smartStockIntegration.applyPatternToStock(pattern, userRole, branchId);
+
+      // 4. Mark as applied
+      if (results.success) {
+        await smartStockIntegration.markAsApplied(noteId, results);
+      }
+
+      return {
+        success: results.success,
+        results,
+        error: results.errors?.[0]
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to apply pattern to stock:', error);
+      return {
+        success: false,
+        error: String(error)
       };
     }
   }
@@ -116,6 +182,31 @@ export class ChickenBusinessAI {
    * Parse note using Gemini AI with chicken business context
    */
   private async parseWithGemini(noteText: string): Promise<ChickenBusinessPattern> {
+    try {
+      console.log('🤖 Parsing with smart Gemini model selection...');
+      
+      // Use the smart API manager for optimal model selection
+      const response = await geminiAPIManager.parseChickenNote(noteText, 'medium');
+      
+      const parsed = JSON.parse(response.text);
+      
+      console.log('✅ Smart Gemini parsing successful:', {
+        model: response.metadata?.model,
+        confidence: parsed.confidence_score,
+        type: parsed.business_type
+      });
+      
+      return parsed;
+    } catch (error) {
+      console.warn('🔄 Smart parsing failed, trying fallback method...');
+      return this.fallbackGeminiParsing(noteText);
+    }
+  }
+
+  /**
+   * Fallback to original Gemini method if smart manager fails
+   */
+  private async fallbackGeminiParsing(noteText: string): Promise<ChickenBusinessPattern> {
     const prompt = `
 You are a chicken business AI assistant. Parse this note into structured data about chicken business operations.
 
@@ -366,14 +457,14 @@ Examples:
       } else {
         // Save to IndexedDB only (will sync later)
         const id = await offlineDB.save('notes', { ...noteData, sync_status: 'pending' });
-        return id.toString();
+        return String(id);
       }
     } catch (error) {
       console.error('❌ Failed to save AI note:', error);
       
       // Fallback to IndexedDB
       const id = await offlineDB.save('notes', { ...noteData, sync_status: 'pending' });
-      return id.toString();
+      return String(id);
     }
   }
   
