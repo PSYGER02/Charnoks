@@ -1,6 +1,7 @@
 import { parseStockNote } from './geminiService';
 import { supabase } from '../src/supabaseConfig';
 import { offlineDB } from './offlineService';
+import { recordSale, recordExpense } from './supabaseService';
 
 export class AIAgentService {
   // Step 1: Note → IndexedDB → Supabase → Gemini → Structured Data
@@ -105,10 +106,8 @@ export class AIAgentService {
       case 'notes':
         return this.syncAndProcess(data.content, data.user_role);
       case 'sales':
-        const { recordSale } = await import('./supabaseService');
         return recordSale(data);
       case 'expenses':
-        const { recordExpense } = await import('./supabaseService');
         return recordExpense(data);
       case 'products':
         return supabase.from(table).insert(data);

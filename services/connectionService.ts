@@ -5,8 +5,11 @@ class ConnectionService {
   private checkInterval: NodeJS.Timeout | null = null;
 
   constructor() {
+    console.log('🔌 ConnectionService initialized, navigator.onLine:', navigator.onLine);
     this.setupEventListeners();
     this.startPeriodicCheck();
+    // Force initial check
+    this.checkConnection();
   }
 
   private setupEventListeners() {
@@ -25,22 +28,24 @@ class ConnectionService {
     // Check every 30 seconds (like YouTube)
     this.checkInterval = setInterval(() => {
       this.checkConnection();
-    }, 30000);
+    }, 1000);
   }
 
   private async checkConnection(): Promise<boolean> {
     try {
-      // Try to fetch a small resource (like YouTube does)
-      const response = await fetch('/favicon.ico', {
+      // Try to fetch a small resource that actually exists
+      const response = await fetch('/manifest.json', {
         method: 'HEAD',
         cache: 'no-cache',
         signal: AbortSignal.timeout(5000) // 5 second timeout
       });
       
       const online = response.ok;
+      console.log('🔌 Connection check result:', online, 'status:', response.status);
       this.updateStatus(online);
       return online;
-    } catch {
+    } catch (error) {
+      console.log('🔌 Connection check failed:', error instanceof Error ? error.message : 'Unknown error');
       this.updateStatus(false);
       return false;
     }
@@ -48,6 +53,7 @@ class ConnectionService {
 
   private updateStatus(online: boolean) {
     if (this.isOnline !== online) {
+      console.log('🔌 Connection status changed:', this.isOnline, '->', online);
       this.isOnline = online;
       this.listeners.forEach(listener => listener(online));
     }

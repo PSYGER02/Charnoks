@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Expense } from '../../types';
 import { useAuth } from '../../hooks/useSupabaseAuth';
+import { supabase } from '../../src/supabaseConfig';
 import Spinner from '../../components/ui/Spinner';
 import SuccessOverlay from '../../components/ui/SuccessOverlay';
 import { getExpensesUnified } from '../../services/unifiedDataService';
@@ -11,18 +12,8 @@ import ConnectionStatus from '../../components/ui/ConnectionStatus';
 const ExpenseRow: React.FC<{ expense: Expense; workers: any[] }> = ({ expense, workers }) => {
     const [isOpen, setIsOpen] = useState(false);
     
-    // Improved worker name lookup with debugging
-    const worker = workers.find(w => w.id === expense.workerId);
-    const workerName = worker?.name || expense.workerName || 'Unknown Worker';
-    
-    // Debug log for troubleshooting
-    if (!worker && expense.workerId) {
-        console.log('Worker not found for expense:', {
-            expenseId: expense.id,
-            workerId: expense.workerId,
-            availableWorkers: workers.map(w => ({ id: w.id, name: w.name }))
-        });
-    }
+    // Worker name resolution - look up in workers array first, then fallback to stored name
+    const workerName = workers.find(w => w.id === expense.workerId)?.name || expense.workerName || 'Unknown Worker';
 
     return (
         <>
@@ -168,11 +159,21 @@ const ExpensesPage: React.FC = () => {
         setIsLoading(true);
 
         try {
+            // Get user profile for worker name (like recordExpense does)
+            const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('display_name')
+                .eq('id', user?.uid)
+                .single();
+            
+            const workerName = profile?.display_name || user?.email?.split('@')[0] || 'User';
+
             const expenseData = {
                 description,
                 amount: parseFloat(amount),
                 category: 'general',
-                worker_id: user?.id
+                worker_id: user?.uid,
+                worker_name: workerName  // Add worker name like other services do
             };
 
             // Use unified service for saving expenses

@@ -3,19 +3,28 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ command, mode }) => {
     // Load env file based on `mode` in the current working directory.
-    const env = loadEnv(mode, process.cwd(), '');
+    const _env = loadEnv(mode, process.cwd(), '');
     
     return {
         plugins: [react()],
         build: {
+            outDir: 'build-output',
+            emptyOutDir: true,
             target: 'esnext',
             sourcemap: true,
+            chunkSizeWarningLimit: 1000,
             rollupOptions: {
                 output: {
                     manualChunks: {
                         vendor: ['react', 'react-dom'],
                         supabase: ['@supabase/supabase-js'],
-                        charts: ['recharts']
+                        charts: ['recharts'],
+                        router: ['react-router-dom'],
+                        services: [
+                            './services/supabaseService',
+                            './services/unifiedDataService',
+                            './services/smartSaveService'
+                        ]
                     }
                 }
             }
@@ -34,7 +43,13 @@ export default defineConfig(({ command, mode }) => {
         // Server configuration for development
         server: {
             port: 5173,
-            host: true,
+            host: '0.0.0.0',
+            open: false,
+            strictPort: false,
+            // Try multiple ports if 5173 is occupied
+            hmr: {
+                port: 24678
+            },
             // Proxy API calls in development
             proxy: command === 'serve' ? {
                 '/api': {
@@ -47,7 +62,9 @@ export default defineConfig(({ command, mode }) => {
         // Preview configuration
         preview: {
             port: 4173,
-            host: true
+            host: '0.0.0.0',
+            open: false,
+            strictPort: false
         }
     };
 });

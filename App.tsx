@@ -13,6 +13,7 @@ import OwnerHomePage from './pages/owner/OwnerHomePage';
 import AnalysisPage from './pages/owner/AnalysisPage';
 import AdvancedAnalyticsPage from './pages/owner/AdvancedAnalyticsPage';
 import AIAssistantPage from './pages/owner/AIAssistantPage';
+import AITestPage from './pages/owner/AITestPage';
 import StockManagementPage from './pages/owner/StockManagementPage';
 import ProductsPage from './pages/owner/ProductsPage';
 import ExpensesPage from './pages/owner/ExpensesPage';

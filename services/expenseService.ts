@@ -17,7 +17,7 @@ export const getExpenses = async (limitCount: number = 50): Promise<Expense[]> =
     }
 
     // Fix worker names in background if needed
-    const hasUnknownWorkers = data?.some(expense => 
+    const hasUnknownWorkers = data?.some((expense: any) => 
       !expense.worker_name || expense.worker_name === 'Unknown' || expense.worker_name === 'Worker'
     );
     if (hasUnknownWorkers) {
@@ -46,13 +46,26 @@ export const recordExpense = async (expenseData: {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('display_name')
-      .eq('id', user.id)
-      .single();
+    let workerName = 'Unknown Worker';
     
-    const workerName = profile?.display_name || user.email?.split('@')[0] || 'User';
+    // ALWAYS get fresh display name from user_profiles
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('display_name, email')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile) {
+        workerName = profile.display_name || profile.email?.split('@')[0] || user.email?.split('@')[0] || 'Unknown Worker';
+      } else {
+        // Fallback to auth user email
+        workerName = user.email?.split('@')[0] || 'Unknown Worker';
+      }
+    } catch (profileError) {
+      console.warn('Could not fetch user profile, using auth email:', profileError);
+      workerName = user.email?.split('@')[0] || 'Unknown Worker';
+    }
 
     const { data, error } = await supabase
       .from('expenses')

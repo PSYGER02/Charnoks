@@ -11,12 +11,14 @@ export interface Worker {
 // Fast worker lookup - query user_profiles directly (FIXED)
 export const getWorkers = async (): Promise<Worker[]> => {
   try {
-    // Query user_profiles instead of workers table (which might be empty)
+    console.log('👥 Fetching workers from user_profiles');
+    
+    // Query user_profiles for all active users (not just workers)
+    // This ensures we can resolve worker names for expenses created by owners too
     const { data, error } = await supabase
       .from('user_profiles')
       .select('id, display_name, email, is_active, role')
-      .eq('role', 'worker')
-      .eq('is_active', true)
+      .eq('is_active', true) // Remove role filter to include owners
       .order('display_name');
 
     if (error) {
@@ -24,7 +26,9 @@ export const getWorkers = async (): Promise<Worker[]> => {
       return [];
     }
 
-    return (data || []).map(w => ({
+    console.log('👥 Found user profiles:', data?.length || 0);
+    
+    return (data || []).map((w: any) => ({
       id: w.id,
       name: w.display_name || w.email?.split('@')[0] || 'Worker',
       email: w.email,

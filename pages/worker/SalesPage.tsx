@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import type { ParsedSale } from '../../types';
 import VoiceInputButton from '../../components/ui/VoiceInputButton';
 import ConfirmationModal from '../../components/ui/ConfirmationModal';
-import { subscribeToProducts, recordSale } from '../../services/supabaseService';
+import { subscribeToProducts, recordSale, getProducts } from '../../services/supabaseService';
 import { parseSaleFromVoice } from '../../services/supabaseService';
 import { smartSaveService } from '../../services/smartSaveService';
 import ConnectionStatus from '../../components/ui/ConnectionStatus';
@@ -68,8 +68,7 @@ const SalesPage: React.FC = () => {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        // Simple direct call like other working pages
-        const { getProducts } = await import('../../services/supabaseService');
+        // Use static import to avoid bundling conflicts
         const fetchedProducts = await getProducts();
         setProducts(fetchedProducts);
         setLoadingProducts(false);

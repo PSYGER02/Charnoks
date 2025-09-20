@@ -1,140 +1,173 @@
 import React, { useState } from 'react';
-import { supabase } from '../src/supabaseConfig';
-import { aiAgent } from '../services/AIAgentService';
+import { chickenBusinessAI } from '../services/chickenBusinessAI';
 import { offlineDB } from '../services/offlineService';
-import { useAuth } from '../hooks/useSupabaseAuth';
 
 interface NoteInputProps {
   userRole: 'owner' | 'worker';
+  branchId?: string;
   onNoteSaved?: () => void;
 }
 
-const NoteInput: React.FC<NoteInputProps> = ({ userRole, onNoteSaved }) => {
-  const { user } = useAuth();
+const NoteInput: React.FC<NoteInputProps> = ({ userRole, branchId, onNoteSaved }) => {
   const [note, setNote] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [parsing, setParsing] = useState(false);
-  const [applying, setApplying] = useState(false);
-  const [parsedData, setParsedData] = useState<any>(null);
-  const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [aiResult, setAiResult] = useState<any>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  const processNote = async () => {
+  const processChickenNote = async () => {
     if (!note.trim()) return;
     
-    setParsing(true);
-    try {
-      // Save to IndexedDB first (offline-first)
-      await offlineDB.save('notes', { content: note, user_role: userRole });
-      
-      // Try AI processing if online
-      if (navigator.onLine) {
-        const result = await aiAgent.processNote(note, userRole);
-        setParsedData(result.parsed || { status: 'processed' });
-        alert('✅ Processed and synced!');
-      } else {
-        alert('💾 Saved offline - will sync when online');
-      }
-      
-      setNote('');
-      onNoteSaved?.();
-    } catch (error) {
-      console.warn('Process error:', error);
-    } finally {
-      setParsing(false);
-    }
-  };
-
-  const applyToStock = async () => {
-    if (!parsedData || !savedNoteId || !user) return;
+    setProcessing(true);
+    setAiResult(null);
+    setSuggestions([]);
     
-    setApplying(true);
     try {
-      const result = await applyParsedDataToStock(savedNoteId, parsedData, user.uid);
+      console.log('🧠 Processing chicken business note...');
+      
+      // Use ChickenBusinessAI to process the note
+      const result = await chickenBusinessAI.processChickenNote(
+        note, 
+        userRole, 
+        branchId
+      );
+      
       if (result.success) {
-        alert('✅ Applied to stock successfully!');
+        setAiResult(result);
+        setSuggestions(result.suggested_actions || []);
+        
+        // Show success with pattern info
+        const pattern = result.pattern;
+        alert(`✅ AI processed as: ${pattern?.business_type} (${Math.round((pattern?.confidence_score || 0) * 100)}% confidence)`);
+        
+        // Clear note after successful processing
         setNote('');
-        setParsedData(null);
-        setSavedNoteId(null);
         onNoteSaved?.();
       } else {
-        alert('❌ Failed to apply to stock');
+        console.error('❌ AI processing failed:', result.error);
+        alert(`❌ AI processing failed: ${result.error}`);
       }
-    } catch (error) {
-      console.error('Failed to apply to stock:', error);
+      
+    } catch (error: any) {
+      console.error('❌ Error processing note:', error);
+      alert(`❌ Error: ${error?.message || 'Unknown error'}`);
     } finally {
-      setApplying(false);
+      setProcessing(false);
     }
   };
 
-  const saveNote = async () => {
+  const quickSaveNote = async () => {
     if (!note.trim()) return;
     
-    setSaving(true);
     try {
-      const { data, error } = await supabase.from('notes').insert({
-        content: note,
+      // Quick save without AI processing for simple notes
+      await offlineDB.save('notes', { 
+        content: note, 
         user_role: userRole,
-        parsed_data: parsedData,
-        status: parsedData ? 'parsed' : 'pending',
-        created_at: new Date().toISOString()
-      }).select().single();
+        business_type: 'general',
+        local_uuid: crypto.randomUUID(),
+        sync_status: 'pending'
+      });
       
-      if (error) throw error;
-      
-      setSavedNoteId(data.id);
+      alert('💾 Note saved locally');
+      setNote('');
       onNoteSaved?.();
+      
     } catch (error) {
-      console.error('Failed to save note:', error);
-    } finally {
-      setSaving(false);
+      console.error('❌ Failed to save note:', error);
+      alert('❌ Failed to save note');
     }
   };
 
   return (
     <div className="modern-card p-4">
-      <h3 className="text-lg font-bold mb-3">📝 Stock Notes</h3>
+      <h3 className="text-lg font-bold mb-3">🧠 Chicken Business AI</h3>
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder={userRole === 'owner' 
-          ? "e.g. Bought magnolia whole chicken 20 bags, each bag 10 chickens"
-          : "e.g. Cooked 1 bag, sold 20 pieces at 35 pesos"
+          ? "e.g. 'Buy magnolia whole chicken 20 bags (10 chickens per bag)' or 'Chopped 200 chickens into 35 bags parts + 10 neck bags'"
+          : "e.g. 'Branch1 cooked 1 bag' or 'Leftovers: 20 pieces @35 pesos, 10 necks @15 pesos'"
         }
         rows={3}
         className="w-full bg-transparent border-2 border-border/50 rounded-lg p-3 focus:border-primary focus:ring-0 transition"
       />
       <div className="flex gap-2 mt-3">
         <button
-          onClick={processNote}
-          disabled={!note.trim() || parsing}
-          className="px-4 py-2 bg-accent text-white rounded-lg disabled:opacity-50"
+          onClick={processChickenNote}
+          disabled={!note.trim() || processing}
+          className="px-4 py-2 bg-accent text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
         >
-          {parsing ? 'Processing...' : '🚀 Process'}
+          {processing ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              AI Processing...
+            </>
+          ) : (
+            <>🧠 AI Process</>
+          )}
         </button>
         <button
-          onClick={saveNote}
-          disabled={!note.trim() || saving}
-          className="px-4 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
+          onClick={quickSaveNote}
+          disabled={!note.trim()}
+          className="px-4 py-2 bg-gray-600 text-white rounded-lg disabled:opacity-50"
         >
-          {saving ? 'Saving...' : 'Save'}
+          💾 Quick Save
         </button>
-        {parsedData && savedNoteId && (
-          <button
-            onClick={applyToStock}
-            disabled={applying}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50"
-          >
-            {applying ? 'Applying...' : '📊 Apply to Stock'}
-          </button>
-        )}
       </div>
       
-      {parsedData && (
-        <div className="mt-4 p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
-          <h4 className="text-green-300 font-medium mb-2">✅ AI Parsed Data:</h4>
-          <pre className="text-xs text-green-200 overflow-auto">
-            {JSON.stringify(parsedData, null, 2)}
-          </pre>
+      {/* AI Result Display */}
+      {aiResult && aiResult.success && (
+        <div className="mt-4 space-y-3">
+          {/* Pattern Info */}
+          <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+            <h4 className="text-blue-300 font-medium mb-2">🤖 AI Analysis:</h4>
+            <div className="text-sm text-blue-200 space-y-1">
+              <div><strong>Type:</strong> {aiResult.pattern?.business_type}</div>
+              <div><strong>Confidence:</strong> {Math.round((aiResult.pattern?.confidence_score || 0) * 100)}%</div>
+              {aiResult.pattern?.learned_patterns?.supplier && (
+                <div><strong>Supplier:</strong> {aiResult.pattern.learned_patterns.supplier}</div>
+              )}
+              {aiResult.pattern?.learned_patterns?.bags && (
+                <div><strong>Bags:</strong> {aiResult.pattern.learned_patterns.bags}</div>
+              )}
+              {aiResult.pattern?.learned_patterns?.branch && (
+                <div><strong>Branch:</strong> {aiResult.pattern.learned_patterns.branch}</div>
+              )}
+            </div>
+          </div>
+          
+          {/* Suggestions */}
+          {suggestions.length > 0 && (
+            <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+              <h4 className="text-green-300 font-medium mb-2">💡 Suggested Actions:</h4>
+              <ul className="text-sm text-green-200 space-y-1">
+                {suggestions.map((suggestion: string, index: number) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-green-400">•</span>
+                    <span>{suggestion}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {/* Stock Update Status */}
+          {aiResult.should_update_stock && (
+            <div className="p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+              <h4 className="text-yellow-300 font-medium mb-2">📊 Stock Impact:</h4>
+              <p className="text-sm text-yellow-200">
+                This operation should update your inventory. Future versions will do this automatically!
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Error Display */}
+      {aiResult && !aiResult.success && (
+        <div className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
+          <h4 className="text-red-300 font-medium mb-2">❌ AI Error:</h4>
+          <p className="text-sm text-red-200">{aiResult.error}</p>
         </div>
       )}
     </div>
