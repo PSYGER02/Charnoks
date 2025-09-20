@@ -1,0 +1,59 @@
+{
+  "name": "Charnoks AI Development",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
+  "hostRequirements": {
+    "cpus": 8,
+    "memory": "32gb",
+    "storage": "64gb"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "nodeGypDependencies": true,
+      "version": "22"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "forwardPorts": [5173, 4173, 3000],
+  "portsAttributes": {
+    "5173": {
+      "label": "Vite Dev Server",
+      "onAutoForward": "openBrowser"
+    },
+    "4173": {
+      "label": "Vite Preview",
+      "onAutoForward": "notify"
+    },
+    "3000": {
+      "label": "API Server",
+      "onAutoForward": "notify"
+    }
+  },
+  "onCreateCommand": "npm install",
+  "postCreateCommand": "npm run setup || true",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-json",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-eslint"
+      ],
+      "settings": {
+        "typescript.preferences.includePackageJsonAutoImports": "auto",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "emmet.includeLanguages": {
+          "typescript": "html",
+          "typescriptreact": "html"
+        }
+      }
+    }
+  },
+  "mounts": [
+    "source=charnoks-node-modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
+  ],
+  "remoteUser": "node"
+}
