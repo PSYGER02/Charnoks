@@ -149,6 +149,120 @@ class OfflineFirstDataService {
   }
 
   /**
+   * Get dashboard data with offline-first approach
+   */
+  async getDashboardData() {
+    try {
+      const [sales, expenses] = await Promise.all([
+        this.getSales(30),
+        this.getExpenses(30)
+      ]);
+
+      // Calculate dashboard metrics
+      const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+      const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+      const netProfit = totalRevenue - totalExpenses;
+      const transactions = sales.length;
+
+      // Calculate sales trend (last 7 days)
+      const salesTrend = this.calculateSalesTrend(sales);
+
+      // Get top products from sales data
+      const topProducts = this.calculateTopProducts(sales);
+
+      return {
+        totalRevenue,
+        totalExpenses,
+        netProfit,
+        transactions,
+        salesTrend,
+        topProducts
+      };
+    } catch (error) {
+      console.error('Failed to get dashboard data:', error);
+      return {
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        transactions: 0,
+        salesTrend: this.getEmptySalesTrend(),
+        topProducts: [{ name: 'No products yet', value: 1 }]
+      };
+    }
+  }
+
+  /**
+   * Calculate sales trend for last 7 days
+   */
+  private calculateSalesTrend(sales: Sale[]) {
+    const now = new Date();
+    const salesTrend = [];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+      
+      const daySales = sales.filter((sale: Sale) => {
+        const saleDate = new Date(sale.date);
+        return saleDate >= date && saleDate < nextDate;
+      });
+      
+      const dayTotal = daySales.reduce((sum: number, sale: Sale) => sum + (sale.total || 0), 0);
+      
+      salesTrend.push({
+        name: dayNames[date.getDay()],
+        sales: dayTotal
+      });
+    }
+
+    return salesTrend;
+  }
+
+  /**
+   * Calculate top products from sales data
+   */
+  private calculateTopProducts(sales: Sale[]) {
+    const productTotals: { [key: string]: number } = {};
+    
+    sales.forEach(sale => {
+      if (sale.items && Array.isArray(sale.items)) {
+        sale.items.forEach((item: any) => {
+          const productName = item.productName || item.name || 'Unknown Product';
+          const quantity = item.quantity || 0;
+          productTotals[productName] = (productTotals[productName] || 0) + quantity;
+        });
+      }
+    });
+
+    const topProductsArray = Object.entries(productTotals)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    return topProductsArray.length > 0 ? topProductsArray : [{ name: 'No products yet', value: 1 }];
+  }
+
+  /**
+   * Get empty sales trend for fallback
+   */
+  private getEmptySalesTrend() {
+    return [
+      { name: 'Mon', sales: 0 },
+      { name: 'Tue', sales: 0 },
+      { name: 'Wed', sales: 0 },
+      { name: 'Thu', sales: 0 },
+      { name: 'Fri', sales: 0 },
+      { name: 'Sat', sales: 0 },
+      { name: 'Sun', sales: 0 }
+    ];
+  }
+
+  /**
    * Private method to update local cache with fresh data
    */
   private async _updateLocalCache(tableName: string, data: any[]): Promise<void> {
@@ -182,3 +296,6 @@ export const getWorkersOfflineFirst = () =>
 
 export const getProductsOfflineFirst = (limitCount?: number) => 
   offlineFirstDataService.getProducts(limitCount);
+
+export const getDashboardDataOfflineFirst = () => 
+  offlineFirstDataService.getDashboardData();

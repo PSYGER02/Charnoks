@@ -51,6 +51,19 @@ class OfflineDB {
       throw new Error(`Store ${tableName} does not exist`);
     }
     
+    // Validate save operation to prevent duplicates
+    try {
+      const { validateSave } = await import('./dataDeduplicationService');
+      const validation = await validateSave(tableName, data);
+      
+      if (!validation.valid) {
+        console.warn(`❌ Save blocked: ${validation.reason}`);
+        throw new Error(validation.reason);
+      }
+    } catch (validationError) {
+      console.warn('Validation service unavailable, proceeding with save');
+    }
+    
     const record = {
       ...data,
       local_uuid: data.local_uuid || crypto.randomUUID(), // Generate UUID if not provided

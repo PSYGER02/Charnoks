@@ -36,6 +36,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     import.meta.env.VITE_SUPABASE_ANON_KEY !== 'undefined';
 
   useEffect(() => {
+    // Check for demo mode first
+    const demoMode = localStorage.getItem('demo_mode') === 'true';
+    const demoUser = localStorage.getItem('demo_user');
+    
+    if (demoMode && demoUser) {
+      try {
+        const userData = JSON.parse(demoUser);
+        setUser(userData);
+        setLoading(false);
+        console.log('🎭 Demo mode active:', userData);
+        return;
+      } catch (error) {
+        console.warn('Invalid demo user data');
+      }
+    }
+    
     // FORCE loading to false after 2 seconds to prevent infinite loading
     const forceTimeout = setTimeout(() => {
       if (loading) {
