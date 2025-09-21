@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
-import { THEMES } from '../constants';
+import { THEMES } from '../components/constants';
 import type { Theme } from '../types';
 
 interface ThemeContextType {

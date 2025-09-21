@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { OWNER_NAVIGATION_ITEMS } from '../../constants';
+import { OWNER_NAVIGATION_ITEMS } from '../constants';
 import LogoutButton from '../ui/LogoutButton';
 
 const ResponsiveLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {

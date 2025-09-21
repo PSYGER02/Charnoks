@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { WORKER_NAVIGATION_ITEMS } from '../../constants';
+import { WORKER_NAVIGATION_ITEMS } from '../constants';
 import LogoutButton from '../ui/LogoutButton';
 
 export const WorkerLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {

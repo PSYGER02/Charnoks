@@ -4,9 +4,17 @@
  * Safe AI that cannot make destructive writes - perfect for business insights!
  */
 
-import { supabase } from '../src/supabaseConfig';
-import { geminiAPIManager } from './geminiAPIManager';
-import { offlineDB } from './offlineService';
+import { createClient } from '@supabase/supabase-js';
+import { GeminiAPIManager } from './geminiAPIManager';
+
+// Initialize Supabase client for MCP server context
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// Initialize Gemini API manager
+const geminiAPIManager = new GeminiAPIManager();
 
 interface BusinessInsight {
   type: 'insight' | 'trend' | 'recommendation' | 'alert';

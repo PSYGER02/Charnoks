@@ -1,5 +1,5 @@
 
-import type { Theme } from './types';
+import type { Theme } from '../types';
 
 export const OWNER_NAVIGATION_ITEMS = [
   { path: '/owner/dashboard', icon: '👑', label: 'Dashboard' },

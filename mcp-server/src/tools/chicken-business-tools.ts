@@ -1,11 +1,13 @@
 /**
  * Chicken Business Tools for MCP Server
  * Integrates your existing AI services as MCP tools
- * Provides reliable access to all 6 AI services through the Gemini proxy
+ * Provides reliable access to all AI services through the Gemini proxy
  */
 
 import { createClient } from '@supabase/supabase-js';
-import AdvancedGeminiProxy, { GeminiConfig, GeminiResponse } from '../advanced-gemini-proxy.js';
+import AdvancedGeminiProxy, { GeminiConfig, GeminiResponse, TaskRequest } from '../advanced-gemini-proxy.js';
+import AIStoreAdvisorService from '../services/ai-store-advisor.js';
+import AIObserverService from '../services/ai-observer.js';
 
 export interface ChickenBusinessPattern {
   business_type: 'purchase' | 'processing' | 'distribution' | 'cooking' | 'sales' | 'general';
@@ -25,6 +27,8 @@ export interface BusinessAdvice {
 export class ChickenBusinessTools {
   private supabase;
   private geminiProxy: AdvancedGeminiProxy;
+  private aiStoreAdvisor: AIStoreAdvisorService;
+  private aiObserver: AIObserverService;
 
   constructor(geminiProxy: AdvancedGeminiProxy) {
     this.geminiProxy = geminiProxy;
@@ -32,6 +36,10 @@ export class ChickenBusinessTools {
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+    
+    // Initialize AI services
+    this.aiStoreAdvisor = new AIStoreAdvisorService(geminiProxy);
+    this.aiObserver = new AIObserverService(geminiProxy);
   }
 
   async initialize(): Promise<void> {
@@ -99,7 +107,7 @@ export class ChickenBusinessTools {
 
   /**
    * Get business advice from AI Store Advisor
-   * Integrates with your existing aiStoreAdvisor.ts service
+   * Now uses the integrated aiStoreAdvisor service
    */
   async getBusinessAdvice(
     question: string,
@@ -113,32 +121,24 @@ export class ChickenBusinessTools {
     try {
       console.log(`💭 Getting business advice for ${userRole}...`);
       
-      // Get current business context
-      const businessContext = await this.getBusinessContext();
+      // Use the AI Store Advisor service
+      const consultationResponse = await this.aiStoreAdvisor.askBusinessConsultant(question, userRole);
       
-      // Build comprehensive prompt
-      const prompt = this.buildBusinessAdvicePrompt(question, userRole, businessContext, context);
+      // Get contextual recommendations
+      const contextualAdvice = await this.aiStoreAdvisor.getBusinessAdvice(userRole, question);
       
-      // Get AI response using reliable API
-      const response = await this.geminiProxy.generateText(
-        prompt,
-        { 
-          model: 'gemini-2.0-flash',
-          temperature: 0.7,
-          maxOutputTokens: 2000,
-          taskType: {
-            complexity: 'complex',
-            type: 'reasoning',
-            priority: 'high'
-          }
-        }
-      );
-      
-      // Generate contextual recommendations
-      const recommendations = await this.generateContextualRecommendations(userRole, businessContext);
+      // Convert to BusinessAdvice format
+      const recommendations: BusinessAdvice[] = contextualAdvice.map(advice => ({
+        type: advice.type,
+        priority: advice.priority,
+        title: advice.title,
+        message: advice.message,
+        action_suggested: advice.action_suggested,
+        confidence: advice.confidence
+      }));
       
       return {
-        advice: response.text,
+        advice: consultationResponse,
         contextual_recommendations: recommendations,
         confidence: 85
       };
@@ -155,7 +155,7 @@ export class ChickenBusinessTools {
 
   /**
    * Analyze business performance using AI Observer
-   * Integrates with your existing aiObserver.ts service
+   * Now uses the integrated aiObserver service
    */
   async analyzeBusinessPerformance(
     timeframe: 'daily' | 'weekly' | 'monthly',
@@ -170,30 +170,43 @@ export class ChickenBusinessTools {
     try {
       console.log(`📊 Analyzing ${timeframe} business performance...`);
       
-      // Get business data for timeframe
-      const businessData = await this.getBusinessDataForTimeframe(timeframe);
-      
-      // Generate AI insights if requested
-      let insights = [];
-      if (includeInsights) {
-        insights = await this.generateAIInsights(businessData);
+      if (timeframe === 'daily') {
+        // Use AI Observer for daily analysis
+        const dailySummary = await this.aiObserver.generateDailySummary();
+        
+        return {
+          summary: {
+            date: dailySummary.date,
+            sales_total: dailySummary.sales_total,
+            expenses_total: dailySummary.expenses_total,
+            profit_margin: dailySummary.profit_margin,
+            top_products: dailySummary.top_products
+          },
+          insights: includeInsights ? dailySummary.ai_insights : [],
+          recommendations: includeRecommendations ? dailySummary.recommendations : [],
+          performance_score: Math.max(0, dailySummary.profit_margin + 50) // Normalize to 0-100
+        };
+      } else if (timeframe === 'weekly') {
+        // Use AI Observer for weekly analysis
+        const weeklyReport = await this.aiObserver.generateWeeklyReport();
+        
+        return {
+          summary: weeklyReport.summary,
+          insights: includeInsights ? weeklyReport.insights : [],
+          recommendations: includeRecommendations ? weeklyReport.recommendations : [],
+          performance_score: this.calculatePerformanceScore(weeklyReport.summary)
+        };
+      } else {
+        // For monthly, use AI Store Advisor
+        const performanceData = await this.aiStoreAdvisor.analyzeBusinessPerformance(timeframe);
+        
+        return {
+          summary: performanceData.summary,
+          insights: includeInsights ? performanceData.insights || [] : [],
+          recommendations: includeRecommendations ? performanceData.recommendations.map((r: any) => r.message) : [],
+          performance_score: performanceData.performance_score
+        };
       }
-      
-      // Generate recommendations if requested
-      let recommendations: any[] = [];
-      if (includeRecommendations) {
-        recommendations = await this.generateRecommendations(businessData);
-      }
-      
-      // Calculate performance score
-      const performanceScore = this.calculatePerformanceScore(businessData);
-      
-      return {
-        summary: this.buildBusinessSummary(businessData),
-        insights,
-        recommendations,
-        performance_score: performanceScore
-      };
       
     } catch (error) {
       console.error('❌ Failed to analyze business performance:', error);

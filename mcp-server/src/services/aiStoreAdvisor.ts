@@ -4,9 +4,17 @@
  * This is the "customer service level AI" for business operations you wanted!
  */
 
-import { supabase } from '../src/supabaseConfig';
-import { geminiAPIManager } from './geminiAPIManager';
-import { offlineDB } from './offlineService';
+import { createClient } from '@supabase/supabase-js';
+import { GeminiAPIManager } from './geminiAPIManager';
+
+// Initialize Supabase client for MCP server context
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// Initialize Gemini API manager
+const geminiAPIManager = new GeminiAPIManager();
 
 interface BusinessMemory {
   pattern_type: string;

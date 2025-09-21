@@ -40,11 +40,28 @@ export interface ModelCapabilities {
   bestFor: string[];
 }
 
+export interface TaskRequest {
+  type: 'text' | 'embedding' | 'flash' | 'preview' | 'audio' | 'multimodal';
+  complexity: 'simple' | 'medium' | 'complex';
+  priority: 'low' | 'medium' | 'high';
+  estimatedTokens?: number;
+  requiresStructuredOutput?: boolean;
+}
+
+interface UsageTracker {
+  model: string;
+  requestCount: number;
+  tokenCount: number;
+  lastRequest: number;
+  resetTime: number;
+}
+
 export class AdvancedGeminiProxy {
   private genAI: GoogleGenerativeAI;
   private supabase;
   private models: Map<string, ModelCapabilities> = new Map();
   private rateLimitCache = new Map<string, { count: number; resetTime: number }>();
+  private usageTrackers: Map<string, UsageTracker> = new Map();
 
   constructor() {
     if (!process.env.GEMINI_API_KEY) {
@@ -62,12 +79,27 @@ export class AdvancedGeminiProxy {
 
   private initializeModels() {
     this.models = new Map([
+      // Latest 2.5 series models for enhanced reasoning
+      ['gemini-2.5-pro', {
+        maxTokens: 8192,
+        rateLimit: { rpm: 2, tpm: 250000 },
+        costTier: 'high',
+        features: ['advanced-reasoning', 'long-context', 'structured-output'],
+        bestFor: ['complex-analysis', 'business-insights', 'detailed-reports', 'strategic-planning']
+      }],
+      ['gemini-2.5-flash', {
+        maxTokens: 8192,
+        rateLimit: { rpm: 10, tpm: 250000 },
+        costTier: 'medium',
+        features: ['fast-response', 'structured-output', 'json-mode'],
+        bestFor: ['structured-parsing', 'note-analysis', 'pattern-recognition', 'chicken-business-ops']
+      }],
       ['gemini-2.0-flash-exp', {
         maxTokens: 8192,
-        rateLimit: { rpm: 15, tpm: 1000000 },
-        costTier: 'medium',
-        features: ['text', 'code', 'multimodal', 'fast'],
-        bestFor: ['general', 'coding', 'analysis']
+        rateLimit: { rpm: 30, tpm: 1000000 },
+        costTier: 'low',
+        features: ['text', 'code', 'multimodal', 'fast', 'experimental'],
+        bestFor: ['general', 'coding', 'analysis', 'development']
       }],
       ['gemini-2.0-flash-thinking-exp', {
         maxTokens: 32768,
@@ -75,6 +107,20 @@ export class AdvancedGeminiProxy {
         costTier: 'high',
         features: ['reasoning', 'complex-analysis', 'step-by-step'],
         bestFor: ['complex-reasoning', 'detailed-analysis', 'problem-solving']
+      }],
+      ['gemini-2.0-flash', {
+        maxTokens: 8192,
+        rateLimit: { rpm: 15, tpm: 1000000 },
+        costTier: 'medium',
+        features: ['general-parsing', 'conversation', 'moderate-complexity'],
+        bestFor: ['general-parsing', 'conversation', 'moderate-complexity']
+      }],
+      ['gemini-2.0-flash-lite', {
+        maxTokens: 4096,
+        rateLimit: { rpm: 15, tpm: 1000000 },
+        costTier: 'low',
+        features: ['fast', 'lightweight'],
+        bestFor: ['simple-parsing', 'quick-classification', 'lightweight-tasks']
       }],
       ['gemini-1.5-pro', {
         maxTokens: 8192,
@@ -133,6 +179,175 @@ export class AdvancedGeminiProxy {
 
     // Default for medium complexity
     return 'gemini-2.0-flash-exp';
+  }
+
+  /**
+   * Initialize usage tracker for a model
+   */
+  private initializeUsageTracker(modelId: string): void {
+    this.usageTrackers.set(modelId, {
+      model: modelId,
+      requestCount: 0,
+      tokenCount: 0,
+      lastRequest: Date.now(),
+      resetTime: Date.now() + 60000 // Reset in 1 minute
+    });
+  }
+
+  /**
+   * Update usage tracker after a request
+   */
+  private updateUsageTracker(modelId: string, tokensUsed: number = 0): void {
+    let tracker = this.usageTrackers.get(modelId);
+    if (!tracker) {
+      this.initializeUsageTracker(modelId);
+      tracker = this.usageTrackers.get(modelId)!;
+    }
+
+    tracker.requestCount++;
+    tracker.tokenCount += tokensUsed;
+    tracker.lastRequest = Date.now();
+  }
+
+  /**
+   * Enhanced rate limit checking with detailed feedback
+   */
+  canMakeRequest(modelId: string): { allowed: boolean; waitTime?: number; reason?: string } {
+    const model = this.models.get(modelId);
+    if (!model) {
+      return { allowed: false, reason: `Unknown model: ${modelId}` };
+    }
+
+    const tracker = this.usageTrackers.get(modelId);
+    if (!tracker) {
+      // First request for this model
+      this.initializeUsageTracker(modelId);
+      return { allowed: true };
+    }
+
+    const now = Date.now();
+
+    // Reset tracker if minute has passed
+    if (now >= tracker.resetTime) {
+      tracker.requestCount = 0;
+      tracker.tokenCount = 0;
+      tracker.resetTime = now + 60000; // Reset in 1 minute
+    }
+
+    // Check RPM limit
+    if (tracker.requestCount >= model.rateLimit.rpm) {
+      const waitTime = tracker.resetTime - now;
+      return { 
+        allowed: false, 
+        waitTime,
+        reason: `Rate limit exceeded: ${tracker.requestCount}/${model.rateLimit.rpm} RPM`
+      };
+    }
+
+    // Check TPM limit (approximate)
+    if (tracker.tokenCount >= model.rateLimit.tpm) {
+      const waitTime = tracker.resetTime - now;
+      return { 
+        allowed: false, 
+        waitTime,
+        reason: `Token limit exceeded: ${tracker.tokenCount}/${model.rateLimit.tpm} TPM`
+      };
+    }
+
+    return { allowed: true };
+  }
+
+  /**
+   * Smart model selection based on task requirements (enhanced version)
+   */
+  selectOptimalModel(task: TaskRequest): string {
+    const { type, complexity, priority, estimatedTokens } = task;
+
+    // Handle embeddings
+    if (type === 'embedding') {
+      return 'text-embedding-004';
+    }
+
+    // Handle complex reasoning tasks
+    if (complexity === 'complex' && type === 'text') {
+      return priority === 'high' ? 'gemini-2.5-pro' : 'gemini-2.0-flash-thinking-exp';
+    }
+
+    // Handle structured output requirements
+    if (task.requiresStructuredOutput) {
+      return complexity === 'complex' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+    }
+
+    // Handle simple tasks efficiently
+    if (complexity === 'simple') {
+      return 'gemini-2.0-flash-lite';
+    }
+
+    // Handle medium complexity with cost considerations
+    if (complexity === 'medium') {
+      return priority === 'high' ? 'gemini-2.5-flash' : 'gemini-2.0-flash';
+    }
+
+    // Default fallback
+    return 'gemini-2.0-flash-exp';
+  }
+
+  /**
+   * Enhanced request method with automatic model selection and rate limiting
+   */
+  async makeIntelligentRequest(
+    task: TaskRequest,
+    prompt: string,
+    config: GeminiConfig = {}
+  ): Promise<GeminiResponse> {
+    const startTime = Date.now();
+    const requestId = uuidv4();
+
+    try {
+      // Select optimal model
+      const modelId = this.selectOptimalModel(task);
+      console.log(`🧠 Selected ${modelId} for ${task.type} task (${task.complexity} complexity)`);
+
+      // Check rate limits
+      const rateLimitCheck = this.canMakeRequest(modelId);
+      if (!rateLimitCheck.allowed) {
+        if (rateLimitCheck.waitTime) {
+          console.log(`⏳ Rate limit reached. Waiting ${rateLimitCheck.waitTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, rateLimitCheck.waitTime));
+          return this.makeIntelligentRequest(task, prompt, config);
+        } else {
+          throw new Error(`Rate limit exceeded: ${rateLimitCheck.reason}`);
+        }
+      }
+
+      // Make the actual request using existing generateText method
+      const response = await this.generateText(prompt, {
+        ...config,
+        taskType: {
+          complexity: task.complexity,
+          type: task.type as any,
+          priority: task.priority
+        },
+        requestId
+      });
+
+      // Update usage tracking
+      this.updateUsageTracker(modelId, response.metadata.tokensUsed || 0);
+
+      return response;
+
+    } catch (error) {
+      console.error(`❌ Error in intelligent request:`, error);
+      
+      // Try fallback with simpler model if this was a complex task
+      if (task.complexity !== 'simple') {
+        console.log('🔄 Trying fallback with simpler model...');
+        const fallbackTask: TaskRequest = { ...task, complexity: 'simple' };
+        return this.makeIntelligentRequest(fallbackTask, prompt, config);
+      }
+      
+      throw error;
+    }
   }
 
   /**

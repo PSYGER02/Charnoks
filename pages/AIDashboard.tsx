@@ -5,9 +5,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { aiObserver, type BusinessInsight, type DailySummary } from '../services/aiObserver';
-import { aiAssistant, type AIProposal } from '../services/aiAssistant';
-import { geminiAPIManager } from '../services/geminiAPIManager';
+//import { aiObserver, type BusinessInsight, type DailySummary } from '../services/aiObserver';
+//import { aiAssistant, type AIProposal } from '../services/aiAssistant';
+//import { geminiAPIManager } from '../services/geminiAPIManager';
 
 const AIDashboard: React.FC = () => {
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);

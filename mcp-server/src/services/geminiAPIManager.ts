@@ -152,12 +152,12 @@ class GeminiAPIManager {
   private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
   
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+    this.apiKey = apiKey || process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
     if (!this.apiKey) {
       console.warn('⚠️ No Gemini API key provided');
     } else {
       try {
-        this.googleGenAI = new GoogleGenAI(this.apiKey);
+        this.googleGenAI = new GoogleGenAI({ apiKey: this.apiKey });
         console.log('✅ GoogleGenAI client initialized with @google/genai library');
       } catch (error) {
         console.warn('⚠️ Failed to initialize @google/genai client, falling back to fetch:', error);
@@ -515,6 +515,9 @@ Return JSON with this structure:
 
 // Export singleton instance
 export const geminiAPIManager = new GeminiAPIManager();
+
+// Export class for direct instantiation
+export { GeminiAPIManager };
 
 // Export types for use in other files
 export type { TaskRequest, GeminiModel, UsageTracker };
