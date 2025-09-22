@@ -4,20 +4,21 @@
  * Handles: Purchase → Processing → Distribution → Cooking → Sales workflow
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../src/supabaseConfig.js';
+// import { createClient } from '@supabase/supabase-js';
 //import { GeminiAPIManager } from './geminiAPIManager';
 
-// Initialize Supabase client for MCP server context
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Use the configured supabase client instead of creating a new one
+// const supabase = createClient(
+//   import.meta.env.SUPABASE_URL || 'undefined',
+//   import.meta.env.SUPABASE_SERVICE_ROLE_KEY || 'undefined'
+// );
 
 // Initialize Gemini API manager
-const geminiAPIManager = new GeminiAPIManager();
+// const geminiAPIManager = new GeminiAPIManager();
 
 // Constants
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = import.meta.env.GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
 
 export interface ChickenBusinessPattern {

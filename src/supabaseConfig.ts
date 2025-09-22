@@ -22,7 +22,17 @@ if (!isValidUrl || !isValidKey) {
   console.warn('⚠️ Supabase not configured - using demo mode');
   console.warn('Expected valid values for: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
   
-  // Create a dummy client to prevent crashes
+  // Create a dummy client to prevent crashes with method chaining
+  const createChainableMethods = () => ({
+    select: () => createChainableMethods(),
+    order: () => createChainableMethods(),
+    eq: () => createChainableMethods(),
+    limit: () => createChainableMethods(),
+    single: () => createChainableMethods(),
+    then: () => Promise.resolve({ data: [], error: null }),
+    catch: () => Promise.resolve({ data: [], error: null })
+  });
+  
   supabaseClient = {
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
@@ -33,10 +43,10 @@ if (!isValidUrl || !isValidKey) {
       signOut: () => Promise.reject(new Error('Supabase not configured'))
     },
     from: () => ({
-      select: () => Promise.reject(new Error('Supabase not configured')),
-      insert: () => Promise.reject(new Error('Supabase not configured')),
-      update: () => Promise.reject(new Error('Supabase not configured')),
-      delete: () => Promise.reject(new Error('Supabase not configured'))
+      ...createChainableMethods(),
+      insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+      update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+      delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
     }),
     storage: {
       from: () => ({
