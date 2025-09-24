@@ -4,7 +4,7 @@
  */
 
 import { unifiedAI } from '../services/unifiedAI.js';
-import { mcpClient } from '../services/mcpClient.js';
+import { mcpClient } from '../services/mcp/mcpClient.js';
 
 async function testUnifiedAI() {
   console.log('🚀 Testing Unified AI Service...\n');

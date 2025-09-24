@@ -5,7 +5,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-//import { GeminiAPIManager } from './geminiAPIManager';
+/import { GeminiAPIManager } from './geminiAPIManager';
 
 // Initialize Supabase client for MCP server context
 const supabase = createClient(

@@ -1,5 +1,5 @@
-// Client service for Edge Functions with Gemini rate limiting
-import { rateLimitService } from './rateLimitService';
+// Client service for Edge Functions with built-in rate limiting
+// Note: rateLimitService removed - edge functions handle their own rate limiting
 
 const EDGE_FUNCTION_URL = import.meta.env.VITE_SUPABASE_URL + '/functions/v1';
 const CLIENT_KEY = import.meta.env.VITE_SYNC_CLIENT_KEY;
@@ -79,10 +79,9 @@ class EdgeFunctionClient {
     }
   }
 
-  // Parse note with rate limiting (respects Gemini limits)
+  // Parse note (rate limiting handled by edge function)
   async parseNote(content: string, options: any = {}) {
-    return rateLimitService.execute(async () => {
-      const response = await fetch(`${EDGE_FUNCTION_URL}/parseNote`, {
+    const response = await fetch(`${EDGE_FUNCTION_URL}/parseNote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +105,6 @@ class EdgeFunctionClient {
       }
 
       return response.json();
-    });
   }
 
   // Get similar notes using RAG

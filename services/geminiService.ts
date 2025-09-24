@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import type { Sale, ForecastDataPoint, AIInsights, Expense, Product, ParsedSaleFromAI } from '../types';
-import { rateLimitService } from './rateLimitService';
+// Note: rateLimitService removed - using direct API calls for client-side
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
 
@@ -53,8 +53,7 @@ export const getSalesForecast = async (sales: Sale[]): Promise<ForecastDataPoint
 
   const prompt = generatePromptForForecast(sales);
   try {
-    const response: GenerateContentResponse = await rateLimitService.execute(() =>
-      ai.models.generateContent({
+    const response: GenerateContentResponse = await ai.models.generateContent({
         model: "gemini-2.0-flash",
         contents: prompt,
         config: {
@@ -72,8 +71,7 @@ export const getSalesForecast = async (sales: Sale[]): Promise<ForecastDataPoint
           },
           temperature: 0.5,
         }
-      })
-    );
+      });
     
     if (!response.text()) {
         throw new Error("AI response was empty.");
@@ -188,8 +186,7 @@ export const parseStockNote = async (noteContent: string): Promise<any> => {
     try {
       const prompt = `You are a strict JSON-only extractor. For every input note, output valid JSON only. The JSON must follow the schema keys: purchases[], productions[], transfers[], branch_operations[], leftovers[]. If any field is unknown, omit it. Do not add commentary.\n\nParse this note: "${noteContent}"`;
       
-      const response = await rateLimitService.execute(() =>
-        ai.models.generateContent({
+      const response = await ai.models.generateContent({
           model: "gemini-2.0-flash",
           contents: prompt,
           config: { 
@@ -206,8 +203,7 @@ export const parseStockNote = async (noteContent: string): Promise<any> => {
               }
             }
           }
-        })
-      );
+        });
 
       if (response.text()) {
         return JSON.parse(response.text());
