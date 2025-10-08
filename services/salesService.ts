@@ -1,7 +1,7 @@
 import { supabase } from '../src/supabaseConfig';
 import type { Sale } from '../types';
 import { safeLog } from '../utils/securityUtils';
-import { fixWorkerNames } from './dataFixService';
+// import { fixWorkerNames } from './dataFixService'; // Service removed
 
 export const getSales = async (limitCount: number = 50): Promise<Sale[]> => {
   try {
@@ -21,7 +21,7 @@ export const getSales = async (limitCount: number = 50): Promise<Sale[]> => {
       !sale.worker_name || sale.worker_name === 'Unknown' || sale.worker_name === 'Worker'
     );
     if (hasUnknownWorkers) {
-      fixWorkerNames().catch(() => {}); // Silent background fix
+      // fixWorkerNames().catch(() => {}); // Silent background fix - service removed
     }
 
     return (data || []).map((sale: any) => ({

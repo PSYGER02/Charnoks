@@ -1,23 +1,20 @@
 import React, { useEffect } from 'react';
 import { useState } from 'react';
 import KPICard from '../../components/ui/KPI_Card';
-import ChartContainer from '../../components/charts/ChartContainer';
 import { getOwnerDashboard } from '../../services/supabaseService';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
-import CreateWorkerForm from '../../components/CreateWorkerForm';
+import { BarChart, Bar, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis } from 'recharts';
 import Spinner from '../../components/ui/Spinner';
-import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
 import { smartSyncService } from '../../services/smartSyncService';
 import { offlineDB } from '../../services/offlineService';
-
-interface CustomizedLabelProps {
-    cx: number;
-    cy: number;
-    midAngle?: number;
-    innerRadius: number;
-    outerRadius: number;
-    percent: number;
-}
+import CreateWorkerForm from '../../components/CreateWorkerForm';
+import { useEnhancedDataLoading } from '../../hooks/useEnhancedDataLoading';
+import QuickStats from '../../components/dashboard/QuickStats';
+import ActivityFeed from '../../components/dashboard/ActivityFeed';
+import QuickGoals from '../../components/dashboard/QuickGoals';
+import WeatherWidget from '../../components/dashboard/WeatherWidget';
+import { PerformanceRanking, QuickStatsGrid, ProgressIndicator, ActivityTimeline } from '../../components/ui/PerformanceComponents';
+import { BusinessStatusOverview } from '../../components/ui/BusinessStatusOverview';
+import { DollarSign, TrendingUp, Users, Target } from 'lucide-react';
 
 // Default empty data structure for new users
 const getEmptyDashboardData = () => ({
@@ -95,23 +92,6 @@ const OwnerHomePage: React.FC = () => {
 
     const { totalRevenue, netProfit, transactions, salesTrend, topProducts } = dashboardData;
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
-
-    const RADIAN = Math.PI / 180;
-    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: CustomizedLabelProps) => {
-        if (midAngle === undefined) return null;
-
-        const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
-        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-        const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-        return (
-            <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                {`${(percent * 100).toFixed(0)}%`}
-            </text>
-        );
-    };
-
     return (
         <div className="space-y-8">
             <header className="animate-bounce-in">
@@ -122,7 +102,7 @@ const OwnerHomePage: React.FC = () => {
                     </div>
                     {isLoading && (
                         <div className="flex items-center text-sm text-text-secondary">
-                            <Spinner size="sm" className="mr-2" />
+                            <div className="mr-2"><Spinner size="sm" /></div>
                             <span>Updating...</span>
                         </div>
                     )}
@@ -162,57 +142,158 @@ const OwnerHomePage: React.FC = () => {
                 />
             </div>
 
+            {/* Beautiful Performance Dashboard */}
             <div className="trading-grid gap-6">
-                {/* Sales Trend Chart */}
+                {/* Quick Stats */}
+                <div className="trading-full-width">
+                    <QuickStatsGrid stats={[
+                        { label: 'Total Revenue', value: `₱${totalRevenue.toLocaleString()}`, change: 12.5, icon: DollarSign },
+                        { label: 'Transactions', value: transactions, change: 8.2, icon: TrendingUp },
+                        { label: 'Active Workers', value: 4, change: 0, icon: Users },
+                        { label: 'Monthly Goal', value: '85%', change: 5.1, icon: Target }
+                    ]} />
+                </div>
+
+                {/* Performance Metrics Row */}
+                <div className="trading-half">
+                    <ProgressIndicator 
+                        label="Monthly Sales Goal"
+                        current={totalRevenue}
+                        target={100000}
+                        unit="₱"
+                        color="success"
+                    />
+                </div>
+                
+                <div className="trading-half">
+                    <ProgressIndicator 
+                        label="Daily Transactions Target"
+                        current={transactions}
+                        target={50}
+                        color="primary"
+                    />
+                </div>
+
+                {/* Performance Ranking */}
+                <div className="trading-half">
+                    <PerformanceRanking workers={[
+                        { name: 'Juan Santos', sales: 25000, rank: 1, change: 15.2 },
+                        { name: 'Maria Garcia', sales: 22000, rank: 2, change: 8.7 },
+                        { name: 'Carlos Rodriguez', sales: 18000, rank: 3, change: -2.1 },
+                        { name: 'Ana Reyes', sales: 15000, rank: 4, change: 12.3 }
+                    ]} />
+                </div>
+
+                {/* Recent Activity */}
+                <div className="trading-half">
+                    <ActivityTimeline activities={[
+                        { time: '2 mins ago', title: 'New Sale Recorded', description: '₱1,250 - Juan Santos', type: 'sale' },
+                        { time: '15 mins ago', title: 'Expense Added', description: '₱500 - Office supplies', type: 'expense' },
+                        { time: '1 hour ago', title: 'Note Created', description: 'Monthly inventory check', type: 'note' },
+                        { time: '2 hours ago', title: 'Worker Check-in', description: 'Maria Garcia - BGC Branch', type: 'system' }
+                    ]} />
+            </div>
+                {/* Business Status Overview */}
+                <div className="trading-full-width">
+                    <BusinessStatusOverview 
+                        revenue={totalRevenue} 
+                        expenses={dashboardData.totalExpenses} 
+                        profit={netProfit} 
+                        transactions={transactions} 
+                    />
+                </div>
+
+                {/* Weather Widget */}
+                <div className="trading-full-width">
+                    <WeatherWidget location="Makati, PH" />
+                </div>
+            </div>
+
+            {/* Charts Section */}  
+            <div className="trading-grid gap-6">
+                {/* Sales Trend Chart - Clean and Simple */}
                 <div className="modern-card p-6 trading-main-chart">
-                    <h3 className="text-lg font-semibold text-text-primary mb-4">Sales Trend</h3>
-                    <ResponsiveContainer width="100%" height={350}>
-                        <AreaChart
-                            data={salesTrend}
-                            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                        >
+                    <h3 className="text-xl font-bold text-text-primary mb-2">📈 Weekly Sales Trend</h3>
+                    <p className="text-text-secondary mb-4">Track your daily sales performance</p>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <AreaChart data={salesTrend}>
                             <defs>
                                 <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="rgb(var(--primary))" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="rgb(var(--primary))" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="#059669" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="#059669" stopOpacity={0.1}/>
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
-                            <XAxis dataKey="name" tick={{ fill: 'rgb(var(--text-secondary))' }} />
-                            <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} />
-                            <Tooltip contentStyle={{ backgroundColor: 'rgb(var(--card-bg-solid))', border: '1px solid rgb(var(--border))' }} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis 
+                                dataKey="name" 
+                                stroke="#9CA3AF"
+                                fontSize={12}
+                            />
+                            <YAxis 
+                                stroke="#9CA3AF"
+                                fontSize={12}
+                                tickFormatter={(value: number) => `₱${value.toLocaleString()}`}
+                            />
+                            <Tooltip 
+                                contentStyle={{
+                                    backgroundColor: '#1F2937',
+                                    border: '1px solid #374151',
+                                    borderRadius: '8px',
+                                    color: '#F3F4F6'
+                                }}
+                                formatter={(value: any) => [`₱${value.toLocaleString()}`, 'Sales']}
+                            />
                             <Area 
                                 type="monotone" 
                                 dataKey="sales" 
-                                stroke="rgb(var(--primary))" 
-                                fillOpacity={1} 
-                                fill="url(#salesGradient)" 
+                                stroke="#059669" 
+                                strokeWidth={3}
+                                fill="url(#salesGradient)"
+                                dot={{ fill: '#059669', strokeWidth: 2, r: 4 }}
+                                activeDot={{ r: 6, stroke: '#059669', strokeWidth: 2 }}
                             />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
 
-                {/* Top Products Chart */}
+                {/* Top Products Chart - Simple Bar Chart */}
                 <div className="modern-card p-6 trading-sidebar">
-                    <h3 className="text-lg font-semibold text-text-primary mb-4">Top Products</h3>
-                    <ResponsiveContainer width="100%" height={350}>
-                        <PieChart>
-                            <Pie
-                                data={topProducts}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={renderCustomizedLabel}
-                                outerRadius={120}
-                                fill="#8884d8"
-                                dataKey="value"
-                            >
-                                {topProducts.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip contentStyle={{ backgroundColor: 'rgb(var(--card-bg-solid))', border: '1px solid rgb(var(--border))' }} />
-                        </PieChart>
+                    <h3 className="text-xl font-bold text-text-primary mb-2">🏆 Top Selling Products</h3>
+                    <p className="text-text-secondary mb-4">Best performing products this week</p>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart 
+                            data={topProducts.slice(0, 5)} 
+                            layout="horizontal"
+                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis 
+                                type="number"
+                                stroke="#9CA3AF"
+                                fontSize={12}
+                            />
+                            <YAxis 
+                                type="category"
+                                dataKey="name" 
+                                stroke="#9CA3AF"
+                                fontSize={12}
+                                width={80}
+                            />
+                            <Tooltip 
+                                contentStyle={{
+                                    backgroundColor: '#1F2937',
+                                    border: '1px solid #374151',
+                                    borderRadius: '8px',
+                                    color: '#F3F4F6'
+                                }}
+                                formatter={(value: any) => [value, 'Sales']}
+                            />
+                            <Bar 
+                                dataKey="value" 
+                                fill="#059669"
+                                radius={[0, 4, 4, 0]}
+                            />
+                        </BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>

@@ -1,239 +1,347 @@
 /**
- * Unified MCP Client Service
- * Routes all AI operations through the MCP server for consistency and reliability
- * Replaces direct Gemini API calls with MCP-mediated requests
+ * MCP Client - Frontend/Backend Integration
+ * Communicates with your MCP server deployed on Render
+ * Handles all AI processing, business intelligence, and real-time communication
  */
 
-export interface MCPToolRequest {
-  name: string;
-  arguments: Record<string, any>;
-}
-
-export interface MCPToolResponse {
+export interface MCPResponse {
   success: boolean;
   result?: any;
   error?: string;
+  requestId?: string;
 }
 
-export interface MCPHealthResponse {
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  services: {
-    gemini: {
-      overall: string;
-      models: Record<string, any>;
-    };
-    supabase: {
-      status: string;
-    };
-  };
-  uptime: number;
-  version: string;
+export interface ChickenNote {
+  content: string;
+  userRole: 'owner' | 'worker';
+  branchId?: string;
+  localUuid?: string;
 }
 
-class MCPClientService {
+export interface BusinessAdviceRequest {
+  question: string;
+  context?: any;
+  userRole: 'owner' | 'worker';
+}
+
+export interface VoiceStreamParams {
+  streamId: string;
+  transcriptChunk: string;
+  products?: Array<{id: string, name: string}>;
+}
+
+/**
+ * Main MCP Client for communicating with your MCP server
+ */
+export class MCPClient {
   private baseUrl: string;
   private authToken: string;
-  private retryCount: number = 3;
-  private retryDelay: number = 1000;
+  private wsUrl: string;
 
   constructor() {
-    // Get MCP server URL from environment or default to local
-    this.baseUrl = import.meta.env.VITE_MCP_SERVER_URL || 
-                   process.env.MCP_SERVER_URL || 
-                   'http://localhost:3002';
-    
-    this.authToken = import.meta.env.VITE_MCP_AUTH_TOKEN || 
-                     process.env.MCP_AUTH_TOKEN || 
-                     'dev-token';
+    // Automatically detect environment
+    this.baseUrl = this.getServerUrl();
+    this.authToken = this.getAuthToken();
+    this.wsUrl = this.baseUrl.replace('https://', 'wss://').replace('http://', 'ws://');
   }
 
-  /**
-   * Call an MCP tool with retry logic
-   */
-  async callTool(request: MCPToolRequest): Promise<MCPToolResponse> {
-    for (let attempt = 1; attempt <= this.retryCount; attempt++) {
-      try {
-        const response = await fetch(`${this.baseUrl}/api/tools/call`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.authToken}`,
-            'X-Request-ID': crypto.randomUUID()
-          },
-          body: JSON.stringify(request)
-        });
-
-        if (!response.ok) {
-          throw new Error(`MCP API error: ${response.status} ${response.statusText}`);
-        }
-
-        return await response.json();
-      } catch (error) {
-        console.warn(`MCP call attempt ${attempt} failed:`, error);
-        
-        if (attempt === this.retryCount) {
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : String(error)
-          };
-        }
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
-      }
+  private getServerUrl(): string {
+    // Check various environment variable patterns
+    if (typeof window !== 'undefined') {
+      // Browser environment
+      return import.meta.env?.VITE_MCP_SERVER_URL || 
+             process.env.VITE_MCP_SERVER_URL || 
+             'http://localhost:3002';
+    } else {
+      // Node.js environment
+      return process.env.MCP_SERVER_URL || 
+             process.env.VITE_MCP_SERVER_URL || 
+             'http://localhost:3002';
     }
+  }
 
-    return { success: false, error: 'Max retries exceeded' };
+  private getAuthToken(): string {
+    if (typeof window !== 'undefined') {
+      // Browser - try localStorage first, then env vars
+      const stored = localStorage.getItem('mcp_auth_token');
+      if (stored) return stored;
+      
+      return import.meta.env?.VITE_MCP_AUTH_TOKEN || 
+             process.env.VITE_MCP_AUTH_TOKEN || '';
+    } else {
+      // Node.js environment
+      return process.env.MCP_AUTH_TOKEN || '';
+    }
   }
 
   /**
-   * Get MCP server health status
+   * Authenticate with MCP server and get JWT token
    */
-  async getHealth(): Promise<MCPHealthResponse> {
+  async authenticate(mcpAuthToken?: string): Promise<{success: boolean, token?: string, error?: string}> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`);
-      if (!response.ok) {
-        throw new Error(`Health check failed: ${response.status}`);
+      const token = mcpAuthToken || this.authToken;
+      if (!token) {
+        throw new Error('No MCP auth token provided');
       }
-      return await response.json();
+
+      const response = await fetch(`${this.baseUrl}/auth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Authentication failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Store JWT token for future requests
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mcp_jwt_token', data.token);
+      }
+
+      return { success: true, token: data.token };
     } catch (error) {
-      throw new Error(`MCP health check failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('MCP Authentication failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Authentication failed' 
+      };
     }
   }
 
   /**
-   * Parse chicken business note using MCP
+   * Get JWT token for API calls
    */
-  async parseChickenNote(
-    content: string, 
-    userRole: 'owner' | 'worker',
-    branchId?: string
-  ): Promise<MCPToolResponse> {
-    return this.callTool({
+  private getJWTToken(): string {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mcp_jwt_token') || '';
+    }
+    return ''; // In Node.js, handle JWT storage differently
+  }
+
+  /**
+   * Make authenticated API call to MCP server
+   */
+  private async apiCall(endpoint: string, data?: any): Promise<MCPResponse> {
+    try {
+      const jwt = this.getJWTToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (jwt) {
+        headers['Authorization'] = `Bearer ${jwt}`;
+      }
+
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        method: data ? 'POST' : 'GET',
+        headers,
+        body: data ? JSON.stringify(data) : undefined
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired, try to re-authenticate
+          const authResult = await this.authenticate();
+          if (authResult.success) {
+            // Retry the original request
+            return this.apiCall(endpoint, data);
+          }
+        }
+        throw new Error(`API call failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return {
+        success: true,
+        result: result.content ? result.content[0]?.text : result,
+        requestId: result.requestId
+      };
+    } catch (error) {
+      console.error('MCP API call failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'API call failed'
+      };
+    }
+  }
+
+  /**
+   * Process chicken business note with AI parsing
+   */
+  async processChickenNote(note: ChickenNote): Promise<MCPResponse> {
+    return this.apiCall('/api/tools/call', {
       name: 'parse_chicken_note',
       arguments: {
-        content,
-        user_role: userRole,
-        branch_id: branchId,
-        local_uuid: crypto.randomUUID()
+        content: note.content,
+        branch_id: note.branchId || 'main',
+        author_id: 'user', // You can make this dynamic
+        local_uuid: note.localUuid || crypto.randomUUID?.() || Date.now().toString(),
+        priority: 'medium'
       }
     });
   }
 
   /**
-   * Get business advice using MCP
+   * Get AI-powered business advice
    */
-  async getBusinessAdvice(
-    question: string,
-    userRole: 'owner' | 'worker',
-    businessContext?: string
-  ): Promise<MCPToolResponse> {
-    return this.callTool({
-      name: 'business_advice',
+  async getBusinessAdvice(request: BusinessAdviceRequest): Promise<MCPResponse> {
+    return this.apiCall('/api/tools/call', {
+      name: 'get_business_advice',
       arguments: {
-        question,
-        user_role: userRole,
-        business_context: businessContext,
-        context: {}
+        question: request.question,
+        context: request.context,
+        user_role: request.userRole
       }
     });
   }
 
   /**
-   * Generate embeddings using MCP
+   * Apply parsed note to stock/inventory
    */
-  async generateEmbeddings(texts: string[]): Promise<MCPToolResponse> {
-    return this.callTool({
-      name: 'generate_embeddings',
+  async applyToStock(noteId: string, dryRun: boolean = false): Promise<MCPResponse> {
+    return this.apiCall('/api/tools/call', {
+      name: 'apply_to_stock',
       arguments: {
-        texts,
-        model: 'text-embedding-004'
+        note_id: noteId,
+        dry_run: dryRun
       }
     });
   }
 
   /**
-   * Sync operations to database using MCP
+   * Get sales forecast based on historical data
    */
-  async syncOperations(operations: any[]): Promise<MCPToolResponse> {
-    return this.callTool({
-      name: 'sync_operations',
+  async getForecast(salesHistory: any[]): Promise<MCPResponse> {
+    return this.apiCall('/api/tools/call', {
+      name: 'forecast_stock',
       arguments: {
-        operations
+        salesHistory
       }
     });
   }
 
   /**
-   * Generate sales forecast using MCP
+   * Search business context and memory
    */
-  async getSalesForecast(
-    historicalData: any[],
-    period: string = '7_days'
-  ): Promise<MCPToolResponse> {
-    return this.callTool({
-      name: 'sales_forecast',
+  async searchBusinessContext(query: string, entityTypes?: string[]): Promise<MCPResponse> {
+    return this.apiCall('/api/tools/call', {
+      name: 'search_business_context',
       arguments: {
-        historical_data: historicalData,
-        forecast_period: period
+        query,
+        entityTypes: entityTypes || ['product', 'supplier', 'customer']
       }
     });
   }
 
   /**
-   * Get AI insights from sales data using MCP
+   * List available MCP tools
    */
-  async getAIInsights(
-    salesData: any[],
-    expenseData: any[]
-  ): Promise<MCPToolResponse> {
-    return this.callTool({
-      name: 'ai_insights',
-      arguments: {
-        sales_data: salesData,
-        expense_data: expenseData
+  async getAvailableTools(): Promise<MCPResponse> {
+    return this.apiCall('/api/tools');
+  }
+
+  /**
+   * Get server health status
+   */
+  async getHealthStatus(): Promise<MCPResponse> {
+    return this.apiCall('/health');
+  }
+
+  /**
+   * Create WebSocket connection for real-time communication
+   */
+  createWebSocketConnection(): Promise<WebSocket> {
+    return new Promise((resolve, reject) => {
+      try {
+        const jwt = this.getJWTToken();
+        const wsUrl = `${this.wsUrl}/ws/chat${jwt ? `?token=${jwt}` : ''}`;
+        
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('MCP WebSocket connected');
+          resolve(ws);
+        };
+
+        ws.onerror = (error) => {
+          console.error('MCP WebSocket error:', error);
+          reject(error);
+        };
+
+        ws.onclose = () => {
+          console.log('MCP WebSocket disconnected');
+        };
+
+      } catch (error) {
+        reject(error);
       }
     });
   }
 
   /**
-   * Test MCP server connectivity
+   * Start live voice streaming session
    */
-  async testConnection(): Promise<boolean> {
-    try {
-      const health = await this.getHealth();
-      return health.status !== 'unhealthy';
-    } catch {
-      return false;
-    }
+  async startVoiceStream(streamId: string): Promise<WebSocket> {
+    const ws = await this.createWebSocketConnection();
+    
+    // Send initial stream setup
+    ws.send(JSON.stringify({
+      type: 'start_stream',
+      streamId,
+      timestamp: new Date().toISOString()
+    }));
+
+    return ws;
   }
 
   /**
-   * Get available tools from MCP server
+   * Send voice transcript chunk for real-time processing
    */
-  async getAvailableTools(): Promise<any[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/tools/list`, {
-        headers: {
-          'Authorization': `Bearer ${this.authToken}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to get tools: ${response.status}`);
+  sendVoiceChunk(ws: WebSocket, params: VoiceStreamParams): void {
+    ws.send(JSON.stringify({
+      toolName: 'live_voice_stream',
+      params: {
+        streamId: params.streamId,
+        transcriptChunk: params.transcriptChunk,
+        products: params.products || []
       }
-      
-      const data = await response.json();
-      return data.tools || [];
-    } catch (error) {
-      console.warn('Failed to get MCP tools:', error);
-      return [];
-    }
+    }));
+  }
+
+  /**
+   * Simple chat with AI assistant
+   */
+  async chat(message: string, role: 'owner' | 'worker' | 'customer' = 'owner'): Promise<MCPResponse> {
+    return this.apiCall('/api/chat', {
+      message,
+      role,
+      history: [] // You can implement history management
+    });
   }
 }
 
-// Create singleton instance
-export const mcpClient = new MCPClientService();
+/**
+ * Default MCP client instance
+ * Use this throughout your app for MCP server communication
+ */
+export const mcpClient = new MCPClient();
 
-// Export for direct use
-export default mcpClient;
+/**
+ * React hook for MCP client (if you're using React)
+ */
+export function useMCPClient() {
+  return {
+    client: mcpClient,
+    processNote: (note: ChickenNote) => mcpClient.processChickenNote(note),
+    getAdvice: (request: BusinessAdviceRequest) => mcpClient.getBusinessAdvice(request),
+    searchContext: (query: string) => mcpClient.searchBusinessContext(query),
+    chat: (message: string, role?: 'owner' | 'worker') => mcpClient.chat(message, role)
+  };
+}
+
+export default MCPClient;

@@ -257,6 +257,9 @@ body {
   .trading-sidebar {
     grid-column: span 4;
   }
+  .trading-full-width {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Enhanced KPI Cards */

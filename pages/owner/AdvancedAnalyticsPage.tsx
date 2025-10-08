@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getSalesAnalytics, getWorkersList, getWorkerPerformance, formatCurrency, formatDate } from '../../services/supabaseService';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
 import Spinner from '../../components/ui/Spinner';
 import ChartContainer from '../../components/charts/ChartContainer';
 
@@ -207,40 +207,119 @@ const AdvancedAnalyticsPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Sales Trend */}
         <ChartContainer title={`Sales Trend (${groupBy})`}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={salesTrendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="period" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-              <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `₱${value}`} />
-              <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
-              <Line type="monotone" dataKey="sales" stroke="rgb(var(--primary))" strokeWidth={2} />
-            </LineChart>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={salesTrendData}>
+              <defs>
+                <linearGradient id="salesGradientAnalytics" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#059669" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#059669" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis 
+                dataKey="period" 
+                stroke="#9CA3AF"
+                fontSize={12}
+              />
+              <YAxis 
+                stroke="#9CA3AF"
+                fontSize={12}
+                tickFormatter={(value: number) => `₱${value.toLocaleString()}`}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: '#1F2937',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                  color: '#F3F4F6'
+                }}
+                formatter={(value: any) => [`₱${value.toLocaleString()}`, 'Sales']}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="sales" 
+                stroke="#059669" 
+                strokeWidth={3}
+                fill="url(#salesGradientAnalytics)"
+                dot={{ fill: '#059669', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, stroke: '#059669', strokeWidth: 2 }}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>
 
         {/* Top Products */}
         <ChartContainer title="Top Products by Revenue">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={topProductsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="name" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-              <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `₱${value}`} />
-              <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
-              <Bar dataKey="revenue" fill="rgb(var(--primary))" />
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={topProductsData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis 
+                dataKey="name" 
+                stroke="#9CA3AF"
+                fontSize={12}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis 
+                stroke="#9CA3AF"
+                fontSize={12}
+                tickFormatter={(value: number) => `₱${value.toLocaleString()}`}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: '#1F2937',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                  color: '#F3F4F6'
+                }}
+                formatter={(value: any) => [`₱${value.toLocaleString()}`, 'Revenue']}
+              />
+              <Bar 
+                dataKey="revenue" 
+                fill="#059669"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
 
         {/* Worker Performance */}
         <ChartContainer title="Worker Performance">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={workerPerformanceData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="name" tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} />
-              <YAxis tick={{ fill: 'rgb(var(--text-secondary))' }} fontSize={12} tickFormatter={(value) => `₱${value}`} />
-              <Tooltip contentStyle={{ backgroundColor: 'rgba(30,41,59,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem' }} />
-              <Bar dataKey="sales" fill="#00C49F" />
-            </BarChart>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={workerPerformanceData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis 
+                dataKey="name" 
+                stroke="#9CA3AF"
+                fontSize={12}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis 
+                stroke="#9CA3AF"
+                fontSize={12}
+                tickFormatter={(value: number) => `₱${value.toLocaleString()}`}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: '#1F2937',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                  color: '#F3F4F6'
+                }}
+                formatter={(value: any) => [`₱${value.toLocaleString()}`, 'Sales']}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="sales" 
+                stroke="#059669" 
+                strokeWidth={3}
+                dot={{ fill: '#059669', strokeWidth: 2, r: 5 }}
+                activeDot={{ r: 7, stroke: '#059669', strokeWidth: 2 }}
+              />
+            </LineChart>
           </ResponsiveContainer>
         </ChartContainer>
 

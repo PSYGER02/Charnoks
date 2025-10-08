@@ -1,0 +1,1378 @@
+{
+  "project": {
+    "name": "CHARNOKS POS System",
+    "description": "Complete UI/UX Design Specification for Point of Sale System",
+    "version": "1.0",
+    "type": "Point of Sale / Restaurant Management",
+    "platform": "Web (Responsive: Mobile, Tablet, Desktop)",
+    "framework": "React + TypeScript + Tailwind CSS"
+  },
+  
+  "designSystem": {
+    "typography": {
+      "fontFamily": {
+        "primary": "Poppins",
+        "fallback": "sans-serif"
+      },
+      "fontSizes": {
+        "xs": "0.75rem",
+        "sm": "0.875rem",
+        "base": "1rem",
+        "lg": "1.125rem",
+        "xl": "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem",
+        "4xl": "2.25rem",
+        "5xl": "3rem"
+      },
+      "fontWeights": {
+        "normal": 400,
+        "medium": 500,
+        "semibold": 600,
+        "bold": 700
+      },
+      "lineHeights": {
+        "tight": 1.25,
+        "normal": 1.5,
+        "relaxed": 1.75
+      }
+    },
+    
+    "colorPalettes": {
+      "charnoksClassic": {
+        "name": "Charnoks Classic (Default)",
+        "category": "Core",
+        "colors": {
+          "backgroundGradientStart": "rgb(219, 78, 42)",
+          "backgroundGradientEnd": "rgb(252, 185, 59)",
+          "primary": "rgb(220, 38, 38)",
+          "secondary": "rgb(245, 158, 11)",
+          "accent": "rgb(253, 224, 71)",
+          "textPrimary": "rgb(255, 255, 255)",
+          "textSecondary": "rgb(229, 231, 235)",
+          "cardBg": "rgba(120, 53, 15, 0.5)",
+          "cardBgSolid": "rgb(120, 53, 15)",
+          "border": "rgba(245, 158, 11, 0.5)",
+          "textOnPrimary": "rgb(255, 255, 255)"
+        }
+      },
+      "ocean": {
+        "name": "Ocean Blue",
+        "category": "Core",
+        "colors": {
+          "backgroundGradientStart": "rgb(20, 30, 48)",
+          "backgroundGradientEnd": "rgb(36, 59, 85)",
+          "primary": "rgb(59, 130, 246)",
+          "secondary": "rgb(14, 165, 233)",
+          "accent": "rgb(34, 211, 238)",
+          "textPrimary": "rgb(255, 255, 255)",
+          "textSecondary": "rgb(209, 213, 219)",
+          "cardBg": "rgba(36, 59, 85, 0.4)",
+          "cardBgSolid": "rgb(36, 59, 85)",
+          "border": "rgba(59, 130, 246, 0.4)",
+          "textOnPrimary": "rgb(255, 255, 255)"
+        }
+      },
+      "forest": {
+        "name": "Forest Green",
+        "category": "Core",
+        "colors": {
+          "backgroundGradientStart": "rgb(16, 26, 22)",
+          "backgroundGradientEnd": "rgb(42, 68, 55)",
+          "primary": "rgb(34, 197, 94)",
+          "secondary": "rgb(22, 163, 74)",
+          "accent": "rgb(134, 239, 172)",
+          "textPrimary": "rgb(255, 255, 255)",
+          "textSecondary": "rgb(229, 231, 235)",
+          "cardBg": "rgba(22, 101, 52, 0.4)",
+          "cardBgSolid": "rgb(22, 101, 52)",
+          "border": "rgba(34, 197, 94, 0.4)",
+          "textOnPrimary": "rgb(255, 255, 255)"
+        }
+      },
+      "sunset": {
+        "name": "Sunset Purple",
+        "category": "Core",
+        "colors": {
+          "backgroundGradientStart": "rgb(76, 29, 149)",
+          "backgroundGradientEnd": "rgb(147, 51, 234)",
+          "primary": "rgb(168, 85, 247)",
+          "secondary": "rgb(192, 132, 252)",
+          "accent": "rgb(233, 213, 255)",
+          "textPrimary": "rgb(255, 255, 255)",
+          "textSecondary": "rgb(229, 231, 235)",
+          "cardBg": "rgba(107, 33, 168, 0.4)",
+          "cardBgSolid": "rgb(107, 33, 168)",
+          "border": "rgba(168, 85, 247, 0.4)",
+          "textOnPrimary": "rgb(255, 255, 255)"
+        }
+      },
+      "light": {
+        "name": "Light Mode",
+        "category": "Core",
+        "colors": {
+          "backgroundGradientStart": "rgb(243, 244, 246)",
+          "backgroundGradientEnd": "rgb(229, 231, 235)",
+          "primary": "rgb(37, 99, 235)",
+          "secondary": "rgb(29, 78, 216)",
+          "accent": "rgb(96, 165, 250)",
+          "textPrimary": "rgb(29, 78, 216)",
+          "textSecondary": "rgb(55, 65, 81)",
+          "cardBg": "rgba(255, 255, 255, 0.8)",
+          "cardBgSolid": "rgb(255, 255, 255)",
+          "border": "rgb(209, 213, 219)",
+          "textOnPrimary": "rgb(255, 255, 255)"
+        }
+      },
+      "statusColors": {
+        "success": "rgb(34, 197, 94)",
+        "warning": "rgb(234, 179, 8)",
+        "error": "rgb(239, 68, 68)",
+        "info": "rgb(59, 130, 246)"
+      }
+    },
+    
+    "spacing": {
+      "xs": "0.25rem",
+      "sm": "0.5rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem",
+      "3xl": "4rem"
+    },
+    
+    "borderRadius": {
+      "sm": "0.375rem",
+      "md": "0.5rem",
+      "lg": "0.75rem",
+      "xl": "1rem",
+      "2xl": "1.5rem",
+      "full": "9999px"
+    },
+    
+    "shadows": {
+      "sm": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+      "md": "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+      "lg": "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+      "xl": "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+      "2xl": "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+    },
+    
+    "animations": {
+      "gradientX": {
+        "name": "Background Gradient Animation",
+        "duration": "15s",
+        "timing": "ease infinite",
+        "keyframes": {
+          "0%": "background-position: 0% 50%",
+          "50%": "background-position: 100% 50%",
+          "100%": "background-position: 0% 50%"
+        }
+      },
+      "bounceIn": {
+        "name": "Bounce In Animation",
+        "duration": "0.6s",
+        "timing": "ease-out",
+        "keyframes": {
+          "0%": "opacity: 0, transform: scale(0.3)",
+          "50%": "opacity: 1, transform: scale(1.05)",
+          "70%": "transform: scale(0.9)",
+          "100%": "transform: scale(1)"
+        }
+      },
+      "slideInBottom": {
+        "name": "Slide from Bottom",
+        "duration": "0.5s",
+        "timing": "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+        "keyframes": {
+          "from": "transform: translateY(100%), opacity: 0",
+          "to": "transform: translateY(0), opacity: 1"
+        }
+      },
+      "shimmer": {
+        "name": "Shimmer Effect (Hover)",
+        "duration": "1.5s infinite",
+        "description": "Shine effect on hover",
+        "keyframes": {
+          "0%": "background-position: -100% 0",
+          "100%": "background-position: 100% 0"
+        }
+      },
+      "float": {
+        "name": "Floating Orb Animation",
+        "duration": "12s infinite ease-in-out",
+        "keyframes": {
+          "0%": "transform: translate(0, 0px)",
+          "50%": "transform: translate(10px, 15px)",
+          "100%": "transform: translate(0, 0px)"
+        }
+      },
+      "pulse": {
+        "name": "Pulse Glow",
+        "duration": "5s infinite ease-in-out",
+        "keyframes": {
+          "0%, 100%": "box-shadow: 0 0 20px 5px rgba(primary, 0.2)",
+          "50%": "box-shadow: 0 0 35px 12px rgba(primary, 0.4)"
+        }
+      }
+    }
+  },
+  
+  "components": {
+    "buttons": {
+      "primary": {
+        "description": "Main action button",
+        "styles": {
+          "background": "var(--primary)",
+          "color": "var(--text-on-primary)",
+          "padding": "0.75rem 1.5rem",
+          "borderRadius": "0.5rem",
+          "fontSize": "1rem",
+          "fontWeight": "700",
+          "transition": "all 0.3s",
+          "hover": {
+            "background": "var(--primary) / 0.8",
+            "transform": "scale(1.05)"
+          },
+          "disabled": {
+            "opacity": "0.5",
+            "transform": "scale(1)",
+            "cursor": "not-allowed"
+          }
+        }
+      },
+      "secondary": {
+        "description": "Secondary action button",
+        "styles": {
+          "background": "rgba(255, 255, 255, 0.1)",
+          "color": "var(--text-primary)",
+          "padding": "0.75rem 1.5rem",
+          "borderRadius": "0.5rem",
+          "fontSize": "1rem",
+          "fontWeight": "600",
+          "transition": "background 0.2s",
+          "hover": {
+            "background": "rgba(255, 255, 255, 0.2)"
+          }
+        }
+      },
+      "navigation": {
+        "description": "Sidebar navigation button",
+        "default": {
+          "background": "transparent",
+          "color": "var(--text-secondary)",
+          "padding": "0.75rem",
+          "borderRadius": "0.5rem",
+          "display": "flex",
+          "alignItems": "center",
+          "gap": "1rem",
+          "transition": "all 0.2s",
+          "hover": {
+            "background": "rgba(255, 255, 255, 0.1)",
+            "color": "var(--text-primary)"
+          }
+        },
+        "active": {
+          "background": "var(--primary) / 0.8",
+          "color": "var(--text-on-primary)",
+          "boxShadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
+        }
+      },
+      "numberPad": {
+        "description": "Number pad key button",
+        "styles": {
+          "background": "rgba(255, 255, 255, 0.1)",
+          "color": "var(--text-primary)",
+          "borderRadius": "0.5rem",
+          "fontSize": "1.5rem",
+          "fontWeight": "700",
+          "height": "4rem",
+          "transition": "all 0.2s",
+          "active": {
+            "background": "var(--primary)",
+            "transform": "scale(1.05)"
+          }
+        }
+      }
+    },
+    
+    "cards": {
+      "kpiCard": {
+        "description": "Key Performance Indicator Card",
+        "layout": {
+          "display": "flex",
+          "flexDirection": "column",
+          "padding": "1.5rem",
+          "borderRadius": "1.5rem",
+          "background": "var(--card-bg)",
+          "backdropFilter": "blur(12px)",
+          "border": "1px solid var(--border)",
+          "boxShadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
+        },
+        "elements": {
+          "header": {
+            "display": "flex",
+            "justifyContent": "space-between",
+            "alignItems": "flex-start",
+            "marginBottom": "1rem"
+          },
+          "title": {
+            "fontSize": "0.75rem",
+            "fontWeight": "600",
+            "color": "var(--text-secondary)",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.05em"
+          },
+          "value": {
+            "fontSize": "1.875rem",
+            "fontWeight": "700",
+            "color": "var(--text-primary)",
+            "lineHeight": "1"
+          },
+          "icon": {
+            "width": "3rem",
+            "height": "3rem",
+            "borderRadius": "0.75rem",
+            "background": "linear-gradient(to bottom right, var(--primary) / 0.2, var(--accent) / 0.2)",
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center",
+            "fontSize": "1.25rem",
+            "transition": "transform 0.3s",
+            "hover": "transform: scale(1.1)"
+          },
+          "trend": {
+            "fontSize": "0.875rem",
+            "fontWeight": "500",
+            "display": "flex",
+            "alignItems": "center",
+            "gap": "0.375rem"
+          }
+        }
+      },
+      "productCard": {
+        "description": "Product display card",
+        "layout": {
+          "background": "var(--card-bg-solid) / 0.5",
+          "borderRadius": "0.75rem",
+          "padding": "1rem",
+          "border": "1px solid var(--border) / 0.3",
+          "transition": "all 0.3s",
+          "hover": {
+            "boxShadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+            "borderColor": "var(--primary) / 0.5",
+            "transform": "scale(1.05)"
+          }
+        },
+        "elements": {
+          "image": {
+            "width": "100%",
+            "height": "8rem",
+            "objectFit": "cover",
+            "borderRadius": "0.5rem",
+            "marginBottom": "0.75rem"
+          },
+          "imagePlaceholder": {
+            "width": "100%",
+            "height": "8rem",
+            "background": "rgb(75, 85, 99)",
+            "borderRadius": "0.5rem",
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center",
+            "fontSize": "2.5rem",
+            "color": "rgb(156, 163, 175)"
+          },
+          "name": {
+            "fontWeight": "700",
+            "color": "var(--text-primary)",
+            "overflow": "hidden",
+            "textOverflow": "ellipsis",
+            "whiteSpace": "nowrap"
+          },
+          "category": {
+            "fontSize": "0.875rem",
+            "color": "var(--text-secondary)",
+            "textTransform": "capitalize"
+          },
+          "price": {
+            "fontWeight": "700",
+            "fontSize": "1.25rem",
+            "color": "var(--primary)"
+          },
+          "stock": {
+            "fontSize": "0.875rem",
+            "color": "var(--text-secondary)",
+            "fontWeight": "500"
+          }
+        }
+      },
+      "modernCard": {
+        "description": "General purpose card with glassmorphism",
+        "styles": {
+          "background": "var(--card-bg) / 0.8",
+          "backdropFilter": "blur(12px)",
+          "borderRadius": "1.5rem",
+          "padding": "1.5rem",
+          "border": "1px solid var(--border) / 0.5",
+          "boxShadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
+        }
+      }
+    },
+    
+    "forms": {
+      "input": {
+        "description": "Standard text input",
+        "styles": {
+          "width": "100%",
+          "background": "transparent",
+          "border": "2px solid var(--border) / 0.5",
+          "borderRadius": "0.5rem",
+          "padding": "0.75rem",
+          "color": "var(--text-primary)",
+          "fontSize": "1rem",
+          "transition": "border-color 0.2s",
+          "focus": {
+            "borderColor": "var(--primary)",
+            "outline": "none",
+            "ring": "0"
+          }
+        }
+      },
+      "inputWithIcon": {
+        "description": "Input field with icon prefix",
+        "container": {
+          "display": "flex",
+          "alignItems": "center",
+          "background": "var(--accent) / 0.2",
+          "borderRadius": "0.5rem",
+          "padding": "0.25rem",
+          "border": "1px solid transparent",
+          "transition": "border-color 0.2s",
+          "focusWithin": {
+            "borderColor": "rgba(255, 255, 255, 0.5)"
+          }
+        },
+        "icon": {
+          "paddingLeft": "0.75rem",
+          "paddingRight": "0.75rem",
+          "color": "rgba(255, 255, 255, 0.7)",
+          "width": "1.25rem",
+          "height": "1.25rem"
+        },
+        "input": {
+          "width": "100%",
+          "background": "transparent",
+          "padding": "0.625rem 0.75rem",
+          "color": "white",
+          "border": "none",
+          "outline": "none",
+          "placeholder": {
+            "color": "rgba(255, 255, 255, 0.6)"
+          }
+        }
+      },
+      "fileUpload": {
+        "description": "Drag & drop file upload area",
+        "default": {
+          "width": "100%",
+          "minHeight": "12.5rem",
+          "display": "flex",
+          "flexDirection": "column",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "border": "2px dashed var(--border) / 0.5",
+          "borderRadius": "0.5rem",
+          "cursor": "pointer",
+          "transition": "all 0.3s",
+          "hover": {
+            "borderColor": "var(--primary) / 0.7"
+          }
+        },
+        "dragging": {
+          "borderColor": "var(--primary)",
+          "background": "var(--primary) / 0.1"
+        },
+        "preview": {
+          "width": "100%",
+          "height": "100%",
+          "objectFit": "cover",
+          "borderRadius": "0.5rem"
+        }
+      }
+    },
+    
+    "navigation": {
+      "sidebar": {
+        "description": "Main navigation sidebar",
+        "desktop": {
+          "position": "fixed",
+          "top": "0",
+          "left": "0",
+          "bottom": "0",
+          "width": "16rem",
+          "background": "rgba(0, 0, 0, 0.2)",
+          "backdropFilter": "blur(12px)",
+          "padding": "1rem",
+          "display": "flex",
+          "flexDirection": "column",
+          "zIndex": "50"
+        },
+        "mobile": {
+          "position": "fixed",
+          "top": "0",
+          "bottom": "0",
+          "left": "0",
+          "width": "16rem",
+          "background": "rgba(0, 0, 0, 0.5)",
+          "backdropFilter": "blur(24px)",
+          "padding": "1rem",
+          "transform": "translateX(-100%)",
+          "transition": "transform 0.3s ease-in-out",
+          "zIndex": "50",
+          "active": {
+            "transform": "translateX(0)"
+          }
+        },
+        "header": {
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "space-between",
+          "marginBottom": "1.5rem",
+          "height": "4rem"
+        },
+        "logo": {
+          "display": "flex",
+          "alignItems": "center",
+          "gap": "0.5rem"
+        },
+        "logoImage": {
+          "width": "2rem",
+          "height": "2rem",
+          "objectFit": "contain"
+        },
+        "logoText": {
+          "fontSize": "1.5rem",
+          "fontWeight": "700",
+          "color": "var(--text-primary)",
+          "letterSpacing": "0.05em"
+        },
+        "nav": {
+          "flexGrow": "1",
+          "display": "flex",
+          "flexDirection": "column",
+          "gap": "0.25rem"
+        }
+      },
+      "mobileHeader": {
+        "description": "Mobile top navigation bar",
+        "styles": {
+          "display": "flex",
+          "justifyContent": "space-between",
+          "alignItems": "center",
+          "padding": "1rem",
+          "background": "rgba(0, 0, 0, 0.2)",
+          "backdropFilter": "blur(12px)",
+          "position": "sticky",
+          "top": "0",
+          "zIndex": "30",
+          "borderBottom": "1px solid var(--border) / 0.3"
+        },
+        "title": {
+          "fontSize": "1.25rem",
+          "fontWeight": "700",
+          "color": "var(--text-primary)"
+        },
+        "menuButton": {
+          "color": "var(--text-primary)",
+          "padding": "0.5rem",
+          "marginRight": "-0.5rem"
+        }
+      }
+    },
+    
+    "modals": {
+      "numberPad": {
+        "description": "Number pad modal overlay",
+        "overlay": {
+          "position": "fixed",
+          "inset": "0",
+          "background": "rgba(0, 0, 0, 0.6)",
+          "backdropFilter": "blur(12px)",
+          "zIndex": "50",
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "center"
+        },
+        "container": {
+          "width": "100%",
+          "maxWidth": "24rem",
+          "background": "var(--card-bg-solid)",
+          "borderRadius": "1.5rem",
+          "mobile": {
+            "borderTopLeftRadius": "1.5rem",
+            "borderTopRightRadius": "1.5rem",
+            "borderBottomLeftRadius": "0",
+            "borderBottomRightRadius": "0",
+            "position": "absolute",
+            "bottom": "0"
+          }
+        }
+      },
+      "confirmation": {
+        "description": "Confirmation modal",
+        "overlay": {
+          "position": "fixed",
+          "inset": "0",
+          "background": "rgba(0, 0, 0, 0.7)",
+          "backdropFilter": "blur(8px)",
+          "zIndex": "50",
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "padding": "1rem"
+        },
+        "content": {
+          "background": "var(--card-bg-solid)",
+          "borderRadius": "1rem",
+          "padding": "1.5rem",
+          "maxWidth": "28rem",
+          "width": "100%",
+          "border": "1px solid var(--border) / 0.3"
+        }
+      }
+    },
+    
+    "overlays": {
+      "success": {
+        "description": "Success overlay animation",
+        "styles": {
+          "position": "absolute",
+          "inset": "0",
+          "background": "rgba(0, 0, 0, 0.5)",
+          "backdropFilter": "blur(12px)",
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "zIndex": "50",
+          "animation": "bounce-in 0.6s ease-out"
+        },
+        "icon": {
+          "background": "rgb(34, 197, 94)",
+          "borderRadius": "9999px",
+          "width": "8rem",
+          "height": "8rem",
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "boxShadow": "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+        },
+        "checkmark": {
+          "width": "5rem",
+          "height": "5rem",
+          "color": "white",
+          "strokeWidth": "2"
+        }
+      },
+      "loading": {
+        "description": "Loading spinner overlay",
+        "spinner": {
+          "width": "2rem",
+          "height": "2rem",
+          "border": "3px solid var(--primary) / 0.3",
+          "borderTopColor": "var(--primary)",
+          "borderRadius": "9999px",
+          "animation": "spin 1s linear infinite"
+        }
+      }
+    }
+  },
+  
+  "layouts": {
+    "responsiveBreakpoints": {
+      "mobile": "< 640px",
+      "tablet": "640px - 1024px",
+      "desktop": "> 1024px"
+    },
+    
+    "gridSystems": {
+      "tradingGrid": {
+        "description": "Dashboard grid layout",
+        "desktop": {
+          "display": "grid",
+          "gridTemplateColumns": "repeat(3, 1fr)",
+          "gap": "1.5rem"
+        },
+        "tablet": {
+          "gridTemplateColumns": "repeat(2, 1fr)"
+        },
+        "mobile": {
+          "gridTemplateColumns": "1fr"
+        }
+      },
+      "productGrid": {
+        "description": "Product cards grid",
+        "desktop": {
+          "display": "grid",
+          "gridTemplateColumns": "repeat(4, 1fr)",
+          "gap": "1rem"
+        },
+        "tablet": {
+          "gridTemplateColumns": "repeat(3, 1fr)"
+        },
+        "mobile": {
+          "gridTemplateColumns": "repeat(2, 1fr)"
+        }
+      }
+    },
+    
+    "pageLayouts": {
+      "dashboardLayout": {
+        "description": "Main dashboard layout with sidebar",
+        "structure": {
+          "sidebar": {
+            "position": "fixed",
+            "width": "16rem",
+            "height": "100vh"
+          },
+          "mainContent": {
+            "marginLeft": "16rem (desktop only)",
+            "padding": "2rem (desktop), 1.5rem (tablet), 1rem (mobile)",
+            "minHeight": "100vh"
+          }
+        }
+      },
+      "salesPageLayout": {
+        "description": "Split screen sales interface",
+        "desktop": {
+          "display": "flex",
+          "height": "100vh",
+          "productArea": {
+            "width": "60%",
+            "overflowY": "auto",
+            "padding": "1rem"
+          },
+          "cartArea": {
+            "width": "40%",
+            "background": "rgba(0, 0, 0, 0.2)",
+            "backdropFilter": "blur(24px)",
+            "display": "flex",
+            "flexDirection": "column",
+            "padding": "1rem"
+          }
+        },
+        "mobile": {
+          "flexDirection": "column",
+          "productArea": {
+            "width": "100%",
+            "flexShrink": "0"
+          },
+          "cartArea": {
+            "width": "100%",
+            "flexGrow": "1"
+          }
+        }
+      }
+    }
+  },
+  
+  "pages": {
+    "loginPage": {
+      "name": "Login Page",
+      "route": "/login",
+      "layout": {
+        "background": "Animated gradient (var(--background-start) to var(--background-end))",
+        "display": "flex",
+        "alignItems": "center",
+        "justifyContent": "center",
+        "minHeight": "100vh",
+        "padding": "1rem"
+      },
+      "elements": {
+        "container": {
+          "maxWidth": "24rem",
+          "width": "100%"
+        },
+        "logo": {
+          "width": "6rem",
+          "height": "6rem",
+          "background": "linear-gradient(to bottom right, orange-500, yellow-500)",
+          "borderRadius": "1rem",
+          "padding": "0.5rem",
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "boxShadow": "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+          "margin": "0 auto",
+          "animation": "bounce-in 0.6s ease-out"
+        },
+        "brandTitle": {
+          "fontSize": "3rem",
+          "fontWeight": "700",
+          "textAlign": "center",
+          "color": "white",
+          "letterSpacing": "0.05em",
+          "animation": "bounce-in 0.6s ease-out",
+          "animationDelay": "150ms"
+        },
+        "subtitle": {
+          "fontSize": "1.125rem",
+          "textAlign": "center",
+          "color": "rgba(255, 255, 255, 0.9)",
+          "marginTop": "0.5rem",
+          "animation": "bounce-in 0.6s ease-out",
+          "animationDelay": "200ms"
+        },
+        "heading": {
+          "fontSize": "1.5rem",
+          "fontWeight": "600",
+          "textAlign": "center",
+          "color": "white",
+          "marginTop": "2rem"
+        },
+        "form": {
+          "marginTop": "1.5rem",
+          "display": "flex",
+          "flexDirection": "column",
+          "gap": "1.25rem"
+        }
+      }
+    },
+    
+    "ownerDashboard": {
+      "name": "Owner Dashboard (Home)",
+      "route": "/owner/dashboard",
+      "sections": {
+        "header": {
+          "title": "Dashboard Overview",
+          "subtitle": "Monitor your business performance",
+          "animation": "bounce-in",
+          "display": "flex",
+          "justifyContent": "space-between",
+          "alignItems": "center"
+        },
+        "kpiCards": {
+          "layout": "trading-grid (3 columns desktop, 2 tablet, 1 mobile)",
+          "cards": [
+            {
+              "title": "Total Revenue",
+              "icon": "💰",
+              "valueFormat": "₱{number}",
+              "trend": "+12.5%",
+              "trendDirection": "up",
+              "sparkline": true
+            },
+            {
+              "title": "Net Profit",
+              "icon": "📈 or 📉",
+              "valueFormat": "₱{number}",
+              "trend": "+8.2% or -3.1%",
+              "trendDirection": "up or down"
+            },
+            {
+              "title": "Total Transactions",
+              "icon": "🛍️",
+              "valueFormat": "{number}",
+              "trend": "+5 today",
+              "trendDirection": "up"
+            }
+          ]
+        },
+        "charts": {
+          "layout": "trading-grid (2 columns desktop, 1 mobile)",
+          "salesTrend": {
+            "type": "Area Chart",
+            "title": "Sales Trend",
+            "height": "350px",
+            "data": "7 days (Mon-Sun)",
+            "gradient": "var(--primary) with opacity fade",
+            "gridLines": "dashed, color: var(--border)"
+          },
+          "topProducts": {
+            "type": "Pie Chart",
+            "title": "Top Products",
+            "height": "350px",
+            "colors": ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF"],
+            "labelStyle": "percent inside segments"
+          }
+        },
+        "emptyState": {
+          "condition": "totalRevenue === 0 && transactions === 0",
+          "title": "🎉 Welcome to Your Dashboard!",
+          "subtitle": "Let's get started with setting up your business metrics",
+          "steps": [
+            {
+              "number": "1",
+              "title": "Add Your Products",
+              "description": "Start by adding your products in the Products page.",
+              "bgColor": "blue-800/20"
+            },
+            {
+              "number": "2",
+              "title": "Record Sales",
+              "description": "Use the Sales page to record transactions and track your revenue.",
+              "bgColor": "blue-800/20"
+            },
+            {
+              "number": "3",
+              "title": "Monitor Growth",
+              "description": "Watch your dashboard come alive with real data and insights!",
+              "bgColor": "blue-800/20"
+            }
+          ]
+        }
+      }
+    },
+    
+    "productsPage": {
+      "name": "Product Management",
+      "route": "/owner/products",
+      "sections": {
+        "header": {
+          "title": "Product Management",
+          "subtitle": "Add new items to your inventory and view existing stock",
+          "animation": "bounce-in"
+        },
+        "productForm": {
+          "layout": "2 column grid (desktop), 1 column (mobile)",
+          "card": "modern-card with glassmorphism",
+          "leftColumn": {
+            "fields": [
+              {
+                "label": "Product Name",
+                "type": "text",
+                "required": true
+              },
+              {
+                "label": "Price",
+                "type": "number",
+                "step": "0.01",
+                "required": true
+              },
+              {
+                "label": "Quantity",
+                "type": "number",
+                "required": true
+              },
+              {
+                "label": "Category",
+                "type": "text",
+                "required": false
+              }
+            ]
+          },
+          "rightColumn": {
+            "imageUpload": {
+              "type": "drag-and-drop",
+              "accept": "image/*",
+              "maxSize": "10MB",
+              "preview": true,
+              "placeholder": {
+                "icon": "📸",
+                "text": "Click to upload or drag & drop",
+                "subtext": "PNG, JPG, GIF up to 10MB"
+              }
+            }
+          },
+          "buttons": {
+            "reset": {
+              "label": "Reset",
+              "style": "secondary"
+            },
+            "submit": {
+              "label": "Save Product",
+              "style": "primary",
+              "loadingText": "Saving..."
+            }
+          }
+        },
+        "productList": {
+          "title": "Current Products ({count})",
+          "refreshButton": true,
+          "grid": "4 columns (desktop), 3 (tablet), 2 (mobile)",
+          "cardStyle": "productCard",
+          "emptyState": {
+            "icon": "📦",
+            "title": "No Products Yet",
+            "description": "Start adding products to your inventory using the form above."
+          }
+        }
+      }
+    },
+    
+    "workerDashboard": {
+      "name": "Worker Dashboard",
+      "route": "/worker/dashboard",
+      "sections": {
+        "header": {
+          "title": "Dashboard",
+          "subtitle": "Here's your summary for today",
+          "animation": "bounce-in"
+        },
+        "kpiCards": {
+          "layout": "2 columns (all breakpoints)",
+          "cards": [
+            {
+              "title": "Your Sales Today",
+              "icon": "🛒",
+              "valueFormat": "{number}"
+            },
+            {
+              "title": "Your Revenue Today",
+              "icon": "💰",
+              "valueFormat": "₱{number}"
+            }
+          ]
+        },
+        "emptyState": {
+          "condition": "salesToday === 0",
+          "title": "👋 Ready to start your day?",
+          "description": "You haven't recorded any sales today yet. Click the button below to get started!"
+        },
+        "recordSaleButton": {
+          "text": "+ Record a New Sale",
+          "styles": {
+            "width": "100%",
+            "padding": "1.5rem",
+            "background": "var(--primary)",
+            "borderRadius": "1.5rem",
+            "color": "var(--text-on-primary)",
+            "fontWeight": "700",
+            "fontSize": "1.5rem",
+            "textAlign": "center",
+            "transition": "transform 0.3s",
+            "hover": {
+              "transform": "scale(1.05)"
+            },
+            "boxShadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+            "animation": "slide-in-bottom"
+          }
+        }
+      }
+    },
+    
+    "salesPage": {
+      "name": "Record Sale (Worker)",
+      "route": "/worker/sales",
+      "layout": "split-screen (60/40 desktop, stacked mobile)",
+      "sections": {
+        "productArea": {
+          "width": "60% (desktop), 100% (mobile)",
+          "padding": "1rem",
+          "overflowY": "auto",
+          "header": {
+            "title": "Record Sale",
+            "subtitle": "Tap products to add to cart or use voice input"
+          },
+          "productGrid": {
+            "columns": "4 (xl), 3 (md), 2 (mobile)",
+            "gap": "1rem",
+            "cardInteraction": {
+              "onClick": "addToCart",
+              "hover": {
+                "borderColor": "var(--primary)",
+                "transform": "scale(1.05)"
+              }
+            }
+          }
+        },
+        "cartArea": {
+          "width": "40% (desktop), 100% (mobile)",
+          "background": "rgba(0, 0, 0, 0.2)",
+          "backdropFilter": "blur(24px)",
+          "display": "flex",
+          "flexDirection": "column",
+          "padding": "1rem",
+          "elements": {
+            "header": {
+              "title": "Current Sale",
+              "fontSize": "1.5rem",
+              "fontWeight": "700"
+            },
+            "voiceInput": {
+              "component": "VoiceInputButton",
+              "placeholder": "Use voice to add items",
+              "marginBottom": "1rem"
+            },
+            "cartItems": {
+              "flexGrow": "1",
+              "overflowY": "auto",
+              "itemLayout": {
+                "display": "flex",
+                "alignItems": "center",
+                "background": "rgba(255, 255, 255, 0.05)",
+                "padding": "0.5rem",
+                "borderRadius": "0.5rem",
+                "gap": "0.75rem"
+              },
+              "quantityControls": {
+                "background": "rgba(255, 255, 255, 0.1)",
+                "borderRadius": "0.375rem",
+                "buttons": {
+                  "width": "3rem",
+                  "fontSize": "1.25rem",
+                  "fontWeight": "700"
+                }
+              },
+              "emptyState": {
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "center",
+                "height": "100%",
+                "text": "Cart is empty",
+                "color": "var(--text-secondary)"
+              }
+            },
+            "paymentSection": {
+              "borderTop": "1px solid var(--border)",
+              "paddingTop": "1rem",
+              "marginTop": "1rem",
+              "rows": [
+                {
+                  "label": "Total",
+                  "value": "₱{total}",
+                  "fontSize": "1.25rem",
+                  "fontWeight": "700",
+                  "color": "var(--primary)"
+                },
+                {
+                  "label": "Received",
+                  "value": "₱{received}",
+                  "interactive": true,
+                  "onClick": "openNumberPad",
+                  "fontSize": "1.5rem",
+                  "color": "var(--accent)"
+                },
+                {
+                  "label": "Change",
+                  "value": "₱{change}",
+                  "fontSize": "1.5rem",
+                  "fontWeight": "700",
+                  "color": "rgb(34, 197, 94)"
+                }
+              ],
+              "saveSaleButton": {
+                "width": "100%",
+                "background": "var(--primary)",
+                "color": "var(--text-on-primary)",
+                "fontSize": "1.25rem",
+                "fontWeight": "700",
+                "padding": "1rem",
+                "borderRadius": "0.5rem",
+                "boxShadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                "transition": "transform 0.3s",
+                "hover": {
+                  "transform": "scale(1.05)"
+                },
+                "disabled": {
+                  "opacity": "0.5",
+                  "transform": "scale(1)",
+                  "background": "rgb(107, 114, 128)"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  
+  "interactionPatterns": {
+    "hoverEffects": {
+      "cards": {
+        "default": "border color change + scale(1.05)",
+        "duration": "300ms",
+        "timing": "ease-in-out"
+      },
+      "buttons": {
+        "primary": "opacity 0.8 + scale(1.05)",
+        "secondary": "background brightness increase"
+      },
+      "shimmer": {
+        "description": "Shine effect overlay on hover",
+        "element": "::after pseudo-element",
+        "gradient": "linear-gradient(110deg, transparent 40%, white/10 50%, transparent 60%)",
+        "animation": "slide across 1.5s infinite"
+      }
+    },
+    
+    "clickEffects": {
+      "buttons": "scale(0.95) on active",
+      "numberPad": "scale(1.05) + background color change on active",
+      "productCards": "add to cart immediate feedback"
+    },
+    
+    "loadingStates": {
+      "spinner": {
+        "size": "sm: 1rem, md: 1.5rem, lg: 2rem",
+        "border": "3px solid var(--primary)/0.3",
+        "borderTop": "3px solid var(--primary)",
+        "animation": "spin 1s linear infinite"
+      },
+      "skeleton": {
+        "background": "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)",
+        "animation": "pulse 1.5s infinite"
+      },
+      "inlineLoader": {
+        "display": "flex items-center",
+        "spinner": "small",
+        "text": "Loading... / Updating..."
+      }
+    },
+    
+    "feedbackMessages": {
+      "success": {
+        "overlay": "full-screen success checkmark animation",
+        "duration": "1500ms",
+        "icon": "green circle with white checkmark",
+        "iconSize": "8rem"
+      },
+      "error": {
+        "banner": "red background with error icon",
+        "position": "top of form",
+        "autoHide": "4000ms"
+      },
+      "warning": {
+        "banner": "yellow/amber background",
+        "icon": "⚠️",
+        "dismissible": true
+      },
+      "info": {
+        "banner": "blue background",
+        "position": "below header",
+        "dismissible": true
+      }
+    },
+    
+    "transitions": {
+      "pageTransitions": {
+        "enter": "fade-in + slide-up",
+        "exit": "fade-out",
+        "duration": "300ms"
+      },
+      "modalTransitions": {
+        "overlay": "fade-in 200ms",
+        "content": "slide-in-bottom 300ms"
+      },
+      "sidebarTransitions": {
+        "mobile": "slide from left 300ms ease-in-out",
+        "overlay": "fade-in 200ms"
+      }
+    }
+  },
+  
+  "responsiveDesign": {
+    "mobileFirst": true,
+    "breakpoints": {
+      "sm": "640px",
+      "md": "768px",
+      "lg": "1024px",
+      "xl": "1280px",
+      "2xl": "1536px"
+    },
+    
+    "mobileOptimizations": {
+      "touchTargets": {
+        "minimum": "44px x 44px",
+        "recommended": "48px x 48px"
+      },
+      "navigation": {
+        "type": "hamburger menu",
+        "position": "fixed sidebar overlay",
+        "closeButton": "top-right of sidebar",
+        "overlay": "semi-transparent backdrop blur"
+      },
+      "forms": {
+        "inputSpacing": "increased for touch",
+        "fontSize": "minimum 16px (prevents zoom on iOS)",
+        "numberPad": "bottom sheet modal"
+      },
+      "layout": {
+        "sidebar": "hidden by default, slide from left",
+        "mainContent": "full width with mobile header",
+        "cards": "full width with reduced padding"
+      }
+    },
+    
+    "tabletOptimizations": {
+      "grid": "2-3 columns for cards",
+      "sidebar": "persistent or collapsible",
+      "fontSize": "slightly larger than mobile"
+    },
+    
+    "desktopOptimizations": {
+      "sidebar": "always visible, fixed position",
+      "grid": "3-4 columns for cards",
+      "hover": "enhanced interactions with shimmer effects",
+      "charts": "larger with more detail"
+    }
+  },
+  
+  "accessibility": {
+    "keyboardNavigation": {
+      "focusVisible": "outline: 2px solid var(--primary), offset: 2px",
+      "tabOrder": "logical flow through interactive elements",
+      "skipLinks": "skip to main content"
+    },
+    
+    "screenReaderSupport": {
+      "ariaLabels": "all interactive elements",
+      "ariaDescribedBy": "form fields with errors",
+      "liveRegions": "for dynamic content updates",
+      "semanticHTML": "proper heading hierarchy, landmarks"
+    },
+    
+    "colorContrast": {
+      "textOnBackground": "minimum 4.5:1 (WCAG AA)",
+      "primaryText": "white on colored backgrounds",
+      "secondaryText": "reduced opacity maintains readability"
+    },
+    
+    "textScaling": {
+      "support": "up to 200% zoom without horizontal scroll",
+      "units": "rem-based for user font size preferences"
+    }
+  },
+  
+  "brandingAssets": {
+    "logo": {
+      "primary": "/Charnoks logo-192x192.png",
+      "sizes": ["192x192", "512x512"],
+      "usage": {
+        "login": "6rem x 6rem with gradient background",
+        "sidebar": "2rem x 2rem",
+        "header": "3rem x 3rem with brand name"
+      }
+    },
+    
+    "brandName": {
+      "text": "CHARNOKS",
+      "style": {
+        "fontWeight": "700",
+        "letterSpacing": "0.05em",
+        "color": "white or var(--text-primary)"
+      },
+      "tagline": "Point of Sale System",
+      "subtext": "🍗 Special Fried Chicken & More"
+    },
+    
+    "iconography": {
+      "style": "Emoji-based for quick recognition",
+      "examples": {
+        "revenue": "💰",
+        "profit": "📈 / 📉",
+        "transactions": "🛍️",
+        "sales": "🛒",
+        "products": "📦",
+        "expenses": "🧾",
+        "settings": "⚙️",
+        "dashboard": "📊",
+        "analytics": "📈",
+        "success": "✅",
+        "warning": "⚠️",
+        "chicken": "🍗"
+      }
+    }
+  }
+}

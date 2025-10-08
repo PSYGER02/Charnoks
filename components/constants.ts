@@ -4,9 +4,9 @@ import type { Theme } from '../types';
 export const OWNER_NAVIGATION_ITEMS = [
   { path: '/owner/dashboard', icon: '👑', label: 'Dashboard' },
   { path: '/owner/analysis', icon: '📊', label: 'Analysis' },
-  { path: '/owner/ai-assistant', icon: '🧠', label: 'AI Assistant' },
-  { path: '/owner/ai-dashboard', icon: '🤖', label: 'AI Dashboard' },
-  { path: '/owner/ai-store-advisor', icon: '🎯', label: 'AI Store Advisor' },
+  // { path: '/owner/ai-assistant', icon: '🧠', label: 'AI Assistant' },
+  // { path: '/owner/ai-dashboard', icon: '🤖', label: 'AI Dashboard' },
+  // { path: '/owner/ai-store-advisor', icon: '🎯', label: 'AI Store Advisor' },
   { path: '/owner/sales', icon: '🚚', label: 'Stock Management' },
   { path: '/owner/products', icon: '📦', label: 'Products' },
   { path: '/owner/expenses', icon: '🧾', label: 'Expenses' },
@@ -17,7 +17,7 @@ export const OWNER_NAVIGATION_ITEMS = [
 
 export const WORKER_NAVIGATION_ITEMS = [
     { path: '/worker/dashboard', icon: '📊', label: 'Dashboard' },
-    { path: '/worker/ai-advisor', icon: '🎯', label: 'AI Work Assistant' },
+    // { path: '/worker/ai-advisor', icon: '🎯', label: 'AI Work Assistant' },
     { path: '/worker/sales', icon: '🛒', label: 'Record Sale' },
     { path: '/worker/expenses', icon: '🧾', label: 'Record Expense' },
     { path: '/worker/transactions', icon: '📋', label: 'My Sales' },

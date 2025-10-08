@@ -1,0 +1,1 @@
+i have a crazy idea is it possible to integrate with google maps for worker branch and hq location and then if we pick the location of one worker in the location we can then tap it and it will zoom and we will see all the output data or values that branch or worker makes 

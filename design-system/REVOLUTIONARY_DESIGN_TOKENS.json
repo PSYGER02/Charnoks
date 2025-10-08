@@ -1,0 +1,902 @@
+{
+  "meta": {
+    "name": "Charnoks Revolutionary Design System",
+    "version": "2.0.0",
+    "description": "Next-generation design tokens for world-class POS interface",
+    "created": "2025-10-01",
+    "philosophy": "Semantic, accessible, and emotionally intelligent design language"
+  },
+  
+  "foundation": {
+    "grid": {
+      "base": "4px",
+      "scale": [2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256],
+      "philosophy": "8px grid system with fibonacci-inspired scaling"
+    },
+    
+    "breakpoints": {
+      "xs": "320px",
+      "sm": "640px", 
+      "md": "768px",
+      "lg": "1024px",
+      "xl": "1280px",
+      "2xl": "1536px",
+      "3xl": "1920px",
+      "4k": "2560px"
+    },
+    
+    "aspect_ratios": {
+      "square": "1:1",
+      "card": "3:2", 
+      "video": "16:9",
+      "golden": "1.618:1",
+      "photo": "4:3"
+    }
+  },
+
+  "color": {
+    "semantic_system": {
+      "philosophy": "Perceptually uniform color space with emotional intelligence",
+      
+      "primitives": {
+        "gray": {
+          "50": "#fafafa",
+          "100": "#f5f5f5", 
+          "200": "#e5e5e5",
+          "300": "#d4d4d4",
+          "400": "#a3a3a3",
+          "500": "#737373",
+          "600": "#525252",
+          "700": "#404040",
+          "800": "#262626",
+          "900": "#171717",
+          "950": "#0a0a0a"
+        },
+        
+        "red": {
+          "50": "#fef2f2",
+          "100": "#fee2e2",
+          "200": "#fecaca", 
+          "300": "#fca5a5",
+          "400": "#f87171",
+          "500": "#ef4444",
+          "600": "#dc2626",
+          "700": "#b91c1c",
+          "800": "#991b1b",
+          "900": "#7f1d1d",
+          "950": "#450a0a"
+        },
+        
+        "orange": {
+          "50": "#fff7ed",
+          "100": "#ffedd5",
+          "200": "#fed7aa",
+          "300": "#fdba74", 
+          "400": "#fb923c",
+          "500": "#f97316",
+          "600": "#ea580c",
+          "700": "#c2410c",
+          "800": "#9a3412",
+          "900": "#7c2d12",
+          "950": "#431407"
+        },
+        
+        "yellow": {
+          "50": "#fefce8",
+          "100": "#fef9c3",
+          "200": "#fef08a",
+          "300": "#fde047",
+          "400": "#facc15", 
+          "500": "#eab308",
+          "600": "#ca8a04",
+          "700": "#a16207",
+          "800": "#854d0e",
+          "900": "#713f12",
+          "950": "#422006"
+        },
+        
+        "green": {
+          "50": "#f0fdf4",
+          "100": "#dcfce7",
+          "200": "#bbf7d0",
+          "300": "#86efac",
+          "400": "#4ade80",
+          "500": "#22c55e",
+          "600": "#16a34a",
+          "700": "#15803d",
+          "800": "#166534",
+          "900": "#14532d",
+          "950": "#052e16"
+        },
+        
+        "blue": {
+          "50": "#eff6ff",
+          "100": "#dbeafe", 
+          "200": "#bfdbfe",
+          "300": "#93c5fd",
+          "400": "#60a5fa",
+          "500": "#3b82f6",
+          "600": "#2563eb",
+          "700": "#1d4ed8",
+          "800": "#1e40af",
+          "900": "#1e3a8a",
+          "950": "#172554"
+        },
+        
+        "purple": {
+          "50": "#faf5ff",
+          "100": "#f3e8ff",
+          "200": "#e9d5ff",
+          "300": "#d8b4fe",
+          "400": "#c084fc",
+          "500": "#a855f7",
+          "600": "#9333ea",
+          "700": "#7c3aed",
+          "800": "#6b21a8",
+          "900": "#581c87",
+          "950": "#3b0764"
+        }
+      },
+
+      "semantic_tokens": {
+        "background": {
+          "primary": "{gray.900}",
+          "secondary": "{gray.800}",
+          "tertiary": "{gray.700}",
+          "elevated": "{gray.800}",
+          "overlay": "rgba({gray.900}, 0.8)",
+          "glass": "rgba({gray.800}, 0.7)",
+          "success": "{green.900}",
+          "warning": "{yellow.900}",
+          "error": "{red.900}",
+          "info": "{blue.900}"
+        },
+        
+        "text": {
+          "primary": "{gray.50}",
+          "secondary": "{gray.300}",
+          "tertiary": "{gray.400}",
+          "inverse": "{gray.900}",
+          "success": "{green.400}",
+          "warning": "{yellow.400}",
+          "error": "{red.400}",
+          "info": "{blue.400}",
+          "link": "{blue.400}",
+          "muted": "{gray.500}"
+        },
+        
+        "border": {
+          "primary": "{gray.600}",
+          "secondary": "{gray.700}",
+          "tertiary": "{gray.800}",
+          "focus": "{blue.500}",
+          "success": "{green.600}",
+          "warning": "{yellow.600}", 
+          "error": "{red.600}",
+          "info": "{blue.600}"
+        },
+        
+        "surface": {
+          "primary": "{gray.800}",
+          "secondary": "{gray.700}",
+          "tertiary": "{gray.600}",
+          "elevated": "{gray.700}",
+          "glass": "rgba({gray.800}, 0.8)",
+          "overlay": "rgba({gray.900}, 0.95)"
+        }
+      }
+    },
+
+    "themes": {
+      "charnoks_premium": {
+        "name": "Charnoks Premium",
+        "category": "brand",
+        "primary": {
+          "50": "#fef7ee",
+          "100": "#fde8d7",
+          "200": "#fbd0ae",
+          "300": "#f7b07a",
+          "400": "#f28545",
+          "500": "#ef6820",
+          "600": "#e05016",
+          "700": "#ba3b15",
+          "800": "#94321a",
+          "900": "#782c18",
+          "950": "#41140a"
+        },
+        "accent": {
+          "50": "#fffbeb",
+          "100": "#fef3c7", 
+          "200": "#fde68a",
+          "300": "#fcd34d",
+          "400": "#fbbf24",
+          "500": "#f59e0b",
+          "600": "#d97706",
+          "700": "#b45309",
+          "800": "#92400e",
+          "900": "#78350f",
+          "950": "#451a03"
+        },
+        "background_gradient": "linear-gradient(135deg, {primary.600}, {accent.500})",
+        "glass_effect": "backdrop-blur(12px) bg-{primary.800}/70"
+      },
+      
+      "ocean_depth": {
+        "name": "Ocean Depth",
+        "category": "nature",
+        "primary": {
+          "50": "#ecfeff",
+          "100": "#cffafe",
+          "200": "#a5f3fc",
+          "300": "#67e8f9",
+          "400": "#22d3ee",
+          "500": "#06b6d4",
+          "600": "#0891b2",
+          "700": "#0e7490",
+          "800": "#155e75",
+          "900": "#164e63",
+          "950": "#083344"
+        },
+        "accent": {
+          "50": "#f0f9ff",
+          "100": "#e0f2fe",
+          "200": "#bae6fd",
+          "300": "#7dd3fc",
+          "400": "#38bdf8",
+          "500": "#0ea5e9",
+          "600": "#0284c7",
+          "700": "#0369a1",
+          "800": "#075985",
+          "900": "#0c4a6e",
+          "950": "#082f49"
+        }
+      },
+      
+      "forest_zen": {
+        "name": "Forest Zen",
+        "category": "nature", 
+        "primary": {
+          "50": "#f0fdf4",
+          "100": "#dcfce7",
+          "200": "#bbf7d0",
+          "300": "#86efac",
+          "400": "#4ade80",
+          "500": "#22c55e",
+          "600": "#16a34a",
+          "700": "#15803d",
+          "800": "#166534",
+          "900": "#14532d",
+          "950": "#052e16"
+        },
+        "accent": {
+          "50": "#ecfdf5",
+          "100": "#d1fae5",
+          "200": "#a7f3d0",
+          "300": "#6ee7b7",
+          "400": "#34d399",
+          "500": "#10b981",
+          "600": "#059669",
+          "700": "#047857",
+          "800": "#065f46",
+          "900": "#064e3b",
+          "950": "#022c22"
+        }
+      },
+      
+      "sunset_glow": {
+        "name": "Sunset Glow",
+        "category": "warm",
+        "primary": {
+          "50": "#fdf4ff",
+          "100": "#fae8ff",
+          "200": "#f5d0fe",
+          "300": "#f0abfc",
+          "400": "#e879f9",
+          "500": "#d946ef",
+          "600": "#c026d3",
+          "700": "#a21caf",
+          "800": "#86198f",
+          "900": "#701a75",
+          "950": "#4a044e"
+        },
+        "accent": {
+          "50": "#fef7ee",
+          "100": "#fde8d7",
+          "200": "#fbd0ae",
+          "300": "#f7b07a",
+          "400": "#f28545",
+          "500": "#ef6820",
+          "600": "#e05016",
+          "700": "#ba3b15",
+          "800": "#94321a",
+          "900": "#782c18",
+          "950": "#41140a"
+        }
+      },
+      
+      "midnight_professional": {
+        "name": "Midnight Professional",
+        "category": "professional",
+        "primary": {
+          "50": "#f8fafc",
+          "100": "#f1f5f9",
+          "200": "#e2e8f0",
+          "300": "#cbd5e1",
+          "400": "#94a3b8",
+          "500": "#64748b",
+          "600": "#475569",
+          "700": "#334155",
+          "800": "#1e293b",
+          "900": "#0f172a",
+          "950": "#020617"
+        },
+        "accent": {
+          "50": "#eff6ff",
+          "100": "#dbeafe",
+          "200": "#bfdbfe", 
+          "300": "#93c5fd",
+          "400": "#60a5fa",
+          "500": "#3b82f6",
+          "600": "#2563eb",
+          "700": "#1d4ed8",
+          "800": "#1e40af",
+          "900": "#1e3a8a",
+          "950": "#172554"
+        }
+      },
+      
+      "aurora_dreams": {
+        "name": "Aurora Dreams",
+        "category": "vibrant",
+        "primary": {
+          "50": "#f0f9ff",
+          "100": "#e0f2fe",
+          "200": "#bae6fd",
+          "300": "#7dd3fc", 
+          "400": "#38bdf8",
+          "500": "#0ea5e9",
+          "600": "#0284c7",
+          "700": "#0369a1",
+          "800": "#075985",
+          "900": "#0c4a6e",
+          "950": "#082f49"
+        },
+        "accent": {
+          "50": "#fdf4ff",
+          "100": "#fae8ff",
+          "200": "#f5d0fe",
+          "300": "#f0abfc",
+          "400": "#e879f9",
+          "500": "#d946ef",
+          "600": "#c026d3",
+          "700": "#a21caf",
+          "800": "#86198f", 
+          "900": "#701a75",
+          "950": "#4a044e"
+        }
+      },
+      
+      "golden_hour": {
+        "name": "Golden Hour",
+        "category": "warm",
+        "primary": {
+          "50": "#fffbeb",
+          "100": "#fef3c7",
+          "200": "#fde68a",
+          "300": "#fcd34d",
+          "400": "#fbbf24",
+          "500": "#f59e0b",
+          "600": "#d97706",
+          "700": "#b45309",
+          "800": "#92400e",
+          "900": "#78350f",
+          "950": "#451a03"
+        },
+        "accent": {
+          "50": "#fef7ee",
+          "100": "#fde8d7",
+          "200": "#fbd0ae",
+          "300": "#f7b07a",
+          "400": "#f28545",
+          "500": "#ef6820",
+          "600": "#e05016",
+          "700": "#ba3b15",
+          "800": "#94321a",
+          "900": "#782c18",
+          "950": "#41140a"
+        }
+      },
+      
+      "emerald_luxury": {
+        "name": "Emerald Luxury",
+        "category": "luxury",
+        "primary": {
+          "50": "#ecfdf5",
+          "100": "#d1fae5",
+          "200": "#a7f3d0",
+          "300": "#6ee7b7",
+          "400": "#34d399",
+          "500": "#10b981",
+          "600": "#059669",
+          "700": "#047857",
+          "800": "#065f46",
+          "900": "#064e3b",
+          "950": "#022c22"
+        },
+        "accent": {
+          "50": "#f0fdf4",
+          "100": "#dcfce7",
+          "200": "#bbf7d0",
+          "300": "#86efac",
+          "400": "#4ade80",
+          "500": "#22c55e",
+          "600": "#16a34a",
+          "700": "#15803d",
+          "800": "#166534",
+          "900": "#14532d",
+          "950": "#052e16"
+        }
+      },
+      
+      "high_contrast": {
+        "name": "High Contrast",
+        "category": "accessibility",
+        "primary": {
+          "50": "#ffffff",
+          "100": "#f5f5f5",
+          "200": "#e5e5e5", 
+          "300": "#d4d4d4",
+          "400": "#a3a3a3",
+          "500": "#737373",
+          "600": "#525252",
+          "700": "#404040",
+          "800": "#262626",
+          "900": "#000000",
+          "950": "#000000"
+        },
+        "accent": {
+          "50": "#ffff00",
+          "100": "#ffff33",
+          "200": "#ffff66",
+          "300": "#ffff99",
+          "400": "#ffffcc",
+          "500": "#ffff00",
+          "600": "#cccc00",
+          "700": "#999900",
+          "800": "#666600",
+          "900": "#333300",
+          "950": "#1a1a00"
+        }
+      }
+    }
+  },
+
+  "typography": {
+    "philosophy": "Typographic scale based on modular scale with perfect readability",
+    
+    "font_families": {
+      "sans": {
+        "name": "Inter Variable",
+        "stack": "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif",
+        "features": ["Variable weights", "Optical sizing", "Contextual alternates"],
+        "weights": [400, 500, 600, 700, 800, 900]
+      },
+      "mono": {
+        "name": "JetBrains Mono",
+        "stack": "JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace",
+        "features": ["Ligatures", "Programming symbols"],
+        "weights": [400, 500, 600, 700]
+      },
+      "display": {
+        "name": "Instrument Serif",
+        "stack": "Instrument Serif, ui-serif, Georgia, Cambria, Times New Roman, Times, serif",
+        "features": ["Display optimized", "High contrast"],
+        "weights": [400, 500, 600]
+      }
+    },
+    
+    "scale": {
+      "philosophy": "Perfect fourth scale (1.333) with optical adjustments",
+      "base_size": "16px",
+      "line_height_ratio": 1.5,
+      
+      "sizes": {
+        "xs": {
+          "size": "12px",
+          "line_height": "16px",
+          "letter_spacing": "0.05em",
+          "usage": "Captions, metadata, fine print"
+        },
+        "sm": {
+          "size": "14px", 
+          "line_height": "20px",
+          "letter_spacing": "0.025em",
+          "usage": "Small text, labels, secondary content"
+        },
+        "base": {
+          "size": "16px",
+          "line_height": "24px",
+          "letter_spacing": "0",
+          "usage": "Body text, primary content"
+        },
+        "lg": {
+          "size": "18px",
+          "line_height": "28px", 
+          "letter_spacing": "-0.025em",
+          "usage": "Large body text, emphasized content"
+        },
+        "xl": {
+          "size": "20px",
+          "line_height": "28px",
+          "letter_spacing": "-0.025em",
+          "usage": "Subheadings, large text"
+        },
+        "2xl": {
+          "size": "24px",
+          "line_height": "32px",
+          "letter_spacing": "-0.05em",
+          "usage": "Section headings"
+        },
+        "3xl": {
+          "size": "30px",
+          "line_height": "36px",
+          "letter_spacing": "-0.05em", 
+          "usage": "Page headings"
+        },
+        "4xl": {
+          "size": "36px",
+          "line_height": "40px",
+          "letter_spacing": "-0.1em",
+          "usage": "Large headings, hero text"
+        },
+        "5xl": {
+          "size": "48px",
+          "line_height": "48px",
+          "letter_spacing": "-0.1em",
+          "usage": "Display headings"
+        },
+        "6xl": {
+          "size": "60px",
+          "line_height": "60px",
+          "letter_spacing": "-0.15em",
+          "usage": "Large display text"
+        },
+        "7xl": {
+          "size": "72px",
+          "line_height": "72px",
+          "letter_spacing": "-0.15em",
+          "usage": "Hero display text"
+        },
+        "8xl": {
+          "size": "96px",
+          "line_height": "96px",
+          "letter_spacing": "-0.2em",
+          "usage": "Large hero text"
+        },
+        "9xl": {
+          "size": "128px",
+          "line_height": "128px",
+          "letter_spacing": "-0.2em",
+          "usage": "Massive display text"
+        }
+      },
+      
+      "weights": {
+        "thin": 100,
+        "extralight": 200,
+        "light": 300,
+        "normal": 400,
+        "medium": 500,
+        "semibold": 600,
+        "bold": 700,
+        "extrabold": 800,
+        "black": 900
+      }
+    },
+    
+    "semantic_styles": {
+      "heading_1": {
+        "size": "3xl",
+        "weight": "bold",
+        "line_height": "tight",
+        "letter_spacing": "tight",
+        "margin_bottom": "lg"
+      },
+      "heading_2": {
+        "size": "2xl",
+        "weight": "semibold", 
+        "line_height": "tight",
+        "letter_spacing": "tight",
+        "margin_bottom": "md"
+      },
+      "heading_3": {
+        "size": "xl",
+        "weight": "semibold",
+        "line_height": "snug",
+        "letter_spacing": "normal",
+        "margin_bottom": "sm"
+      },
+      "body_large": {
+        "size": "lg",
+        "weight": "normal",
+        "line_height": "relaxed",
+        "letter_spacing": "normal"
+      },
+      "body": {
+        "size": "base",
+        "weight": "normal",
+        "line_height": "normal",
+        "letter_spacing": "normal"
+      },
+      "body_small": {
+        "size": "sm",
+        "weight": "normal",
+        "line_height": "normal",
+        "letter_spacing": "wide"
+      },
+      "caption": {
+        "size": "xs",
+        "weight": "medium",
+        "line_height": "tight",
+        "letter_spacing": "wide",
+        "text_transform": "uppercase"
+      }
+    }
+  },
+
+  "spacing": {
+    "philosophy": "8px grid system with golden ratio and fibonacci influences",
+    "base_unit": "4px",
+    
+    "scale": {
+      "0": "0px",
+      "px": "1px", 
+      "0.5": "2px",
+      "1": "4px",
+      "1.5": "6px",
+      "2": "8px",
+      "2.5": "10px",
+      "3": "12px",
+      "3.5": "14px",
+      "4": "16px",
+      "5": "20px",
+      "6": "24px",
+      "7": "28px",
+      "8": "32px",
+      "9": "36px",
+      "10": "40px",
+      "11": "44px",
+      "12": "48px",
+      "14": "56px",
+      "16": "64px",
+      "20": "80px",
+      "24": "96px",
+      "28": "112px",
+      "32": "128px",
+      "36": "144px",
+      "40": "160px",
+      "44": "176px",
+      "48": "192px",
+      "52": "208px",
+      "56": "224px",
+      "60": "240px",
+      "64": "256px",
+      "72": "288px",
+      "80": "320px",
+      "96": "384px"
+    },
+    
+    "semantic_tokens": {
+      "component_padding": {
+        "xs": "2",
+        "sm": "3", 
+        "md": "4",
+        "lg": "6",
+        "xl": "8"
+      },
+      "component_margin": {
+        "xs": "2",
+        "sm": "4",
+        "md": "6", 
+        "lg": "8",
+        "xl": "12"
+      },
+      "section_spacing": {
+        "xs": "8",
+        "sm": "12",
+        "md": "16",
+        "lg": "24",
+        "xl": "32"
+      },
+      "page_margins": {
+        "mobile": "4",
+        "tablet": "6", 
+        "desktop": "8",
+        "wide": "12"
+      }
+    }
+  },
+
+  "elevation": {
+    "philosophy": "Physics-based shadows with multiple light sources",
+    
+    "levels": {
+      "0": {
+        "name": "Flat",
+        "shadow": "none",
+        "usage": "Flush elements, backgrounds"
+      },
+      "1": {
+        "name": "Subtle",
+        "shadow": "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+        "usage": "Cards, buttons"
+      },
+      "2": {
+        "name": "Low",
+        "shadow": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)", 
+        "usage": "Dropdowns, tooltips"
+      },
+      "3": {
+        "name": "Medium",
+        "shadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)",
+        "usage": "Modals, popovers"
+      },
+      "4": {
+        "name": "High",
+        "shadow": "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+        "usage": "Sticky elements, floating panels"
+      },
+      "5": {
+        "name": "Maximum", 
+        "shadow": "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+        "usage": "Modal overlays, hero elements"
+      }
+    },
+    
+    "glow_effects": {
+      "primary": "0 0 20px rgba(var(--primary-500), 0.3)",
+      "success": "0 0 20px rgba(var(--green-500), 0.3)",
+      "warning": "0 0 20px rgba(var(--yellow-500), 0.3)",
+      "error": "0 0 20px rgba(var(--red-500), 0.3)",
+      "focus": "0 0 0 3px rgba(var(--primary-500), 0.2)"
+    }
+  },
+
+  "motion": {
+    "philosophy": "Physics-based motion with emotional intelligence",
+    
+    "durations": {
+      "instant": "0ms",
+      "fast": "150ms", 
+      "normal": "300ms",
+      "slow": "500ms",
+      "slower": "750ms",
+      "slowest": "1000ms"
+    },
+    
+    "easing": {
+      "linear": "linear",
+      "ease": "ease",
+      "ease_in": "cubic-bezier(0.4, 0, 1, 1)",
+      "ease_out": "cubic-bezier(0, 0, 0.2, 1)",
+      "ease_in_out": "cubic-bezier(0.4, 0, 0.2, 1)",
+      "bounce": "cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+      "elastic": "cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+      "back": "cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+      "spring": "cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+    },
+    
+    "presets": {
+      "fade_in": {
+        "duration": "normal",
+        "easing": "ease_out",
+        "from": {"opacity": 0},
+        "to": {"opacity": 1}
+      },
+      "slide_up": {
+        "duration": "normal", 
+        "easing": "ease_out",
+        "from": {"opacity": 0, "transform": "translateY(20px)"},
+        "to": {"opacity": 1, "transform": "translateY(0)"}
+      },
+      "scale_in": {
+        "duration": "normal",
+        "easing": "bounce",
+        "from": {"opacity": 0, "transform": "scale(0.9)"},
+        "to": {"opacity": 1, "transform": "scale(1)"}
+      },
+      "hover_lift": {
+        "duration": "fast",
+        "easing": "ease_out", 
+        "transform": "translateY(-2px)",
+        "shadow": "elevation.3"
+      }
+    }
+  },
+
+  "border_radius": {
+    "philosophy": "Consistent radius scale for spatial harmony",
+    
+    "scale": {
+      "none": "0px",
+      "sm": "2px",
+      "base": "4px", 
+      "md": "6px",
+      "lg": "8px",
+      "xl": "12px",
+      "2xl": "16px",
+      "3xl": "24px",
+      "full": "9999px"
+    },
+    
+    "semantic_tokens": {
+      "button": "lg",
+      "card": "2xl",
+      "input": "md",
+      "modal": "3xl",
+      "avatar": "full",
+      "badge": "full",
+      "tooltip": "lg"
+    }
+  },
+
+  "opacity": {
+    "philosophy": "Semantic opacity levels for information hierarchy",
+    
+    "levels": {
+      "0": "0",
+      "5": "0.05",
+      "10": "0.1", 
+      "20": "0.2",
+      "25": "0.25",
+      "30": "0.3",
+      "40": "0.4",
+      "50": "0.5",
+      "60": "0.6",
+      "70": "0.7",
+      "75": "0.75",
+      "80": "0.8",
+      "90": "0.9",
+      "95": "0.95",
+      "100": "1"
+    },
+    
+    "semantic_tokens": {
+      "disabled": "50",
+      "placeholder": "60",
+      "secondary": "70",
+      "overlay": "80",
+      "glass": "70"
+    }
+  },
+
+  "accessibility": {
+    "philosophy": "Universal design principles with WCAG 2.1 AAA compliance",
+    
+    "contrast_ratios": {
+      "aa_normal": "4.5:1",
+      "aa_large": "3:1", 
+      "aaa_normal": "7:1",
+      "aaa_large": "4.5:1"
+    },
+    
+    "touch_targets": {
+      "minimum": "44px",
+      "recommended": "48px",
+      "comfortable": "56px"
+    },
+    
+    "focus_indicators": {
+      "width": "2px",
+      "offset": "2px",
+      "color": "focus",
+      "style": "solid"
+    },
+    
+    "motion_preferences": {
+      "respect_reduced_motion": true,
+      "alternative_feedback": "color_and_pattern",
+      "essential_motion_only": true
+    }
+  }
+}
