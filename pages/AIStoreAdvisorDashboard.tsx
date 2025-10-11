@@ -15,7 +15,7 @@ import {
   Activity,
   Clock
 } from 'lucide-react';
-import { aiStoreAdvisor, type ContextualAdvice } from '../services/aiStoreAdvisor';
+//import { aiStoreAdvisor, type ContextualAdvice } from '../services/aiStoreAdvisor';
 
 interface ChatMessage {
   id: string;

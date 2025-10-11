@@ -142,6 +142,7 @@ const OwnerHomePage: React.FC = () => {
                 />
             </div>
 
+
             {/* Beautiful Performance Dashboard */}
             <div className="trading-grid gap-6">
                 {/* Quick Stats */}

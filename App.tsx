@@ -11,11 +11,11 @@ import { offlineDataInitService } from './services/offlineDataInitService';
 
 import OwnerHomePage from './pages/owner/OwnerHomePage';
 import AnalysisPage from './pages/owner/AnalysisPage';
-import AdvancedAnalyticsPage from './pages/owner/AdvancedAnalyticsPage';
-import AIAssistantPage from './pages/owner/AIAssistantPage';
-import AITestPage from './pages/owner/AITestPage';
-import AIDashboard from './pages/AIDashboard';
-import AIStoreAdvisorDashboard from './pages/AIStoreAdvisorDashboard';
+//import AdvancedAnalyticsPage from './pages/owner/AdvancedAnalyticsPage';
+//import AIAssistantPage from './pages/owner/AIAssistantPage';
+//import AITestPage from './pages/owner/AITestPage';
+//import AIDashboard from './pages/AIDashboard';
+//import AIStoreAdvisorDashboard from './pages/AIStoreAdvisorDashboard';
 import StockManagementPage from './pages/owner/StockManagementPage';
 import ProductsPage from './pages/owner/ProductsPage';
 import ExpensesPage from './pages/owner/ExpensesPage';
@@ -110,12 +110,13 @@ const AppContent: React.FC = () => {
             <Route path="/owner" element={<ResponsiveLayout><Outlet /></ResponsiveLayout>}>
                 <Route path="dashboard" element={<OwnerHomePage />} />
                 <Route path="home" element={<OwnerHomePage />} />
+                {/* AI Routes - Commented out to prevent development issues */}
                 <Route path="analysis" element={<AnalysisPage />} />
-                <Route path="advanced-analytics" element={<AdvancedAnalyticsPage />} />
-                <Route path="ai-assistant" element={<AIAssistantPage />} />
-                <Route path="ai-test" element={<AITestPage />} />
-                <Route path="ai-dashboard" element={<AIDashboard />} />
-                <Route path="ai-store-advisor" element={<AIStoreAdvisorDashboard userRole="owner" />} />
+                {/* <Route path="advanced-analytics" element={<AdvancedAnalyticsPage />} /> */}
+                {/* <Route path="ai-assistant" element={<AIAssistantPage />} /> */}
+                {/* <Route path="ai-test" element={<AITestPage />} /> */}
+                {/* <Route path="ai-dashboard" element={<AIDashboard />} /> */}
+                {/* <Route path="ai-store-advisor" element={<AIStoreAdvisorDashboard userRole="owner" />} /> */}
                 <Route path="sales" element={<StockManagementPage />} />
                 <Route path="products" element={<ProductsPage />} />
                 <Route path="expenses" element={<ExpensesPage />} />
@@ -128,7 +129,8 @@ const AppContent: React.FC = () => {
             {/* Worker Routes are nested under their own layout */}
             <Route path="/worker" element={<WorkerLayout><Outlet /></WorkerLayout>}>
                 <Route path="dashboard" element={<WorkerDashboard />} />
-                <Route path="ai-advisor" element={<AIStoreAdvisorDashboard userRole="worker" />} />
+                {/* AI Route - Commented out to prevent development issues */}
+                {/* <Route path="ai-advisor" element={<AIStoreAdvisorDashboard userRole="worker" />} /> */}
                 <Route path="sales" element={<SalesPage />} />
                 <Route path="expenses" element={<WorkerExpensePage />} />
                 <Route path="transactions" element={<WorkerTransactionsPage />} />
